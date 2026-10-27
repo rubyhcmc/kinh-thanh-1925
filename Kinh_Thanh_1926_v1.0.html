@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kinh Thánh</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f3ea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kinh Thánh">
+<style>
+/* ============ GIAO DIỆN ============ */
+:root{
+  --bg:#f7f3ea; --card:#fffdf8; --fg:#2a2118; --muted:#7a6e60;
+  --accent:#8a5a1f; --accent-soft:#f0e3cc; --line:#e4dccb; --hl:#fff1c2;
+  --danger:#b3261e; --fs:18px; --hh:calc(52px + env(safe-area-inset-top)); --tabh:0px;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+[data-theme=dark]{
+  --bg:#121212; --card:#1c1b19; --fg:#e8e2d6; --muted:#9a9080;
+  --accent:#e0b160; --accent-soft:#2c2619; --line:#2e2b26; --hl:#4a3d1a; --danger:#ff8a80;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5;
+  padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+
+/* Thanh tiêu đề */
+.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 14px 0;
+  display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--line)}
+.top h1{font-size:19px;margin:0;font-family:var(--serif)}
+.top .right{display:flex;gap:8px;align-items:center}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.syncb{border:0;font-family:inherit;white-space:nowrap}
+.syncb.err,.syncb.conflict{background:#fde7e5;color:var(--danger)}
+[data-theme=dark] .syncb.err,[data-theme=dark] .syncb.conflict{background:#3a1f1d}
+.syncb.dirty,.syncb.busy,.syncb.offline{background:var(--hl);color:var(--fg)}
+.iconbtn{border:1px solid var(--line);background:var(--bg);border-radius:10px;min-width:42px;height:36px;padding:0 10px;font-weight:600}
+
+main{max-width:760px;margin:0 auto}
+
+/* Chọn sách / chương / câu */
+.navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;
+  padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+select,input[type=search],input[type=password],input[type=text],input[type=number],textarea{
+  width:100%;padding:10px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+select{min-width:0}
+
+/* Khu vực đọc */
+.reader{padding:16px 18px 24px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
+.reader h2{font-size:1.25em;margin:.2em 0 .6em;line-height:1.3}
+.reader .sub{font-family:var(--sans);font-size:.7em;color:var(--muted);margin:-.4em 0 1em}
+.verse.flash,.v.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,60%{background:var(--hl)}100%{background:transparent}}
+.chapnav{display:flex;gap:10px;padding:0 14px 20px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .btn.primary{color:#1a1409}
+.btn.danger{color:var(--danger)}
+.chapnav .btn{flex:1}
+.btn:disabled{opacity:.4}
+
+/* ===== Kiểu sách in ===== */
+.reader.print{text-align:justify;-webkit-hyphens:auto;hyphens:auto;line-height:1.75}
+.chhead{text-align:center;margin:.1em 0 1.1em}
+.chhead .bk{font-size:1.3em;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.chhead .ch{font-family:var(--sans);font-size:.55em;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:.2em}
+.sec{font-size:1.08em;font-weight:700;text-align:center;margin:1.5em 0 .55em;line-height:1.35}
+.sec .ref{display:block;font-weight:400;font-style:italic;font-size:.8em;color:var(--muted);margin-top:.15em}
+.hd{margin:1.5em 0 .6em;text-align:center}
+.hd .sec,.hd .sec2,.hd .ref1{margin:0}
+.sec2{font-size:.92em;font-weight:700;line-height:1.35;margin-top:.25em}
+.ref1{font-style:italic;font-size:.8em;color:var(--muted)}
+.para{margin:0 0 .75em}
+.dc{float:left;font-size:3.5em;line-height:.8;font-weight:700;color:var(--accent);margin:.07em .12em 0 0}
+.vn{font-family:var(--sans);font-size:.58em;font-weight:700;vertical-align:super;line-height:0;margin:0 .22em 0 .12em;color:var(--accent)}
+.v{border-radius:4px;scroll-margin-top:calc(var(--hh) + 70px)}
+.v.sel{background:var(--hl)}
+.poem{margin:0 0 .9em;text-align:left}
+.poem .v{display:block}
+.pl{display:block;padding-left:1.3em;text-indent:-1.3em}
+.pl.q2{padding-left:2.6em}
+.vline{margin:0 0 .55em}
+.note{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.5;color:var(--muted);margin:.3em 0 .45em}
+.fnm{font-style:italic;font-weight:400;font-size:.62em;color:var(--accent);margin-left:.08em}
+.fns{margin-top:1.5em;padding-top:.7em;border-top:1px solid var(--line);text-align:left}
+.fn{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.55;color:var(--muted);margin:.2em 0}
+
+/* ===== Trình soạn thảo ===== */
+.edwrap{max-width:1100px;margin:0 auto;padding:12px 14px 30px}
+.edtop{display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:8px}
+.edtop input{min-width:0}
+@media(max-width:600px){.edtop{grid-template-columns:1fr 1fr}.edtop .chstep{grid-column:1/-1}}
+.chstep{display:flex;gap:6px}
+.chstep input{text-align:center}
+.chstep .btn{padding:8px 14px}
+.edopts{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;font-size:13px;color:var(--muted)}
+.edopts label{display:flex;align-items:center;gap:6px}
+.edopts input,.edopts select{width:auto;padding:6px 8px;font-size:14px}
+.edopts input[type=number]{width:70px}
+.edseg{margin:6px 0 10px}
+.edseg button{flex:1}
+.edcols{display:grid;grid-template-columns:1fr;gap:12px}
+.edpane{display:none}
+.edpane.on{display:block}
+@media(min-width:900px){.edcols{grid-template-columns:1fr 1fr}.edseg{display:none}.edpane{display:block}}
+.tbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tbar .btn{padding:7px 10px;font-size:13px}
+#edText{min-height:58vh;font-family:ui-monospace,Menlo,monospace;font-size:15px;line-height:1.6}
+.paper{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:58vh;padding-top:20px}
+.edact{position:sticky;bottom:0;background:var(--bg);padding:10px 0 calc(10px + env(safe-area-inset-bottom));margin-top:12px;border-top:1px solid var(--line)}
+
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 12px;font-size:14px;color:var(--muted)}
+.empty{padding:48px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;font-size:18px;color:var(--fg);margin-bottom:6px}
+.searchbar{padding:10px 12px;position:sticky;top:var(--hh);z-index:10;background:var(--bg);display:flex;gap:8px}
+.searchbar input{flex:1;min-width:0}
+
+/* Tìm kiếm Kinh Thánh */
+#tab-bible.searching>.navrow,#tab-bible.searching>.reader,#tab-bible.searching>.chapnav{display:none!important}
+.bsopts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 12px 8px;font-size:14px;color:var(--muted)}
+.bsopts label{display:flex;gap:6px;align-items:center}
+.bsopts input[type=checkbox]{width:auto}
+.bsopts select{width:auto;max-width:44vw;padding:6px 8px;font-size:14px}
+.bsopts .btn{margin-left:auto;padding:6px 12px}
+.bsinfo{padding:4px 14px 8px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.bsitem{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--card);
+  padding:12px 16px;font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.55}
+.bsitem b{display:block;font-family:var(--sans);font-size:13px;color:var(--accent);margin-bottom:2px}
+mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-weight:700}
+
+/* Thanh sao chép câu */
+.copybar{position:fixed;left:12px;right:12px;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 10px);z-index:25;
+  display:flex;gap:8px;padding:10px;border-radius:14px;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:736px;margin:0 auto}
+.copybar .btn{flex:1}
+
+/* Sheet & lớp phủ */
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;background:var(--card);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 12px;font-size:18px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:8px 12px;font-size:14px}
+.seg button.on{background:var(--accent);color:#fff}
+[data-theme=dark] .seg button.on{color:#1a1409}
+input[type=range]{width:100%}
+.preview{font-family:var(--serif);font-size:var(--fs);padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-top:8px}
+
+.admin{position:fixed;inset:0;z-index:45;background:var(--bg);overflow:auto;padding:0 0 40px}
+.admin .bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--card);border-bottom:1px solid var(--line)}
+.admin .bar h3{margin:0}
+.panel{max-width:760px;margin:14px auto;padding:0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.card h4{margin:0 0 10px;font-size:15px}
+.card p.hint{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats div{background:var(--bg);border-radius:10px;padding:10px 4px;font-size:12px;color:var(--muted)}
+.stats b{display:block;font-size:22px;color:var(--accent)}
+textarea{min-height:180px;font-family:ui-monospace,Menlo,monospace;font-size:13px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.log{font-size:13px;margin-top:10px;white-space:pre-wrap}
+.log.ok{color:#2e7d32}.log.err{color:var(--danger)}
+[data-theme=dark] .log.ok{color:#81c784}
+details{font-size:13px;color:var(--muted);margin-top:8px}
+details summary{cursor:pointer;color:var(--accent);font-weight:600}
+details pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:12px;color:var(--fg)}
+details ol{padding-left:20px;line-height:1.7}
+details a{color:var(--accent)}
+.lbl{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+.chk input{width:auto}
+.toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
+  background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
+@media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 id="title">Kinh Thánh</h1>
+  <div class="right">
+    <span class="badge" id="offlineBadge" hidden>Ngoại tuyến</span>
+    <button class="badge syncb" id="syncBadge" hidden aria-label="Đồng bộ GitHub"></button>
+    <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh">🔍</button>
+    <button class="iconbtn" id="btnSettings" aria-label="Cài đặt">Aa</button>
+  </div>
+</header>
+
+<main>
+  <section class="tab on" id="tab-bible">
+    <div id="bSearch" hidden>
+      <div class="searchbar"><input type="search" id="bsQ" placeholder="Tìm trong cả Kinh Thánh… (vd: kính sợ)" autocomplete="off" enterkeyhint="search"></div>
+      <div class="bsopts">
+        <select id="bsMode" aria-label="Kiểu tìm"><option value="phrase">Đúng cụm từ</option><option value="all">Có đủ các từ</option></select>
+        <label><input type="checkbox" id="bsWord"> Nguyên từ</label>
+        <select id="bsScope" aria-label="Phạm vi"></select>
+        <button class="btn" id="bsClose">Đóng</button>
+      </div>
+      <div class="bsinfo" id="bsInfo"></div>
+      <div id="bsItems"></div>
+      <div class="pager" id="bsPager"></div>
+    </div>
+    <div class="navrow">
+      <select id="selBook" aria-label="Sách"></select>
+      <select id="selChap" aria-label="Chương"></select>
+      <select id="selVerse" aria-label="Câu"></select>
+    </div>
+    <article class="reader" id="bibleText"></article>
+    <div class="chapnav" id="chapNav" hidden>
+      <button class="btn" id="prevChap">‹ Trước</button>
+      <button class="btn" id="nextChap">Sau ›</button>
+    </div>
+  </section>
+</main>
+
+<div class="copybar" id="copyBar" hidden>
+  <button class="btn" id="copyClear">Bỏ chọn</button>
+  <button class="btn primary" id="copyGo">Sao chép</button>
+</div>
+
+<!-- CÀI ĐẶT -->
+<div class="overlay" id="settings" hidden>
+  <div class="sheet">
+    <h3>Cài đặt hiển thị</h3>
+    <div class="row"><b>Giao diện</b>
+      <div class="seg" id="themeSeg">
+        <button data-v="auto">Tự động</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button>
+      </div>
+    </div>
+    <div>
+      <b>Cỡ chữ: <span id="fsVal"></span>px</b>
+      <input type="range" id="fsRange" min="14" max="36" step="1">
+      <div class="preview">Ban đầu có Ngôi Lời, Ngôi Lời ở cùng Thiên Chúa.</div>
+    </div>
+    <div class="row"><b>Kiểu hiển thị Kinh Thánh</b>
+      <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
+    </div>
+    <div class="row"><b>Giữ màn hình sáng</b>
+      <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+    </div>
+    <div class="row" id="setSyncRow" hidden><b>Nội dung mới từ GitHub</b>
+      <button class="btn" id="setSync">☁ Cập nhật ngay</button>
+    </div>
+    <div class="btns">
+      <button class="btn" id="btnAdmin">🔒 Quản lý dữ liệu</button>
+      <button class="btn primary" id="closeSettings" style="margin-left:auto">Xong</button>
+    </div>
+  </div>
+</div>
+
+<!-- ĐĂNG NHẬP -->
+<div class="overlay" id="login" hidden>
+  <div class="sheet">
+    <h3>Đăng nhập quản lý</h3>
+    <input type="password" id="pw" placeholder="Nhập mật khẩu (đúng là vào ngay)" autocomplete="current-password">
+    <div class="log err" id="loginErr"></div>
+    <div class="btns">
+      <button class="btn" id="loginCancel">Hủy</button>
+      <button class="btn primary" id="loginGo" style="margin-left:auto">Đăng nhập</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANG QUẢN LÝ -->
+<div class="admin" id="admin" hidden>
+  <div class="bar"><h3>Quản lý dữ liệu</h3>
+    <div class="btns" style="margin:0">
+      <button class="btn" id="logout">Đăng xuất</button>
+      <button class="btn primary" id="adminClose">Đóng</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="card">
+      <h4>Dữ liệu hiện có trong máy</h4>
+      <div class="stats">
+        <div><b id="stBible">0</b>Sách</div>
+        <div><b id="stChap">0</b>Chương</div>
+        <div><b id="stSync">Tắt</b>Đồng bộ GitHub</div>
+      </div>
+      <p class="hint" style="margin:10px 0 0">Mọi thay đổi được lưu tự động vào máy này ngay khi bạn gõ hoặc nhập.</p>
+    </div>
+
+    <div class="card">
+      <h4>1. Soạn / dán nội dung từng chương</h4>
+      <p class="hint">Dán nguyên văn từ trang web, PDF hay Word. App tự nhận dạng số câu, tiêu đề, đoạn và thơ, tự lưu và hiện ngay ở trang chủ.</p>
+      <button class="btn primary" id="openEditor">✍️ Mở trình soạn thảo</button>
+    </div>
+
+    <div class="card">
+      <h4>2. Đồng bộ với GitHub (lưu trữ trên mạng)</h4>
+      <p class="hint">Dữ liệu được tự động đưa lên GitHub để không bao giờ bị mất, và các máy khác tự cập nhật nội dung mới.</p>
+      <div class="log" id="ghStatus">Chưa kết nối GitHub.</div>
+
+      <label class="lbl" for="ghToken">Mã token GitHub (để lưu lên mạng)</label>
+      <input type="password" id="ghToken" placeholder="ghp_... (bỏ trống nếu máy này chỉ để đọc)" autocomplete="off" spellcheck="false">
+      <label class="lbl" for="ghRepo">Tên kho lưu trữ</label>
+      <input type="text" id="ghRepo" placeholder="kinh-thanh-data  hoặc  tên-người-dùng/kinh-thanh-data" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <label class="chk"><input type="checkbox" id="ghAuto"> Tự động đồng bộ sau mỗi thay đổi</label>
+      <details>
+        <summary>Tùy chọn nâng cao</summary>
+        <label class="lbl" for="ghBranch">Nhánh (để trống = nhánh mặc định)</label>
+        <input type="text" id="ghBranch" placeholder="main" autocomplete="off" autocapitalize="off">
+        <label class="lbl" for="ghPath">Tên tệp dữ liệu</label>
+        <input type="text" id="ghPath" placeholder="kinhthanh-data.json" autocomplete="off" autocapitalize="off">
+      </details>
+      <div class="btns">
+        <button class="btn primary" id="ghConnect">🔗 Kết nối &amp; kiểm tra</button>
+        <button class="btn" id="ghSyncNow">☁ Đồng bộ ngay</button>
+        <button class="btn danger" id="ghDisconnect">Ngắt kết nối</button>
+      </div>
+      <div class="log" id="ghLog"></div>
+      <div id="ghShare" hidden>
+        <label class="lbl">Liên kết cho người đọc (máy khác mở là tự nhận nội dung)</label>
+        <div style="display:flex;gap:8px"><input type="text" id="ghShareUrl" readonly><button class="btn" id="ghCopy">Chép</button></div>
+        <p class="hint" style="margin-top:6px">Chỉ dùng được khi kho ở chế độ Công khai. Kho Riêng tư cần nhập token trên từng máy.</p>
+      </div>
+      <details>
+        <summary>Hướng dẫn từng bước (cho người mới)</summary>
+        <ol>
+          <li>Vào <a href="https://github.com/signup" target="_blank" rel="noopener">github.com</a> tạo tài khoản miễn phí (bỏ qua nếu đã có).</li>
+          <li>Bấm vào <a href="https://github.com/settings/tokens/new?scopes=repo&description=Kinh-Thanh-App" target="_blank" rel="noopener">liên kết tạo token</a>. Ở ô "Expiration" chọn <b>No expiration</b>, kéo xuống cuối bấm <b>Generate token</b>.</li>
+          <li>Sao chép dãy chữ bắt đầu bằng <b>ghp_</b>, dán vào ô "Mã token" ở trên.</li>
+          <li>Gõ tên kho, ví dụ <b>kinh-thanh-data</b> (hoặc bỏ trống), rồi bấm <b>Kết nối &amp; kiểm tra</b>. App sẽ tự tạo kho cho bạn.</li>
+          <li>Xong! Từ nay mọi chương bạn soạn hoặc nhập sẽ tự lên GitHub. Trên điện thoại/máy khác, mở app, nhập cùng token và tên kho (hoặc mở liên kết chia sẻ nếu kho công khai) là có đủ nội dung.</li>
+        </ol>
+        <p>Lưu ý: token được lưu trong trình duyệt của máy này. Không gửi token cho người khác; nếu lộ, hãy xóa token trên GitHub và tạo cái mới.</p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h4>3. Nhập nhiều chương / nhiều sách cùng lúc</h4>
+      <div class="grid2">
+        <select id="impType">
+          <option value="bible">Kinh Thánh (văn bản hoặc JSON)</option>
+          <option value="backup">Tệp sao lưu</option>
+        </select>
+        <select id="impMode">
+          <option value="merge">Gộp (ghi đè mục trùng)</option>
+          <option value="replace">Thay thế toàn bộ</option>
+        </select>
+      </div>
+      <textarea id="impText" placeholder="Dán JSON hoặc văn bản vào đây…" spellcheck="false"></textarea>
+      <div class="btns">
+        <input type="file" id="impFile" accept=".json,.txt,.md,text/plain,application/json" hidden multiple>
+        <button class="btn" id="pickFile">📂 Chọn tệp…</button>
+        <button class="btn" id="fillSample">Chèn mẫu định dạng</button>
+        <button class="btn primary" id="doImport" style="margin-left:auto">Nhập vào máy</button>
+      </div>
+      <div class="log" id="impLog"></div>
+      <details><summary>Hướng dẫn định dạng</summary>
+<pre>VĂN BẢN – Kinh Thánh
+# Sáng Thế | St
+## 1
+1. Ban đầu Thiên Chúa dựng nên trời đất.
+2. ...
+
+JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
+      </details>
+    </div>
+
+    <div class="card">
+      <h4>Đổi mật khẩu quản lý</h4>
+      <div class="grid2">
+        <input type="password" id="pwOld" placeholder="Mật khẩu hiện tại" autocomplete="current-password">
+        <input type="password" id="pwNew" placeholder="Mật khẩu mới (từ 4 ký tự)" autocomplete="new-password">
+      </div>
+      <input type="password" id="pwNew2" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password">
+      <div class="log" id="pwLog"></div>
+      <div class="btns">
+        <button class="btn primary" id="pwChange">Đổi mật khẩu</button>
+        <button class="btn" id="pwReset">Về mật khẩu ban đầu</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Sao lưu &amp; xóa</h4>
+      <div class="btns" style="margin-top:0">
+        <button class="btn" id="doExport">⬇️ Tải tệp sao lưu</button>
+        <button class="btn" id="loadDemo">Nạp dữ liệu thử</button>
+      </div>
+      <div class="btns">
+        <button class="btn danger" id="clearBible">Xóa toàn bộ Kinh Thánh trong máy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRÌNH SOẠN THẢO KINH THÁNH -->
+<div class="admin" id="editor" style="z-index:48" hidden>
+  <div class="bar"><h3>Soạn thảo Kinh Thánh</h3>
+    <button class="btn primary" id="edClose">Đóng</button>
+  </div>
+  <div class="edwrap">
+    <div class="edtop">
+      <input type="text" id="edBook" list="bookList" placeholder="Tên sách (vd: Sáng Thế)" autocomplete="off">
+      <input type="text" id="edAbbr" placeholder="Viết tắt (St)" autocomplete="off">
+      <div class="chstep">
+        <button class="btn" id="edPrev" aria-label="Chương trước">‹</button>
+        <input type="number" id="edChap" min="1" value="1" inputmode="numeric" aria-label="Chương">
+        <button class="btn" id="edNext" aria-label="Chương sau">›</button>
+      </div>
+    </div>
+    <datalist id="bookList"></datalist>
+    <div class="edopts">
+      <label>Bắt đầu từ câu <input type="number" id="edStart" min="1" value="1" inputmode="numeric"></label>
+      <label>Xuống dòng trong câu
+        <select id="edPoem"><option value="0">Nối thành văn xuôi</option><option value="1">Giữ như thơ</option></select>
+      </label>
+    </div>
+    <div class="seg edseg" id="edSeg"><button data-p="edit" class="on">Soạn</button><button data-p="view">Xem trước</button></div>
+    <div class="edcols">
+      <div class="edpane on" id="paneEdit">
+        <div class="tbar">
+          <button class="btn" id="edH">＃ Tiêu đề</button>
+          <button class="btn" id="edQ1">＞ Thơ</button>
+          <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
+          <button class="btn" id="edPara">¶ Đoạn mới</button>
+          <button class="btn" id="edNorm">Chuẩn hóa</button>
+          <button class="btn danger" id="edClear">Xóa ô</button>
+        </div>
+        <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương"></textarea>
+        <div class="log" id="edStatus"></div>
+        <div class="log ok" id="edAuto"></div>
+      </div>
+      <div class="edpane" id="paneView"><article class="reader paper" id="edPreview"></article></div>
+    </div>
+    <div class="btns edact">
+      <button class="btn primary" id="edSave">💾 Lưu chương</button>
+      <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
+      <button class="btn" id="edView">Xem ở trang chủ</button>
+      <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =========================================================
+ *  CẤU HÌNH – mật khẩu ban đầu (sau đó đổi ngay trong app:
+ *  Quản lý → Đổi mật khẩu quản lý)
+ *  Lưu ý: đây chỉ là khóa giao diện phía trình duyệt, không
+ *  phải bảo mật thực sự (ai xem được mã nguồn đều thấy).
+ * ========================================================= */
+const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
+const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
+const DB_NAME = 'kinhthanh-pwa';
+const DEFAULT_REPO_NAME = 'kinh-thanh-data';
+const DEFAULT_FILE = 'kinhthanh-data.json';
+
+/* ============ TIỆN ÍCH ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Bỏ dấu tiếng Việt để tìm kiếm không phân biệt dấu
+const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+let toastTimer;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+// Hộp thoại nhiều lựa chọn (thay cho confirm khi cần chọn 2–3 hướng)
+function choose(title, msg, opts){
+  return new Promise(res => {
+    const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+    o.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3><p style="white-space:pre-line;margin:0 0 6px">${esc(msg)}</p>
+      <div class="btns" style="flex-direction:column">${opts.map((x, i) => `<button class="btn ${x.cls || ''}" data-i="${i}">${esc(x.t)}</button>`).join('')}</div></div>`;
+    o.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b){ o.remove(); res(+b.dataset.i); } });
+    document.body.appendChild(o);
+  });
+}
+
+/* ============ CÀI ĐẶT (localStorage) ============ */
+const S = { theme:'auto', fs:18, book:null, chapter:1, wake:false, view:'print' };
+try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
+const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
+
+function applyTheme(){
+  const dark = S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('meta[name=theme-color]').content = dark ? '#1c1b19' : '#fffdf8';
+  $$('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.theme));
+}
+function applyFs(){
+  document.documentElement.style.setProperty('--fs', S.fs + 'px');
+  $('#fsRange').value = S.fs; $('#fsVal').textContent = S.fs;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+
+/* ============ INDEXEDDB ============ */
+let db;
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
+      if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
+      if (!d.objectStoreNames.contains('books'))    d.createObjectStore('books',    { keyPath:'name' });
+      if (!d.objectStoreNames.contains('hymns'))    d.createObjectStore('hymns',    { keyPath:'id' });
+      if (!d.objectStoreNames.contains('readings')) d.createObjectStore('readings', { keyPath:'id' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
+const dbGet   = (st, k) => reqP(db.transaction(st).objectStore(st).get(k));
+const dbClear = st => reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
+const dbDel   = (st, k) => reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
+function dbPut(st, items){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
+    items.forEach(i => os.put(i));
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  });
+}
+
+/* =========================================================
+ *  KINH THÁNH: chọn Sách → Chương → Câu
+ *  Chỉ render DUY NHẤT một chương mỗi lần.
+ * ========================================================= */
+let bibleMeta = [];       // [{name, abbr, order, chapterCount}]
+let curBook = null;       // bản ghi sách đang mở {name, chapters:[[{n,t}]]}
+const selected = new Set();
+
+async function loadBibleMeta(){
+  bibleMeta = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order);
+}
+function renderBibleEmpty(){
+  $('#bibleText').className = 'reader';
+  $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
+  $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = '';
+  $('#chapNav').hidden = true;
+}
+async function initBible(){
+  await loadBibleMeta(); bs.idx = null; bsFillScope();
+  if (!bibleMeta.length){ curBook = null; return renderBibleEmpty(); }
+  $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+  const name = bibleMeta.some(m => m.name === S.book) ? S.book : bibleMeta[0].name;
+  await openBook(name, name === S.book ? S.chapter : 1);
+}
+async function openBook(name, chapter){
+  curBook = await dbGet('books', name);
+  if (!curBook) return renderBibleEmpty();
+  const total = curBook.chapters.length;
+  S.book = name; S.chapter = Math.min(Math.max(1, chapter || 1), total); saveS();
+  $('#selBook').value = name;
+  $('#selChap').innerHTML = Array.from({length: total}, (_, i) => `<option value="${i+1}">Ch. ${i+1}</option>`).join('');
+  renderChapter();
+}
+function renderChapter(){
+  clearSelection();
+  const verses = curBook.chapters[S.chapter - 1] || [];
+  $('#selChap').value = S.chapter;
+  $('#selVerse').innerHTML = `<option value="">Câu…</option>` + verses.map(v => `<option value="${v.n}">Câu ${v.n}</option>`).join('');
+  $('#bibleText').className = 'reader' + (S.view !== 'verse' ? ' print' : '');
+  $('#bibleText').innerHTML = paperHTML(curBook.name, S.chapter, verses, S.view);
+  $('#chapNav').hidden = false;
+  const idx = bibleMeta.findIndex(m => m.name === curBook.name);
+  $('#prevChap').disabled = idx === 0 && S.chapter === 1;
+  $('#nextChap').disabled = idx === bibleMeta.length - 1 && S.chapter === curBook.chapters.length;
+  window.scrollTo(0, 0);
+}
+async function stepChapter(d){
+  const idx = bibleMeta.findIndex(m => m.name === curBook.name);
+  const c = S.chapter + d;
+  if (c >= 1 && c <= curBook.chapters.length){ S.chapter = c; saveS(); return renderChapter(); }
+  const nb = bibleMeta[idx + d];
+  if (!nb) return;
+  const rec = await dbGet('books', nb.name);
+  await openBook(nb.name, d > 0 ? 1 : (rec ? rec.chapters.length : 1));
+}
+$('#selBook').onchange = e => openBook(e.target.value, 1);
+$('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
+$('#selVerse').onchange = e => {
+  const el = $('#v' + e.target.value); if (!el) return;
+  el.scrollIntoView({ block:'start', behavior:'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  e.target.value = '';
+};
+$('#prevChap').onclick = () => stepChapter(-1);
+$('#nextChap').onclick = () => stepChapter(1);
+
+// Chạm vào câu để chọn → sao chép
+$('#bibleText').addEventListener('click', e => {
+  const p = e.target.closest('.v'); if (!p) return;
+  const n = +p.dataset.n;
+  selected.has(n) ? selected.delete(n) : selected.add(n);
+  p.classList.toggle('sel', selected.has(n));
+  $('#copyBar').hidden = !selected.size;
+  $('#copyGo').textContent = `Sao chép (${selected.size})`;
+});
+function clearSelection(){ selected.clear(); $$('.v.sel').forEach(e => e.classList.remove('sel')); $('#copyBar').hidden = true; }
+$('#copyClear').onclick = clearSelection;
+$('#copyGo').onclick = async () => {
+  const verses = curBook.chapters[S.chapter - 1].filter(v => selected.has(v.n));
+  const nums = verses.map(v => v.n);
+  const ref = `${curBook.name} ${S.chapter}:${compressRange(nums)}`;
+  const text = `${verses.map(v => v.t.replace(/\n/g, ' ')).join(' ')}\n— ${ref}`;
+  try { await navigator.clipboard.writeText(text); toast('Đã sao chép ' + ref); }
+  catch(e){ prompt('Sao chép đoạn văn:', text); }
+  clearSelection();
+};
+function compressRange(a){ // [1,2,3,5] -> "1-3,5"
+  const out = []; let s = a[0], p = a[0];
+  for (let i = 1; i <= a.length; i++){
+    if (a[i] === p + 1){ p = a[i]; continue; }
+    out.push(s === p ? `${s}` : `${s}-${p}`); s = p = a[i];
+  }
+  return out.join(',');
+}
+
+/* =========================================================
+ *  TÌM KIẾM TRONG CẢ KINH THÁNH
+ *  - Lập chỉ mục trong bộ nhớ lần đầu mở (rồi dùng lại)
+ *  - Gõ không dấu → bỏ qua dấu; gõ có dấu → khớp đúng dấu
+ * ========================================================= */
+const bs = { idx:null, building:null, res:[], page:0 };
+const BS_PAGE = 30;
+
+function bsFillScope(){
+  const sel = $('#bsScope'), old = sel.value;
+  sel.innerHTML = '<option value="">Cả Kinh Thánh</option>' + bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+  if (bibleMeta.some(m => m.name === old)) sel.value = old;
+}
+async function bsBuild(){
+  if (bs.idx) return bs.idx;
+  if (!bs.building) bs.building = (async () => {
+    const recs = new Map((await dbAll('books')).map(b => [b.name, b]));
+    const out = [];
+    bibleMeta.forEach(m => {
+      const rec = recs.get(m.name); if (!rec) return;
+      rec.chapters.forEach((vs, ci) => vs.forEach(v => {
+        const t = String(v.t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').normalize('NFC');
+        out.push({ b:m.name, c:ci + 1, n:v.n, t, l:t.toLowerCase(), f:Array.from(t, ch => fold(ch) || ' ').join('') });
+      }));
+    });
+    bs.idx = out; bs.building = null; return out;
+  })();
+  return bs.building;
+}
+function bsRegexes(q){
+  q = q.normalize('NFC').trim().toLowerCase();
+  const plain = fold(q) === q;                       // không có dấu → bỏ qua dấu khi so khớp
+  const word = $('#bsWord').checked;
+  const terms = $('#bsMode').value === 'all' ? q.split(/\s+/).filter(Boolean) : [q.replace(/\s+/g, ' ')];
+  const mk = (t, w) => {
+    let src = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+    if (w) src = '(?<![\\p{L}\\p{N}])' + src + '(?![\\p{L}\\p{N}])';
+    return new RegExp(src, 'gu');
+  };
+  let rx;
+  try { rx = terms.map(t => mk(t, word)); } catch(e){ rx = terms.map(t => mk(t, false)); }
+  return { rx, plain };
+}
+function bsHighlight(e, rx, plain){
+  const target = plain ? e.f : e.l, ranges = [];
+  rx.forEach(r => { r.lastIndex = 0; let m; while ((m = r.exec(target)) && m[0]){ ranges.push([m.index, m.index + m[0].length]); } });
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  ranges.forEach(r => { const l = merged[merged.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else merged.push(r.slice()); });
+  let out = '', pos = 0;
+  merged.forEach(([a, b]) => { out += esc(e.t.slice(pos, a)) + '<mark>' + esc(e.t.slice(a, b)) + '</mark>'; pos = b; });
+  return out + esc(e.t.slice(pos));
+}
+let bsCtx = null;
+async function bsRun(){
+  const q = $('#bsQ').value, info = $('#bsInfo');
+  if (!bibleMeta.length){ info.textContent = 'Chưa có dữ liệu Kinh Thánh.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
+  if (fold(q.trim()).length < 2){ bs.res = []; info.textContent = 'Nhập ít nhất 2 ký tự để tìm.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
+  info.textContent = 'Đang tìm…';
+  const idx = await bsBuild();
+  if ($('#bsQ').value !== q) return;                 // người dùng đã gõ tiếp
+  bsCtx = bsRegexes(q);
+  const scope = $('#bsScope').value, { rx, plain } = bsCtx;
+  bs.res = idx.filter(e => (!scope || e.b === scope) && rx.every(r => { r.lastIndex = 0; return r.test(plain ? e.f : e.l); }));
+  bs.page = 0; bsRender();
+}
+function bsRender(){
+  const n = bs.res.length, info = $('#bsInfo');
+  if (!n){ info.textContent = 'Không tìm thấy kết quả.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
+  const books = new Set(bs.res.map(e => e.b)).size;
+  info.textContent = `Tìm thấy ${n} câu trong ${books} sách`;
+  const pages = Math.ceil(n / BS_PAGE); bs.page = Math.min(bs.page, pages - 1);
+  const from = bs.page * BS_PAGE;
+  $('#bsItems').innerHTML = bs.res.slice(from, from + BS_PAGE).map((e, i) =>
+    `<button class="bsitem" data-i="${from + i}"><b>${esc(e.b)} ${e.c}:${e.n}</b>${bsHighlight(e, bsCtx.rx, bsCtx.plain)}</button>`).join('');
+  $('#bsPager').innerHTML = pages > 1 ? `<button class="btn" data-p="-1" ${bs.page === 0 ? 'disabled' : ''}>‹ Trước</button>
+    <span>trang ${bs.page + 1}/${pages}</span>
+    <button class="btn" data-p="1" ${bs.page >= pages - 1 ? 'disabled' : ''}>Sau ›</button>` : '';
+}
+function setSearch(on){
+  $('#tab-bible').classList.toggle('searching', on);
+  $('#bSearch').hidden = !on;
+  if (on){ clearSelection(); bsFillScope(); bsBuild(); setTimeout(() => $('#bsQ').focus(), 50); }
+  window.scrollTo(0, 0);
+}
+$('#btnSearch').onclick = () => setSearch(true);
+$('#bsClose').onclick = () => setSearch(false);
+let bsTimer;
+$('#bsQ').addEventListener('input', () => { clearTimeout(bsTimer); bsTimer = setTimeout(bsRun, 250); });
+$('#bsQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeout(bsTimer); bsRun(); e.target.blur(); } });
+['bsMode', 'bsWord', 'bsScope'].forEach(id => $('#' + id).onchange = bsRun);
+$('#bsPager').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; bs.page += +b.dataset.p; bsRender(); window.scrollTo(0, 0); });
+$('#bsItems').addEventListener('click', async e => {
+  const b = e.target.closest('[data-i]'); if (!b) return;
+  const r = bs.res[+b.dataset.i]; if (!r) return;
+  setSearch(false);
+  await openBook(r.b, r.c);
+  const el = $('#v' + r.n);
+  if (el){ el.scrollIntoView({ block:'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+});
+
+/* =========================================================
+ *  NHẬP DỮ LIỆU: chuẩn hóa JSON / văn bản
+ * ========================================================= */
+function parseInput(text){
+  text = String(text).replace(/^\uFEFF/, '').trim();
+  if (!text) throw new Error('Nội dung trống.');
+  if (/^[\[{]/.test(text)){
+    try { return { json: JSON.parse(text) }; }
+    catch(e){ throw new Error('JSON không hợp lệ: ' + e.message); }
+  }
+  return { text };
+}
+function normVerses(ch){
+  if (Array.isArray(ch)) return ch.map((v, i) => typeof v === 'string'
+    ? { n:i + 1, t:v }
+    : Object.assign(
+        { n:Number(v.n ?? v.verse ?? v.number ?? i + 1), t:String(v.t ?? v.text ?? '') },
+        v.h ? { h:String(v.h) } : {}, v.p ? { p:true } : {},
+        Array.isArray(v.q) && v.q.length ? { q:v.q.map(x => +x === 2 ? 2 : 1) } : {},
+        Array.isArray(v.fn) && v.fn.length ? { fn:v.fn.map(String) } : {}));
+  if (ch && typeof ch === 'object') return Object.keys(ch).sort((a, b) => a - b).map(k => ({ n:Number(k), t:String(ch[k]) }));
+  return [];
+}
+function normChapters(cs){
+  if (Array.isArray(cs)) return cs.map(normVerses);
+  const out = [];
+  Object.keys(cs || {}).map(Number).sort((a, b) => a - b).forEach(k => out[k - 1] = normVerses(cs[k]));
+  return Array.from(out, c => c || []);
+}
+function normBible(j){
+  const books = Array.isArray(j) ? j : Array.isArray(j.books) ? j.books : Object.keys(j).map(k => ({ name:k, chapters:j[k] }));
+  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), chapters:normChapters(b.chapters) }))
+              .filter(b => b.name && b.chapters.length);
+}
+function parseBibleText(t){
+  const books = []; let b = null, ch = null, last = null, m;
+  for (const raw of t.split(/\r?\n/)){
+    const line = raw.trim(); if (!line) continue;
+    if ((m = line.match(/^#\s*(?!#)(.+)$/))){
+      const [name, abbr = ''] = m[1].split('|').map(s => s.trim());
+      b = { name, abbr, chapters:[] }; books.push(b); ch = null; last = null;
+    } else if ((m = line.match(/^##\s*(?:chương\s*)?(\d+)/i))){
+      if (!b) throw new Error('Có "## chương" nhưng chưa có "# tên sách" phía trên.');
+      ch = []; b.chapters[+m[1] - 1] = ch; last = null;
+    } else if (ch && (m = line.match(/^(\d+)\s*[.:)\-–]?\s*(.+)$/))){
+      last = { n:+m[1], t:m[2] }; ch.push(last);
+    } else if (last){ last.t += ' ' + line; }
+  }
+  books.forEach(x => x.chapters = Array.from(x.chapters, c => c || []));
+  return books;
+}
+
+/* --- Ghi vào IndexedDB --- */
+async function importBible(books, mode){
+  if (!books.length) throw new Error('Không tìm thấy sách Kinh Thánh hợp lệ.');
+  if (mode === 'replace'){ await dbClear('bookMeta'); await dbClear('books'); }
+  const existing = await dbAll('bookMeta');
+  const map = new Map(existing.map(m => [m.name, m]));
+  let max = existing.reduce((a, m) => Math.max(a, m.order), 0);
+  const metas = books.map(b => {
+    const m = map.get(b.name) || { name:b.name, order:++max };
+    m.abbr = b.abbr || m.abbr || ''; m.chapterCount = b.chapters.length; return m;
+  });
+  await dbPut('books', books.map(b => ({ name:b.name, chapters:b.chapters })));
+  await dbPut('bookMeta', metas);
+  return { msg:`${books.length} sách Kinh Thánh`, first:books[0].name };
+}
+async function importData(type, text, mode){
+  const p = parseInput(text);
+  if (type === 'backup'){
+    const j = p.json;
+    if (!j || Array.isArray(j)) throw new Error('Tệp sao lưu phải là một đối tượng JSON có khóa "bible".');
+    const src = j.bible || (j.books ? j : null);
+    if (!src) throw new Error('Không có dữ liệu Kinh Thánh trong tệp sao lưu.');
+    return importBible(normBible(src), mode);
+  }
+  return importBible(p.json ? normBible(p.json) : parseBibleText(p.text), mode);
+}
+
+/* ============ MẪU ĐỊNH DẠNG & DỮ LIỆU THỬ ============ */
+const SAMPLES = {
+  bible: `{
+  "books": [
+    { "name": "Sáng Thế", "abbr": "St",
+      "chapters": [
+        ["Câu 1 của chương 1...", "Câu 2 của chương 1..."],
+        ["Câu 1 của chương 2..."]
+      ] }
+  ]
+}`,
+  backup: `{ "bible": { "books": [] } }`
+};
+const DEMO = { books:[{ name:'Sách Mẫu', abbr:'Mẫu', chapters:[
+  ['Đây là câu mẫu thứ nhất của chương một.', 'Đây là câu mẫu thứ hai.', 'Đây là câu mẫu thứ ba.'],
+  ['Chương hai, câu một (nội dung thử nghiệm).', 'Chương hai, câu hai (nội dung thử nghiệm).']
+] }] };
+
+/* =========================================================
+ *  ĐỒNG BỘ GITHUB
+ *  - Toàn bộ Kinh Thánh nằm trong MỘT tệp JSON trong kho GitHub.
+ *  - Có token: đọc + ghi (tự đẩy lên sau mỗi thay đổi).
+ *  - Không token: chỉ đọc (tự tải nội dung mới về).
+ * ========================================================= */
+const GH_KEY = 'kt.gh', SY_KEY = 'kt.sync', GH_API = 'https://api.github.com';
+let GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true };
+let SY = { sha:'', dirty:false, at:0 };
+try { Object.assign(GH, JSON.parse(localStorage.getItem(GH_KEY) || '{}')); } catch(e){}
+try { Object.assign(SY, JSON.parse(localStorage.getItem(SY_KEY) || '{}')); } catch(e){}
+const saveGH = () => { try { localStorage.setItem(GH_KEY, JSON.stringify(GH)); } catch(e){} };
+const saveSY = () => { try { localStorage.setItem(SY_KEY, JSON.stringify(SY)); } catch(e){} };
+const ghOn = () => !!GH.repo;
+const ghCanPush = () => !!(GH.repo && GH.token);
+
+function normRepo(s){
+  s = String(s || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\.git$/i, '').replace(/^\/+|\/+$/g, '');
+  const p = s.split('/').filter(Boolean);
+  return p.length >= 2 ? p[0] + '/' + p[1] : (p[0] || '');
+}
+const ghFile = () => (GH.path || DEFAULT_FILE).split('/').map(encodeURIComponent).join('/');
+const ghRef = () => GH.branch ? '?ref=' + encodeURIComponent(GH.branch) : '';
+
+function ghMsg(s, m){
+  if (s === 401) return 'Token sai hoặc đã hết hạn. Hãy tạo token mới.';
+  if (s === 403) return /rate limit/i.test(m) ? 'GitHub tạm giới hạn số lần truy cập, hãy thử lại sau ít phút.' : 'Token chưa đủ quyền (cần quyền "repo") hoặc bị từ chối.';
+  if (s === 404) return 'Không tìm thấy kho hoặc tệp trên GitHub (kho riêng tư cần có token).';
+  if (s === 409 || s === 422) return 'Dữ liệu trên GitHub vừa thay đổi, hãy bấm "Đồng bộ ngay" lần nữa.';
+  return 'Lỗi GitHub ' + s + (m ? ': ' + m : '');
+}
+async function ghReq(path, o = {}){
+  const h = { Accept: o.raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+  if (GH.token) h.Authorization = 'Bearer ' + GH.token;
+  if (o.body) h['Content-Type'] = 'application/json';
+  let res;
+  try { res = await fetch(GH_API + path, { method:o.method || 'GET', headers:h, body:o.body, cache:'no-store' }); }
+  catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
+  if (!res.ok){
+    let m = ''; try { m = (await res.json()).message || ''; } catch(e){}
+    const err = new Error(ghMsg(res.status, m)); err.status = res.status; throw err;
+  }
+  return res;
+}
+const ghJSON = async (p, o) => (await ghReq(p, o)).json();
+
+// Lấy mã nhận dạng (sha) của tệp dữ liệu trên GitHub; null nếu chưa có
+async function ghRemote(){
+  const p = GH.path || DEFAULT_FILE, i = p.lastIndexOf('/');
+  const dir = i >= 0 ? p.slice(0, i) : '', name = p.slice(i + 1);
+  const dp = dir ? '/' + dir.split('/').map(encodeURIComponent).join('/') : '';
+  try {
+    const list = await ghJSON(`/repos/${GH.repo}/contents${dp}${ghRef()}`);
+    const f = Array.isArray(list) ? list.find(x => x.name === name && x.type === 'file') : null;
+    return f ? { sha:f.sha } : null;
+  } catch(e){ if (e.status === 404) return null; throw e; }
+}
+function toB64(str){
+  const b = new TextEncoder().encode(str); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function buildBooks(){
+  const metas = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order), recs = await dbAll('books');
+  const map = new Map(recs.map(b => [b.name, b]));
+  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
+}
+const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books } });
+
+async function ghPull(sha){
+  const res = await ghReq(`/repos/${GH.repo}/contents/${ghFile()}${ghRef()}`, { raw:true });
+  let j; try { j = JSON.parse(await res.text()); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); }
+  const books = normBible(j.bible || j);
+  if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
+  await importBible(books, 'replace');
+  SY = { sha, dirty:false, at:Date.now() }; saveSY();
+  const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
+}
+async function ghPush(auto){
+  const books = await buildBooks();
+  if (!books.length){
+    if (auto){ setSync('dirty', 'Dữ liệu trong máy đang trống nên chưa đẩy lên GitHub.'); return; }
+    if (!confirm('Dữ liệu trong máy đang trống. Xóa luôn dữ liệu trên GitHub?')) return;
+  }
+  const remote = await ghRemote();
+  const body = { message:'Cập nhật Kinh Thánh ' + new Date().toLocaleString('vi-VN'), content:toB64(JSON.stringify(makePayload(books))) };
+  if (GH.branch) body.branch = GH.branch;
+  if (remote) body.sha = remote.sha;
+  const r = await ghJSON(`/repos/${GH.repo}/contents/${ghFile()}`, { method:'PUT', body:JSON.stringify(body) });
+  SY = { sha:r.content.sha, dirty:false, at:Date.now() }; saveSY();
+}
+
+/* --- Trạng thái hiển thị --- */
+const SYNC_TXT = { off:'', ok:'☁ Đã đồng bộ', busy:'⟳ Đang đồng bộ…', dirty:'● Chờ đồng bộ', err:'⚠ Lỗi đồng bộ', conflict:'⚠ Cần chọn', offline:'☁ Chưa có mạng' };
+let syncState = 'off', syncMsg = '', syncBusy = false, pushTimer, lastCheck = 0;
+function setSync(st, msg){ syncState = st; syncMsg = msg || ''; updateSyncUI(); }
+function updateSyncUI(){
+  const on = ghOn(), b = $('#syncBadge');
+  let st = syncState; if (st === 'ok' && SY.dirty && ghCanPush()) st = 'dirty';
+  b.hidden = !on; b.textContent = SYNC_TXT[st] || ''; b.className = 'badge syncb ' + st;
+  $('#setSyncRow').hidden = !on;
+  $('#stSync').textContent = on ? 'Bật' : 'Tắt';
+  const at = SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa lần nào';
+  const l = $('#ghStatus');
+  l.textContent = on ? `Kho: ${GH.repo}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${ghCanPush() ? 'đọc & ghi (có token)' : 'chỉ đọc (không có token)'}` : 'Chưa kết nối GitHub.';
+  l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
+  const sh = $('#ghShare'); sh.hidden = !on;
+  if (on) $('#ghShareUrl').value = location.origin + location.pathname + '?kho=' + GH.repo;
+}
+
+// Đánh dấu có thay đổi → tự đẩy lên GitHub sau vài giây
+function markDirty(){
+  SY.dirty = true; saveSY(); updateSyncUI();
+  if (ghOn() && GH.auto && ghCanPush()){ clearTimeout(pushTimer); pushTimer = setTimeout(() => syncNow({ auto:true }), 4000); }
+}
+
+async function syncNow(o = {}){
+  if (!ghOn() || syncBusy) return;
+  if (!navigator.onLine){ setSync('offline', 'Sẽ tự đồng bộ khi có mạng.'); return; }
+  syncBusy = true; setSync('busy'); lastCheck = Date.now();
+  try {
+    const remote = await ghRemote(), hasLocal = bibleMeta.length > 0;
+    if (!remote){
+      if (ghCanPush() && hasLocal){ await ghPush(o.auto); setSync('ok', 'Đã tạo tệp dữ liệu trên GitHub.'); }
+      else setSync('ok', ghCanPush() ? 'Chưa có dữ liệu để đồng bộ.' : 'Trên GitHub chưa có dữ liệu.');
+    } else if (remote.sha === SY.sha){
+      if (SY.dirty && ghCanPush()){ await ghPush(o.auto); setSync('ok', 'Đã lưu lên GitHub.'); }
+      else setSync('ok', 'Nội dung đã là bản mới nhất.');
+    } else {
+      const conflict = ghCanPush() ? (SY.dirty || (!SY.sha && hasLocal)) : (!SY.sha && hasLocal);
+      if (!conflict){ await ghPull(remote.sha); setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); toast('Đã cập nhật nội dung mới'); }
+      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Bấm vào nhãn ở trên để chọn.'); }
+      else {
+        syncBusy = false;
+        const opts = [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)' }];
+        if (ghCanPush()) opts.unshift({ t:'⬆️ Giữ dữ liệu máy này (ghi đè GitHub)', cls:'primary' });
+        opts.push({ t:'Để sau' });
+        const c = await choose('Dữ liệu khác nhau', 'Nội dung trong máy và trên GitHub không giống nhau. Bạn muốn giữ bản nào?', opts);
+        const pick = opts[c] ? opts[c].t : '';
+        syncBusy = true; setSync('busy');
+        if (pick.startsWith('⬆️')){ await ghPush(false); setSync('ok', 'Đã ghi đè GitHub bằng dữ liệu máy này.'); }
+        else if (pick.startsWith('⬇️')){ await ghPull(remote.sha); setSync('ok', 'Đã lấy dữ liệu từ GitHub.'); toast('Đã cập nhật từ GitHub'); }
+        else setSync('conflict', 'Chưa chọn bản nào.');
+      }
+    }
+  } catch(e){ setSync('err', e.message || String(e)); }
+  finally { syncBusy = false; updateSyncUI(); if (!$('#admin').hidden) refreshStats(); }
+}
+
+/* --- Kết nối --- */
+function ghSay(m, ok){ const l = $('#ghLog'); l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+function fillGhFields(){
+  $('#ghToken').value = GH.token || ''; $('#ghRepo').value = GH.repo || '';
+  $('#ghBranch').value = GH.branch || ''; $('#ghPath').value = GH.path === DEFAULT_FILE ? '' : (GH.path || '');
+  $('#ghAuto').checked = GH.auto !== false;
+}
+async function ghConnect(){
+  const btn = $('#ghConnect'); btn.disabled = true; ghSay('Đang kiểm tra…', true);
+  try {
+    const token = $('#ghToken').value.trim(), repoIn = $('#ghRepo').value.trim();
+    const branch = $('#ghBranch').value.trim(), path = $('#ghPath').value.trim() || DEFAULT_FILE;
+    if (!token && !repoIn) throw new Error('Hãy nhập token (để lưu lên mạng) hoặc tên kho (để chỉ đọc).');
+    const old = { ...GH }; GH.token = token;             // dùng token mới cho các lệnh gọi bên dưới
+    let login = '';
+    try { if (token) login = (await ghJSON('/user')).login; } catch(e){ GH = old; throw e; }
+    let repo = normRepo(repoIn || (token ? DEFAULT_REPO_NAME : ''));
+    if (!repo.includes('/')){
+      if (!login){ GH = old; throw new Error('Hãy nhập đủ dạng "tên-người-dùng/tên-kho".'); }
+      repo = login + '/' + repo;
+    }
+    let info;
+    try { info = await ghJSON('/repos/' + repo); }
+    catch(e){
+      if (e.status === 404 && token && repo.split('/')[0].toLowerCase() === login.toLowerCase()){
+        const c = await choose('Tạo kho lưu trữ mới?', `Chưa có kho "${repo}" trên GitHub. App sẽ tạo giúp bạn.\n\nChọn kiểu kho:`, [
+          { t:'🔒 Riêng tư – chỉ mình tôi xem được (khuyên dùng)', cls:'primary' },
+          { t:'🌍 Công khai – ai có liên kết cũng đọc được' },
+          { t:'Hủy' }]);
+        if (c === 2){ GH = old; throw new Error('Đã hủy.'); }
+        info = await ghJSON('/user/repos', { method:'POST', body:JSON.stringify({ name:repo.split('/')[1], private:c === 0, auto_init:true, description:'Dữ liệu ứng dụng Kinh Thánh' }) });
+        repo = info.full_name;
+      } else { GH = old; throw e; }
+    }
+    GH = { repo, token, branch:branch || info.default_branch || 'main', path, auto:$('#ghAuto').checked };
+    saveGH();
+    const canWrite = !token || (info.permissions && info.permissions.push);
+    if (token && !canWrite){ GH.token = ''; saveGH(); ghSay('⚠ Token không có quyền ghi vào kho này nên máy chỉ ở chế độ đọc.', false); }
+    else ghSay('✔ Đã kết nối kho ' + repo + (token ? ' (đọc & ghi).' : ' (chỉ đọc).'), true);
+    fillGhFields(); setSync('off'); updateSyncUI();
+    syncBusy = false; await syncNow({});
+  } catch(e){ ghSay('✖ ' + e.message, false); }
+  btn.disabled = false;
+}
+$('#ghConnect').onclick = ghConnect;
+$('#ghSyncNow').onclick = () => { if (!ghOn()) return ghSay('Hãy bấm "Kết nối & kiểm tra" trước.', false); syncNow({}); };
+$('#ghDisconnect').onclick = () => {
+  if (!ghOn()) return;
+  if (!confirm('Ngắt kết nối GitHub? Dữ liệu trong máy vẫn được giữ nguyên.')) return;
+  GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0 };
+  saveGH(); saveSY(); fillGhFields(); setSync('off'); ghSay('Đã ngắt kết nối.', true);
+};
+$('#ghAuto').onchange = () => { GH.auto = $('#ghAuto').checked; saveGH(); if (GH.auto && SY.dirty) markDirty(); };
+$('#ghCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#ghShareUrl').value); toast('Đã chép liên kết'); } catch(e){ $('#ghShareUrl').select(); } };
+$('#syncBadge').onclick = () => syncNow({});
+$('#setSync').onclick = () => { show('#settings', false); syncNow({}); };
+
+// Tự kiểm tra nội dung mới khi mở lại app / có mạng trở lại
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ghOn() && Date.now() - lastCheck > 60000) syncNow({ auto:true }); });
+addEventListener('online', () => { if (ghOn()) syncNow({ auto:true }); });
+setInterval(() => { if (ghOn() && document.visibilityState === 'visible' && Date.now() - lastCheck > 300000) syncNow({ auto:true }); }, 60000);
+
+/* =========================================================
+ *  ĐĂNG NHẬP & TRANG QUẢN LÝ
+ * ========================================================= */
+const isAdmin = () => sessionStorage.getItem('kt.admin') === '1';
+function show(id, on = true){ $(id).hidden = !on; }
+
+$('#btnSettings').onclick = () => show('#settings');
+$('#closeSettings').onclick = () => show('#settings', false);
+$('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
+$('#btnAdmin').onclick = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#loginErr').textContent = '', setTimeout(() => $('#pw').focus(), 50)); };
+$('#loginCancel').onclick = () => show('#login', false);
+/*--AUTH-START--*/
+const PW_KEY = 'kt.pwhash';
+async function hashPw(p){
+  const s = 'kt-salt|' + p;
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle){
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return 'a' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+  } catch(e){}
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;                    // dự phòng khi không có crypto.subtle
+  for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 'b' + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+}
+// Chưa đổi mật khẩu → dùng ADMIN_PASSWORD; đã đổi → so với mật khẩu mới (lưu dạng băm). RECOVERY_CODE luôn vào được.
+async function checkPw(p){
+  p = String(p ?? '');
+  if (!p) return false;
+  if (RECOVERY_CODE && p === RECOVERY_CODE) return true;
+  let st = null; try { st = localStorage.getItem(PW_KEY); } catch(e){}
+  if (!st) return p === ADMIN_PASSWORD;
+  return (await hashPw(p)) === st;
+}
+/*--AUTH-END--*/
+function doLogin(){
+  sessionStorage.setItem('kt.admin', '1');
+  $('#pw').value = ''; $('#loginErr').textContent = '';
+  show('#login', false); openAdmin();
+}
+async function tryLogin(){ if (await checkPw($('#pw').value)) doLogin(); else $('#loginErr').textContent = 'Sai mật khẩu.'; }
+$('#loginGo').onclick = tryLogin;
+$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+// Gõ đúng mật khẩu là vào trang ngay, không cần bấm nút
+$('#pw').addEventListener('input', async () => {
+  const v = $('#pw').value; $('#loginErr').textContent = '';
+  if (v && await checkPw(v) && $('#pw').value === v) doLogin();
+});
+
+// Đổi mật khẩu
+function pwSay(m, ok){ const l = $('#pwLog'); l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+$('#pwChange').onclick = async () => {
+  const o = $('#pwOld').value, n = $('#pwNew').value, n2 = $('#pwNew2').value;
+  if (!(await checkPw(o))) return pwSay('Mật khẩu hiện tại không đúng.');
+  if (n.length < 4) return pwSay('Mật khẩu mới cần ít nhất 4 ký tự.');
+  if (n !== n2) return pwSay('Hai lần nhập mật khẩu mới chưa khớp.');
+  try { localStorage.setItem(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
+  $('#pwOld').value = $('#pwNew').value = $('#pwNew2').value = '';
+  pwSay('✔ Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.', true);
+};
+$('#pwReset').onclick = () => {
+  if (!confirm('Đưa mật khẩu về mật khẩu ban đầu trong mã nguồn?')) return;
+  try { localStorage.removeItem(PW_KEY); } catch(e){}
+  pwSay('Đã về mật khẩu ban đầu.', true);
+};
+$('#logout').onclick = () => { sessionStorage.removeItem('kt.admin'); show('#admin', false); show('#editor', false); toast('Đã đăng xuất'); };
+$('#adminClose').onclick = () => show('#admin', false);
+
+async function refreshStats(){
+  const metas = await dbAll('bookMeta');
+  $('#stBible').textContent = metas.length;
+  $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
+  $('#stSync').textContent = ghOn() ? 'Bật' : 'Tắt';
+}
+function openAdmin(){ if (!isAdmin()) return; fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
+async function reloadAll(){ await initBible(); await refreshStats(); }
+
+function setLog(msg, ok){ const l = $('#impLog'); l.textContent = msg; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+
+$('#fillSample').onclick = () => { $('#impText').value = SAMPLES[$('#impType').value]; };
+$('#pickFile').onclick = () => $('#impFile').click();
+$('#impFile').onchange = async e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  const texts = await Promise.all(files.map(f => f.text()));
+  $('#impText').value = texts.length === 1 ? texts[0] : texts.join('\n\n');
+  setLog(`Đã đọc ${files.length} tệp (${files.map(f => f.name).join(', ')}). Bấm "Nhập vào máy" để lưu.`, true);
+  e.target.value = '';
+};
+$('#doImport').onclick = async () => {
+  const btn = $('#doImport'); btn.disabled = true; setLog('Đang nhập…', true);
+  try {
+    const text = $('#impText').value, type = $('#impType').value, mode = $('#impMode').value;
+    if (mode === 'replace' && !confirm('Thay thế toàn bộ Kinh Thánh đang có trong máy?')){ btn.disabled = false; setLog('', true); return; }
+    const res = await importData(type, text, mode);
+    S.book = res.first; S.chapter = 1; saveS();
+    await reloadAll(); markDirty();
+    setLog('✔ Đã lưu: ' + res.msg + '. Đang mở nội dung mới…', true); $('#impText').value = '';
+    // Tự hiển thị nội dung vừa nạp ở trang chủ
+    setTimeout(() => { show('#admin', false); window.scrollTo(0, 0); toast('Đã nạp ' + res.msg); }, 900);
+  } catch(e){ setLog('✖ ' + e.message, false); }
+  btn.disabled = false;
+};
+$('#loadDemo').onclick = async () => {
+  await importBible(normBible(DEMO), 'merge');
+  S.book = 'Sách Mẫu'; S.chapter = 1; saveS();
+  await reloadAll(); markDirty(); toast('Đã nạp dữ liệu thử');
+};
+$('#clearBible').onclick = async () => {
+  if (!confirm('Xóa toàn bộ Kinh Thánh trong máy? Không thể hoàn tác.\n(Nếu đã bật GitHub, bản trên GitHub vẫn còn cho đến khi bạn đồng bộ.)')) return;
+  await dbClear('bookMeta'); await dbClear('books'); S.book = null; S.chapter = 1; saveS();
+  await reloadAll(); markDirty(); toast('Đã xóa Kinh Thánh trong máy');
+};
+$('#doExport').onclick = async () => {
+  try {
+    const payload = makePayload(await buildBooks());
+    const name = `sao-luu-kinhthanh-${new Date().toISOString().slice(0, 10)}.json`;
+    const file = new File([JSON.stringify(payload)], name, { type:'application/json' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){
+      try { await navigator.share({ files:[file] }); return; } catch(e){ if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch(e){ toast('Lỗi xuất tệp: ' + e.message); }
+};
+
+/* =========================================================
+ *  ĐỊNH DẠNG SÁCH IN + BỘ NHẬN DẠNG VĂN BẢN DÁN
+ *  Mô hình câu: { n, t, h?, p?, q? }
+ *    h = tiêu đề mục đứng trước câu · p = bắt đầu đoạn mới
+ *    q = mảng mức thụt của từng dòng thơ ([1] hoặc [1,2]...)
+ * ========================================================= */
+/*--PURE-START--*/
+const SUPMAP = { '⁰':0,'¹':1,'²':2,'³':3,'⁴':4,'⁵':5,'⁶':6,'⁷':7,'⁸':8,'⁹':9 };
+
+// Làm sạch văn bản dán; chữ số mũ (¹²³) → đánh dấu ⟦n⟧
+function cleanRaw(s){
+  s = String(s).replace(/\r\n?/g, '\n').replace(/[\u00A0\u2007\u202F]/g, ' ')
+       .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '').replace(/\t/g, ' ');
+  return s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => '⟦' + [...m].map(c => SUPMAP[c]).join('') + '⟧');
+}
+
+const isHeadLine = s => s.length <= 110 && /^\p{Lu}/u.test(s) && (/\([^()]*\)$/.test(s) || !/[.,;:!?…”"’')\]]$/.test(s));
+const isRefLine  = s => /^\(.{2,40}\)$/.test(s);
+// Chú thích [ … ] (không phải số câu như [3]): tự xuống dòng riêng, chữ nghiêng nhỏ hơn
+const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
+function richText(s){
+  return esc(s).replace(NOTE_RE, m => `<span class="note">${m}</span>`)
+               .replace(/\[(\d{1,3})\]/g, '<sup class="fnm">[$1]</sup>');
+}
+
+function markerOK(t, m){
+  const prev = t[m.index - 1], next = t[m.index + m[0].length];
+  if (prev !== undefined && !/[\s"“‘'«—–-]/.test(prev)) return false;
+  if (next !== undefined && /\d/.test(next)) return false;
+  return true;
+}
+// Tìm số câu theo THỨ TỰ (1,2,3…) để không nhầm với số trong lời văn (vd "40 ngày")
+function findMarkers(t, start, from){
+  const marks = []; let pos = from || 0, n = start;
+  const spans = []; t.replace(NOTE_RE, (s, i) => { spans.push([i, i + s.length]); return s; });
+  const inNote = i => spans.some(([a, b]) => i >= a && i < b);
+  for (;;){
+    let found = null;
+    for (let k = 0; k < 4 && !found; k++){          // cho phép nhảy qua câu bị thiếu
+      const re = /(?:\((\d{1,3})\)|(\d{1,3}))[.:]?/g; re.lastIndex = pos; let m;
+      while ((m = re.exec(t))){
+        if (+(m[1] || m[2]) === n + k && markerOK(t, m) && !inNote(m.index)){ found = { n:n + k, idx:m.index, end:m.index + m[0].length }; break; }
+      }
+    }
+    if (!found) break;
+    marks.push(found); pos = found.end; n = found.n + 1;
+  }
+  return marks;
+}
+
+// Tách phần văn bản giữa hai số câu: thân câu + tiêu đề (đứng cuối, trước câu kế) + cờ đoạn mới
+function splitSeg(seg, hasNext, poem, oneLine){
+  const endsBlank = /\n[ \t]*\n[ \t]*$/.test(seg), endsNL = /\n[ \t]*$/.test(seg);
+  const heads = [];
+  let lines = seg.split('\n').map(s => s.trim()).filter(l => {
+    if (/^#\s+/.test(l)){ heads.push(l.replace(/^#\s+/, '')); return false; }
+    return true;
+  });
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
+  if (hasNext && !heads.length){
+    let i = lines.length - 1, first = -1;
+    while (i > 0){
+      const ln = lines[i];
+      if (!ln || isRefLine(ln)){ i--; continue; }
+      if (isHeadLine(ln)){ first = i; i--; continue; }
+      break;
+    }
+    if (first > 0 && (!poem || lines[first - 1] === '')){
+      heads.push(lines.slice(first).filter(Boolean).join('\n'));
+      lines = lines.slice(0, first);
+    }
+  }
+  return { body: lines.filter(Boolean), h: heads.length ? heads.join('\n') : null, para: endsBlank || (endsNL && !oneLine) };
+}
+
+// Nhận dạng văn bản gốc → danh sách câu
+function detectVerses(raw, o){
+  o = o || {};
+  const startAt = o.startAt || 1;
+  let t = cleanRaw(raw);
+  const defs = [];                                   // dòng chú thích cuối: "[1] Ê-va, nghĩa là sự sống."
+  t = t.replace(/^[ \t]*\[(\d{1,3})\][ \t]+(\S.*)$/gm, (m, k, x) => { defs.push({ k, t:`[${k}] ${x.trim()}` }); return ''; }).trim();
+  if (!t) return [];
+  let marks = [];
+  if (/⟦\d/.test(t)){                                   // số câu dạng chỉ số mũ / <sup> từ trang gốc
+    const re = /⟦(\d{1,3})⟧[ \t]*/g; let m;
+    while ((m = re.exec(t))) marks.push({ n:+m[1], idx:m.index, end:m.index + m[0].length });
+    if (marks.length > 1 && marks[0].n >= marks[1].n) marks[0].n = startAt;   // số chương chữ lớn ở đầu
+  } else {                                              // số câu là chữ số thường
+    marks = findMarkers(t, startAt, 0);
+    if (!marks.length || marks[0].n > startAt){         // câu đầu không có số (thay bằng số chương)
+      const lead = t.match(/^\s*(\d{1,3})(?=\s)/);
+      const from = (lead && o.chapter && +lead[1] === +o.chapter && startAt === 1) ? lead[0].length : 0;
+      marks = [{ n:startAt, idx:from, end:from, implicit:true }, ...findMarkers(t, startAt + 1, from)];
+    }
+  }
+  const real = marks.filter((m, i) => i > 0 && !m.implicit);
+  const oneLine = real.length ? real.filter(m => t[m.idx - 1] === '\n').length / real.length >= 0.8 : true;
+
+  let pendH = null, pendP = false;
+  const pre = t.slice(0, marks[0].implicit ? 0 : marks[0].idx);
+  const hs = [];
+  pre.split('\n').map(s => s.trim()).filter(Boolean).forEach(l => {
+    if (/^#\s+/.test(l)) hs.push(l.replace(/^#\s+/, ''));
+    else if (/^\d{1,3}$/.test(l)) { /* số chương đứng riêng */ }
+    else if (isHeadLine(l) || isRefLine(l)) hs.push(l);
+  });
+  if (hs.length) pendH = hs.join('\n');
+
+  const vs = [];
+  marks.forEach((m, i) => {
+    const seg = t.slice(m.end, i + 1 < marks.length ? marks[i + 1].idx : t.length);
+    const r = splitSeg(seg, i + 1 < marks.length, o.poem, oneLine);
+    let txt, q = null;
+    if (o.poem && r.body.length){ txt = r.body.join('\n'); q = r.body.map(() => 1); }
+    else txt = r.body.join(' ').replace(/\s{2,}/g, ' ');
+    if (!txt && m.implicit){ if (r.h) pendH = r.h; return; }
+    const v = { n:m.n, t:txt };
+    if (q) v.q = q;
+    if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
+    vs.push(v); pendH = r.h; pendP = r.para;
+  });
+  // gắn chú thích vào câu có dấu [n] tương ứng (không thấy thì gắn vào câu cuối)
+  const taken = new Set();
+  defs.forEach(d => {
+    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && v.t.includes('[' + d.k + ']'));
+    if (idx < 0) idx = vs.length - 1;
+    if (idx < 0) return;
+    taken.add(d.k + ':' + idx);
+    (vs[idx].fn = vs[idx].fn || []).push(d.t);
+  });
+  return vs;
+}
+
+// Câu → văn bản soạn thảo (# tiêu đề · dòng trống = đoạn mới · > thơ)
+function serializeVerses(vs){
+  const out = [];
+  vs.forEach((v, i) => {
+    if (v.h){ if (out.length) out.push(''); v.h.split('\n').forEach(l => out.push('# ' + l)); }
+    else if (v.p && i > 0) out.push('');
+    if (Array.isArray(v.q) && v.q.length){
+      v.t.split('\n').forEach((ln, k) => {
+        const pre = '>'.repeat(Math.min(2, v.q[k] || 1));
+        out.push(k === 0 ? `${pre} ${v.n} ${ln}` : `${pre} ${ln}`);
+      });
+    } else out.push(`${v.n} ${v.t}`);
+    (v.fn || []).forEach(f => out.push(f));
+  });
+  return out.join('\n');
+}
+// Văn bản soạn thảo → câu
+function parseMarkup(text, startAt){
+  const vs = []; let pendH = null, pendP = false;
+  const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
+  for (const raw of String(text).replace(/\r\n?/g, '\n').split('\n')){
+    const line = raw.trim();
+    if (!line){ pendP = true; continue; }
+    let m = line.match(/^#\s+(.+)$/);
+    if (m){ pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
+    m = line.match(/^(>{1,2})\s*(.*)$/);
+    const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
+    const fm = !lvl && body.match(/^\[(\d{1,3})\]\s+(\S.*)$/);          // "[1] chú thích" → gắn vào câu liền trước
+    if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); continue; }
+    const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
+    const nn = nm ? +(nm[1] || nm[2]) : 0;
+    if (nm && accept(nn)){
+      const v = { n:nn, t:(nm[3] || '').trim() };
+      if (lvl) v.q = [lvl];
+      if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
+      pendH = null; pendP = false; vs.push(v);
+    } else if (!lvl && (isHeadLine(body) || isRefLine(body)) && ((pendH !== null && !pendP) || !vs.length)){
+      pendH = pendH ? pendH + '\n' + body : body;
+    } else if (vs.length){
+      const v = vs[vs.length - 1];
+      if (lvl){ if (!v.q) v.q = [1]; v.t = v.t ? v.t + '\n' + body : body; v.q.push(lvl); }
+      else v.t = v.t ? v.t + ' ' + body : body;
+    } else {
+      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; pendH = null; pendP = false; vs.push(v);
+    }
+  }
+  return vs;
+}
+function checkVerses(vs){
+  const w = [], miss = [], dup = [];
+  for (let i = 1; i < vs.length; i++){
+    const a = vs[i - 1].n, b = vs[i].n;
+    if (b === a) dup.push(b); else for (let k = a + 1; k < b; k++) miss.push(k);
+  }
+  if (vs.length && vs[0].n !== 1) w.push('Bắt đầu từ câu ' + vs[0].n);
+  if (miss.length) w.push('Thiếu câu: ' + miss.slice(0, 12).join(', ') + (miss.length > 12 ? '…' : ''));
+  if (dup.length) w.push('Trùng số câu: ' + dup.join(', '));
+  vs.forEach(v => { if (!v.t.trim()) w.push('Câu ' + v.n + ' rỗng'); });
+  return w;
+}
+
+// Dựng HTML: "print" = đoạn liền, số câu nhỏ, số chương chữ lớn như sách giấy; "verse" = mỗi câu một dòng
+function secHTML(h){
+  const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
+  const isRef = l => /^\([^()]*\)$/.test(l);
+  const multi = ls.filter(l => !isRef(l)).length > 1;        // nhiều dòng: dòng đầu = mục lớn, các dòng sau = tiểu mục
+  let k = 0;
+  return '<div class="hd">' + ls.map(l => {
+    if (isRef(l)) return `<div class="ref1">${esc(l)}</div>`;
+    const big = !multi || k === 0; k++;                      // tiêu đề một dòng = mục lớn
+    const tag = big ? 'h3' : 'h4', cls = big ? 'sec' : 'sec2';
+    const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
+    return m && m[1] ? `<${tag} class="${cls}">${esc(m[1])}<span class="ref">${esc(m[2])}</span></${tag}>`
+                     : `<${tag} class="${cls}">${esc(l)}</${tag}>`;
+  }).join('') + '</div>';
+}
+function paperHTML(book, ch, verses, view, idp){
+  idp = idp || 'v';
+  const print = view !== 'verse';
+  let out = `<div class="chhead"><div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
+  if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
+  let cur = null;
+  const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
+  verses.forEach((v, i) => {
+    const isPoem = Array.isArray(v.q) && v.q.length;
+    if (v.h){ close(); out += secHTML(v.h); }
+    const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
+    const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
+    const num = `<sup class="vn">${v.n}</sup>`;
+    const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
+    if (!print){
+      close();
+      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).map(f => `<div class="fn">${esc(f)}</div>`).join('');
+      return;
+    }
+    const want = isPoem ? 'q' : 'p';
+    if (!cur || cur !== want || v.p){ close(); cur = want; out += want === 'p' ? '<p class="para">' : '<div class="poem">'; }
+    if (isPoem){
+      out += `<span ${attrs}>` + v.t.split('\n').map((ln, k) =>
+        `<span class="pl q${v.q[k] || 1}">${k === 0 ? dc + num : ''}${richText(ln)}</span>`).join('') + '</span>';
+    } else out += `<span ${attrs}>${dc}${num}${richText(v.t)}</span> `;
+  });
+  close();
+  if (print){
+    const fns = verses.flatMap(v => v.fn || []);
+    if (fns.length) out += `<div class="fns">${fns.map(f => `<div class="fn">${esc(f)}</div>`).join('')}</div>`;
+  }
+  return out;
+}
+/*--PURE-END--*/
+
+/* Kiểu hiển thị (Sách in / Từng câu) */
+function applyView(){ $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view)); }
+$$('#viewSeg button').forEach(b => b.onclick = () => {
+  S.view = b.dataset.v; saveS(); applyView();
+  if (curBook){ const y = window.scrollY; renderChapter(); window.scrollTo(0, y); }
+});
+
+/* Dán từ trang web: chuyển HTML → văn bản có đánh dấu số câu (<sup>, class verse-num…) và tiêu đề (h1–h6) */
+function htmlToMarked(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const BLOCK = new Set(['P','DIV','LI','TR','BLOCKQUOTE','SECTION','ARTICLE','UL','OL','TABLE']);
+  let out = '';
+  (function walk(n){
+    if (n.nodeType === 3){ out += n.nodeValue.replace(/\s+/g, ' '); return; }
+    if (n.nodeType !== 1) return;
+    const tag = n.tagName, cls = String(n.getAttribute('class') || '');
+    if (/^(SCRIPT|STYLE|NOSCRIPT|HEAD)$/.test(tag)) return;
+    const txt = n.textContent.trim();
+    const numLike = tag === 'SUP' || /verse-?num|versenum|vnum|v-num|chapter-?num|chapternum|drop-?cap/i.test(cls) ||
+      (tag === 'SPAN' && /(^|\s)label(\s|$)/.test(cls) && n.parentElement && /\bverse\b/.test(n.parentElement.getAttribute('class') || ''));
+    if (numLike){
+      if (/^\[?\d{1,3}\]?$/.test(txt)){ out += '⟦' + txt.replace(/\D/g, '') + '⟧'; return; }
+      if (tag === 'SUP') return;                      // chú thích, dấu tham chiếu: bỏ
+    }
+    if (/^H[1-6]$/.test(tag)){ out += '\n# ' + txt.replace(/\s+/g, ' ') + '\n'; return; }
+    if (tag === 'BR'){ out += '\n'; return; }
+    const blk = BLOCK.has(tag);
+    if (blk) out += '\n';
+    n.childNodes.forEach(walk);
+    if (blk) out += tag === 'P' ? '\n\n' : '\n';
+  })(doc.body);
+  return out.replace(/[ \t]*\n[ \t]*/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/* =========================================================
+ *  TRÌNH SOẠN THẢO (giao diện) – TỰ ĐỘNG LƯU
+ *  Gõ / dán xong khoảng 2 giây là tự lưu vào máy, hiện ngay
+ *  ở trang chủ và tự đẩy lên GitHub (nếu đã kết nối).
+ * ========================================================= */
+const ed = {};
+['Book','Abbr','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
+let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
+const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
+
+function edRefresh(){
+  const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+  const name = ed.Book.value.trim() || 'Tên sách', ch = parseInt(ed.Chap.value, 10) || 1;
+  ed.Preview.className = 'reader paper' + (S.view !== 'verse' ? ' print' : '');
+  ed.Preview.innerHTML = vs.length ? paperHTML(name, ch, vs, S.view, 'pv')
+    : '<div class="empty"><b>Chưa có nội dung</b>Dán văn bản chương vào ô soạn thảo.</div>';
+  const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
+  ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
+  ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
+  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) localStorage.setItem(draftKey(), ed.Text.value); } catch(e){}
+}
+const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
+
+// Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
+async function persistChapter(name, ch, vs, abbr){
+  const rec = (await dbGet('books', name)) || { name, chapters:[] };
+  while (rec.chapters.length < ch) rec.chapters.push([]);
+  rec.chapters[ch - 1] = vs;
+  const metas = await dbAll('bookMeta');
+  let meta = metas.find(m => m.name === name);
+  if (!meta) meta = { name, order: metas.reduce((a, m) => Math.max(a, m.order), 0) + 1 };
+  meta.abbr = abbr || meta.abbr || ''; meta.chapterCount = rec.chapters.length;
+  await dbPut('books', [rec]); await dbPut('bookMeta', [meta]);
+  S.book = name; S.chapter = ch; saveS();
+  await initBible(); await refreshStats(); markDirty();
+}
+// Tự lưu (chạy ngầm, không hỏi)
+async function edAuto(){
+  clearTimeout(edAutoTimer);
+  const { name, ch } = edCur; if (!name || !(ch >= 1)) return;
+  const text = ed.Text.value; if (!text.trim() || text === edLoaded) return;
+  const vs = parseMarkup(text, +ed.Start.value || 1); if (!vs.length) return;
+  try {
+    const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
+    await persistChapter(name, ch, vs, abbr);
+    edLoaded = text;
+    try { localStorage.removeItem(draftKey()); } catch(e){}
+    const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch(e){ ed.Auto.textContent = ''; toast('Lỗi tự lưu: ' + e.message); }
+}
+
+async function edLoad(){
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  edCur = { name, ch: ch >= 1 ? ch : 0 }; ed.Auto.textContent = '';
+  if (!name || !(ch >= 1)){ ed.Text.value = ''; edLoaded = ''; return edRefresh(); }
+  const rec = await dbGet('books', name);
+  const meta = bibleMeta.find(m => m.name === name);
+  if (meta && !ed.Abbr.value) ed.Abbr.value = meta.abbr || '';
+  edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
+  let txt = edLoaded;
+  try {
+    const d = localStorage.getItem(draftKey());
+    if (d && d !== edLoaded){ txt = d; toast('Đã khôi phục bản nháp chưa lưu'); }
+  } catch(e){}
+  ed.Text.value = txt; edRefresh();
+  if (txt !== edLoaded) edAutoTimer = setTimeout(edAuto, 1200);
+}
+function openEditor(){
+  if (!isAdmin()) return;
+  $('#bookList').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">`).join('');
+  if (!ed.Book.value){ ed.Book.value = S.book || ''; ed.Chap.value = S.book ? S.chapter : 1; }
+  show('#editor'); edLoad();
+}
+$('#openEditor').onclick = openEditor;
+$('#edClose').onclick = async () => { await edAuto(); show('#editor', false); };
+
+// Dán: tự nhận dạng số câu / tiêu đề / đoạn / thơ
+ed.Text.addEventListener('paste', e => {
+  const cd = e.clipboardData; if (!cd) return;
+  let raw = cd.getData('text/plain') || '';
+  const html = cd.getData('text/html');
+  if (html){ try { const c = htmlToMarked(html); if (/⟦\d/.test(c) || /^# /m.test(c)) raw = c; } catch(err){} }
+  if (/^>{1,2}\s/m.test(raw)) return;                              // đã là định dạng của trình soạn thảo
+  const vs = detectVerses(raw, { startAt:+ed.Start.value || 1, chapter:parseInt(ed.Chap.value, 10) || 0, poem:ed.Poem.value === '1' });
+  if (vs.length < 2) return;                                        // dán thường
+  e.preventDefault();
+  const txt = serializeVerses(vs), t = ed.Text;
+  const s = t.selectionStart, en = t.selectionEnd;
+  const whole = !t.value.trim() || (s === 0 && en === t.value.length);
+  if (whole) t.value = txt;
+  else t.setRangeText((s > 0 && t.value[s - 1] !== '\n' ? '\n' : '') + txt + '\n', s, en, 'end');
+  toast(`Đã nhận dạng ${vs.length} câu`); edRefresh(); edQueue();
+});
+
+// Thanh công cụ
+function edLines(fn){
+  const t = ed.Text, v = t.value, s = t.selectionStart, e = t.selectionEnd;
+  const a = s === 0 ? 0 : v.lastIndexOf('\n', s - 1) + 1;
+  let b = v.indexOf('\n', e); if (b < 0) b = v.length;
+  const out = v.slice(a, b).split('\n').map(fn).join('\n');
+  t.value = v.slice(0, a) + out + v.slice(b);
+  t.setSelectionRange(a, a + out.length); t.focus(); edQueue();
+}
+const stripPre = l => l.replace(/^(#\s?|>{1,2}\s?)/, '');
+$('#edH').onclick  = () => edLines(l => /^#\s/.test(l) ? stripPre(l) : '# ' + stripPre(l));
+$('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' + stripPre(l));
+$('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
+$('#edPara').onclick = () => edLines((l, i) => i === 0 ? '\n' + l : l);
+$('#edNorm').onclick = () => { ed.Text.value = serializeVerses(parseMarkup(ed.Text.value, +ed.Start.value || 1)); edRefresh(); edQueue(); };
+$('#edClear').onclick = () => { if (confirm('Xóa toàn bộ nội dung trong ô soạn thảo?')){ ed.Text.value = ''; edRefresh(); } };
+
+ed.Text.addEventListener('input', edQueue);
+ed.Start.addEventListener('input', edQueue);
+ed.Book.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
+ed.Chap.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
+ed.Poem.onchange = edQueue;
+// Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
+ed.Chap.onchange = async () => { await edAuto(); edLoad(); };
+ed.Book.onchange = async () => { await edAuto(); ed.Abbr.value = (bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}).abbr || ''; edLoad(); };
+$('#edPrev').onclick = async () => { await edAuto(); ed.Chap.value = Math.max(1, (parseInt(ed.Chap.value, 10) || 1) - 1); edLoad(); };
+$('#edNext').onclick = async () => { await edAuto(); ed.Chap.value = (parseInt(ed.Chap.value, 10) || 0) + 1; edLoad(); };
+$$('#edSeg button').forEach(b => b.onclick = () => {
+  $$('#edSeg button').forEach(x => x.classList.toggle('on', x === b));
+  $('#paneEdit').classList.toggle('on', b.dataset.p === 'edit');
+  $('#paneView').classList.toggle('on', b.dataset.p === 'view');
+});
+
+// Nút Lưu (chuẩn hóa văn bản + báo cảnh báo nếu có)
+async function edSave(goNext){
+  clearTimeout(edAutoTimer);
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  if (!name) return toast('Hãy nhập tên sách');
+  if (!(ch >= 1)) return toast('Số chương không hợp lệ');
+  if (edCur.name !== name || edCur.ch !== ch) edCur = { name, ch };
+  const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+  if (!vs.length) return toast('Chưa có câu nào để lưu');
+  const w = checkVerses(vs);
+  if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
+  try {
+    await persistChapter(name, ch, vs, ed.Abbr.value.trim());
+    try { localStorage.removeItem(draftKey()); } catch(e){}
+    edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
+    toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
+    if (goNext){ ed.Chap.value = ch + 1; await edLoad(); ed.Text.focus(); } else edRefresh();
+  } catch(e){ toast('Lỗi khi lưu: ' + e.message); }
+}
+$('#edSave').onclick = () => edSave(false);
+$('#edSaveNext').onclick = () => edSave(true);
+$('#edView').onclick = async () => {
+  await edAuto();
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  if (!bibleMeta.some(m => m.name === name)) return toast('Chương này chưa được lưu');
+  show('#editor', false); show('#admin', false); await openBook(name, ch);
+};
+$('#edDel').onclick = async () => {
+  clearTimeout(edAutoTimer);
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  const rec = await dbGet('books', name);
+  if (!rec || !rec.chapters[ch - 1] || !rec.chapters[ch - 1].length) return toast('Chương này chưa có dữ liệu');
+  if (!confirm(`Xóa ${name} ${ch} khỏi máy? Không thể hoàn tác.`)) return;
+  rec.chapters[ch - 1] = [];
+  while (rec.chapters.length && !rec.chapters[rec.chapters.length - 1].length) rec.chapters.pop();
+  if (!rec.chapters.length){ await dbDel('books', name); await dbDel('bookMeta', name); }
+  else {
+    await dbPut('books', [rec]);
+    const meta = (await dbAll('bookMeta')).find(m => m.name === name);
+    if (meta){ meta.chapterCount = rec.chapters.length; await dbPut('bookMeta', [meta]); }
+  }
+  try { localStorage.removeItem(draftKey()); } catch(e){}
+  await initBible(); await refreshStats(); markDirty(); await edLoad(); toast('Đã xóa chương');
+};
+// Tránh mất chữ khi đóng/khóa màn hình: lưu ngay khi app bị ẩn
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !$('#editor').hidden) edAuto(); });
+
+/* ============ CÀI ĐẶT HIỂN THỊ ============ */
+$$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
+$('#fsRange').oninput = e => { S.fs = +e.target.value; saveS(); applyFs(); };
+let wakeLock = null;
+async function setWake(on){
+  try {
+    if (on){ if (!('wakeLock' in navigator)) throw 0; wakeLock = await navigator.wakeLock.request('screen'); }
+    else if (wakeLock){ await wakeLock.release(); wakeLock = null; }
+  } catch(e){ toast('Thiết bị không hỗ trợ giữ sáng màn hình'); S.wake = false; saveS(); }
+  $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
+}
+$$('#wakeSeg button').forEach(b => b.onclick = () => { S.wake = b.dataset.v === '1'; saveS(); setWake(S.wake); });
+document.addEventListener('visibilitychange', () => { if (S.wake && document.visibilityState === 'visible') setWake(true); });
+
+/* ============ OFFLINE: Service Worker, manifest, biểu tượng ============ */
+function makeIcon(size){
+  const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
+  x.fillStyle = '#3b2a1a'; x.fillRect(0, 0, size, size);
+  x.fillStyle = '#e8c675';
+  const w = size * 0.12, h = size * 0.56;
+  x.fillRect(size / 2 - w / 2, size * 0.2, w, h);                 // thân thập giá
+  x.fillRect(size / 2 - h * 0.32, size * 0.34, h * 0.64, w);      // thanh ngang
+  return c.toDataURL('image/png');
+}
+function setupPWA(){
+  const icon180 = makeIcon(180);
+  const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = icon180; document.head.appendChild(link);
+  try {
+    const manifest = {
+      name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
+      start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
+      background_color:'#f7f3ea', theme_color:'#fffdf8',
+      icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
+    };
+    const m = document.createElement('link'); m.rel = 'manifest';
+    m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
+    document.head.appendChild(m);
+  } catch(e){}
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.storage?.persist?.().catch(() => {});   // xin trình duyệt không tự xóa dữ liệu
+}
+function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
+addEventListener('online', updateOnline); addEventListener('offline', updateOnline);
+
+/* ============ KHỞI ĐỘNG ============ */
+(async function init(){
+  applyTheme(); applyFs(); applyView(); updateOnline();
+  $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
+  setupPWA();
+  // Liên kết chia sẻ: ?kho=ten-nguoi-dung/ten-kho → tự kết nối ở chế độ chỉ đọc
+  try {
+    const k = normRepo(new URLSearchParams(location.search).get('kho'));
+    if (k.includes('/') && !GH.repo){ GH = { repo:k, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
+    if (k) history.replaceState(null, '', location.pathname);
+  } catch(e){}
+  try { db = await openDB(); await reloadAll(); }
+  catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
+  updateSyncUI();
+  if (ghOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên GitHub
+})();
+</script>
+</body>
+</html>
