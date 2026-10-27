@@ -225,6 +225,41 @@ details a{color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
   background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
+/* ===== Trang cài đặt ===== */
+#settings .sheet{max-width:520px;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:var(--bg)}
+.sgrab{width:38px;height:4px;border-radius:99px;background:var(--line);margin:4px auto 10px}
+.shead{display:flex;align-items:center;justify-content:space-between;margin:0 2px 4px}
+.shead h3{margin:0;font-family:var(--serif);font-size:22px;letter-spacing:.01em}
+.sdone{border:0;background:none;color:var(--accent);font-weight:700;font-size:16px;padding:8px 6px}
+.slabel{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 6px 6px}
+.sgroup{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}
+.srow+.srow{border-top:1px solid var(--line)}
+.srow.col{flex-direction:column;align-items:stretch;gap:8px}
+.srow.col .stxt{display:flex;justify-content:space-between;align-items:baseline}
+.stxt{min-width:0}
+.stxt b{display:block;font-size:15px;font-weight:600}
+.stxt span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.srow .seg{flex:none}
+.srow .seg button{padding:7px 11px;font-size:13px}
+.fsline{display:flex;align-items:center;gap:10px}
+.fsline input{flex:1;accent-color:var(--accent)}
+.fsa{font-family:var(--serif);color:var(--muted);line-height:1}
+.fsa.s{font-size:13px}.fsa.l{font-size:24px}
+#settings .preview{margin:0;border-radius:10px;background:var(--bg);line-height:1.5}
+.about{padding:14px}
+.abhead{display:flex;align-items:center;gap:12px}
+.abicon{width:48px;height:48px;border-radius:12px;background:#3b2a1a;color:#e8c675;display:flex;align-items:center;justify-content:center;flex:none}
+.abname{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.2}
+.absub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.abtxt{font-size:13.5px;line-height:1.6;margin:12px 0 8px;color:var(--fg)}
+.abfeat{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.5;color:var(--muted)}
+.abfeat li{position:relative;padding:3px 0 3px 16px}
+.abfeat li::before{content:'';position:absolute;left:3px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.abfeat b{color:var(--fg);font-weight:600}
+.abver{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
+.adminlink{display:flex;align-items:center;gap:5px;margin:16px auto 0;border:0;background:none;color:var(--muted);opacity:.65;font-size:11px;letter-spacing:.04em;padding:6px 12px}
+.adminlink:active{opacity:1}
 /* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
 .reader .v{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .v.bm{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
@@ -303,27 +338,46 @@ details a{color:var(--accent)}
 <!-- CÀI ĐẶT -->
 <div class="overlay" id="settings" hidden>
   <div class="sheet">
-    <h3>Cài đặt hiển thị</h3>
-    <div class="row"><b>Giao diện</b>
-      <div class="seg" id="themeSeg">
-        <button data-v="auto">Tự động</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button>
+    <div class="sgrab"></div>
+    <div class="shead"><h3>Cài đặt</h3><button class="sdone" id="closeSettings">Xong</button></div>
+
+    <div class="slabel">Giao diện đọc</div>
+    <div class="sgroup">
+      <div class="srow"><div class="stxt"><b>Chế độ màu</b><span>Sáng, tối hoặc theo thiết bị</span></div>
+        <div class="seg" id="themeSeg">
+          <button data-v="auto">Tự động</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button>
+        </div>
+      </div>
+      <div class="srow col">
+        <div class="stxt"><b>Cỡ chữ</b><span><span id="fsVal"></span> px</span></div>
+        <div class="fsline"><span class="fsa s">A</span><input type="range" id="fsRange" min="14" max="36" step="1" aria-label="Cỡ chữ"><span class="fsa l">A</span></div>
+        <div class="preview">Xem trước cỡ chữ khi đọc Kinh Thánh.</div>
+      </div>
+      <div class="srow"><div class="stxt"><b>Kiểu hiển thị</b><span>Trang sách hoặc từng câu một dòng</span></div>
+        <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
+      </div>
+      <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Không tự tắt khi đang đọc</span></div>
+        <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
     </div>
-    <div>
-      <b>Cỡ chữ: <span id="fsVal"></span>px</b>
-      <input type="range" id="fsRange" min="14" max="36" step="1">
+
+    <div class="slabel">Giới thiệu</div>
+    <div class="sgroup about">
+      <div class="abhead">
+        <div class="abicon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></svg></div>
+        <div><div class="abname">Kinh Thánh</div><div class="absub">Ứng dụng đọc Kinh Thánh tiếng Việt</div></div>
+      </div>
+      <p class="abtxt">Giao diện trang sách in, yên tĩnh và dễ đọc. Nội dung được lưu ngay trên thiết bị nên đọc được cả khi không có mạng.</p>
+      <ul class="abfeat">
+        <li><b>Tìm kiếm</b> toàn bộ Kinh Thánh, gõ không dấu cũng được</li>
+        <li><b>Đánh dấu</b> nơi đọc dở bằng cách chạm giữ một câu</li>
+        <li><b>Lật trang</b> bằng cách vuốt sang trái hoặc phải</li>
+        <li><b>Đồng bộ</b> nội dung qua GitHub giữa các thiết bị</li>
+      </ul>
+      <div id="verTag" class="abver"></div>
     </div>
-    <div class="row"><b>Kiểu hiển thị Kinh Thánh</b>
-      <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
-    </div>
-    <div class="row"><b>Giữ màn hình sáng</b>
-      <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
-    </div>
-    <div class="btns">
-      <button class="btn" id="btnAdmin">🔒 Quản lý dữ liệu</button>
-      <button class="btn primary" id="closeSettings" style="margin-left:auto">Xong</button>
-    </div>
-    <div id="verTag" style="font-size:12px;color:var(--muted);text-align:center;margin-top:14px"></div>
+
+    <button class="adminlink" id="btnAdmin" aria-label="Đăng nhập quản trị viên"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Quản trị viên</button>
   </div>
 </div>
 
@@ -537,7 +591,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.27-i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
