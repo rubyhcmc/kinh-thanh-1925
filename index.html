@@ -330,6 +330,8 @@ details a{color:var(--accent)}
       <div id="ghShare" hidden>
         <label class="lbl">Liên kết cho người đọc (máy khác mở là tự nhận nội dung)</label>
         <div style="display:flex;gap:8px"><input type="text" id="ghShareUrl" readonly><button class="btn" id="ghCopy">Chép</button></div>
+        <p class="hint" style="margin-top:8px">Kho Riêng tư (iPhone/máy khác): bấm nút dưới để chép "mã kết nối" (chứa token – đừng gửi cho người lạ), sang máy kia dán vào ô "Mã token" rồi bấm Kết nối.</p>
+        <button class="btn" id="ghCode">🔑 Chép mã kết nối</button>
         <p class="hint" style="margin-top:6px">Chỉ dùng được khi kho ở chế độ Công khai. Kho Riêng tư cần nhập token trên từng máy.</p>
       </div>
       <details>
@@ -859,7 +861,7 @@ function normRepo(s){
   return p.length >= 2 ? p[0] + '/' + p[1] : (p[0] || '');
 }
 const ghFile = () => (GH.path || DEFAULT_FILE).split('/').map(encodeURIComponent).join('/');
-const ghRef = () => GH.branch ? '?ref=' + encodeURIComponent(GH.branch) : '';
+const ghRef = noRef => '?' + (GH.branch && !noRef ? 'ref=' + encodeURIComponent(GH.branch) + '&' : '') + '_=' + Date.now();   // _ = chống cache cũ (iPhone/Service Worker)
 
 function ghMsg(s, m){
   if (s === 401) return 'Token sai hoặc đã hết hạn. Hãy tạo token mới.';
@@ -883,16 +885,22 @@ async function ghReq(path, o = {}){
 }
 const ghJSON = async (p, o) => (await ghReq(p, o)).json();
 
-// Lấy mã nhận dạng (sha) của tệp dữ liệu trên GitHub; null nếu chưa có
+// Lấy mã nhận dạng (sha) của tệp dữ liệu trên GitHub; null nếu kho có nhưng chưa có tệp
 async function ghRemote(){
-  const p = GH.path || DEFAULT_FILE, i = p.lastIndexOf('/');
-  const dir = i >= 0 ? p.slice(0, i) : '', name = p.slice(i + 1);
-  const dp = dir ? '/' + dir.split('/').map(encodeURIComponent).join('/') : '';
   try {
-    const list = await ghJSON(`/repos/${GH.repo}/contents${dp}${ghRef()}`);
-    const f = Array.isArray(list) ? list.find(x => x.name === name && x.type === 'file') : null;
-    return f ? { sha:f.sha } : null;
-  } catch(e){ if (e.status === 404) return null; throw e; }
+    const j = await ghJSON(`/repos/${GH.repo}/contents/${ghFile()}${ghRef()}`);
+    return (j && !Array.isArray(j) && j.sha) ? { sha:j.sha } : null;
+  } catch(e){
+    if (e.status !== 404) throw e;
+    try { await ghJSON(`/repos/${GH.repo}${ghRef(true)}`); return null; }       // kho có thật, chỉ chưa có tệp dữ liệu
+    catch(e2){
+      if (e2.status !== 404) throw e2;
+      const err = new Error(GH.token
+        ? `Không tìm thấy kho "${GH.repo}". Hãy kiểm tra lại tên kho.`
+        : `Không đọc được kho "${GH.repo}". Nếu kho ở chế độ Riêng tư, máy này cần nhập token (Quản lý dữ liệu → mục 2), hoặc dán "mã kết nối" từ máy đã cài.`);
+      err.status = 404; throw err;
+    }
+  }
 }
 function toB64(str){
   const b = new TextEncoder().encode(str); let s = '';
@@ -925,7 +933,15 @@ async function ghPush(auto){
   const body = { message:'Cập nhật Kinh Thánh ' + new Date().toLocaleString('vi-VN'), content:toB64(JSON.stringify(makePayload(books))) };
   if (GH.branch) body.branch = GH.branch;
   if (remote) body.sha = remote.sha;
-  const r = await ghJSON(`/repos/${GH.repo}/contents/${ghFile()}`, { method:'PUT', body:JSON.stringify(body) });
+  const put = () => ghJSON(`/repos/${GH.repo}/contents/${ghFile()}`, { method:'PUT', body:JSON.stringify(body) });
+  let r;
+  try { r = await put(); }
+  catch(e){
+    if (e.status !== 409 && e.status !== 422) throw e;
+    const rm = await ghRemote();                       // mã cũ bị lệch → lấy mã mới nhất rồi ghi lại một lần
+    if (rm) body.sha = rm.sha; else delete body.sha;
+    r = await put();
+  }
   SY = { sha:r.content.sha, dirty:false, at:Date.now() }; saveSY();
 }
 
@@ -968,7 +984,7 @@ async function syncNow(o = {}){
     } else {
       const conflict = ghCanPush() ? (SY.dirty || (!SY.sha && hasLocal)) : (!SY.sha && hasLocal);
       if (!conflict){ await ghPull(remote.sha); setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); toast('Đã cập nhật nội dung mới'); }
-      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Bấm vào nhãn ở trên để chọn.'); }
+      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Bấm vào nhãn ở trên để chọn.'); toast('Dữ liệu máy này và GitHub khác nhau – bấm biểu tượng đám mây để chọn bản giữ lại'); }
       else {
         syncBusy = false;
         const opts = [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)' }];
@@ -982,12 +998,17 @@ async function syncNow(o = {}){
         else setSync('conflict', 'Chưa chọn bản nào.');
       }
     }
-  } catch(e){ setSync('err', e.message || String(e)); }
+  } catch(e){ setSync('err', e.message || String(e)); if (!o.auto) toast('Đồng bộ lỗi: ' + (e.message || e)); }
   finally { syncBusy = false; updateSyncUI(); if (!$('#admin').hidden) refreshStats(); }
 }
 
 /* --- Kết nối --- */
 function ghSay(m, ok){ const l = $('#ghLog'); l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+const b64u = s => btoa(unescape(encodeURIComponent(s)));
+function decodeCode(s){
+  s = String(s || '').trim(); if (!s.startsWith('KT1:')) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(s.slice(4))))); } catch(e){ return null; }
+}
 function fillGhFields(){
   $('#ghToken').value = GH.token || ''; $('#ghRepo').value = GH.repo || '';
   $('#ghBranch').value = GH.branch || ''; $('#ghPath').value = GH.path === DEFAULT_FILE ? '' : (GH.path || '');
@@ -996,6 +1017,8 @@ function fillGhFields(){
 async function ghConnect(){
   const btn = $('#ghConnect'); btn.disabled = true; ghSay('Đang kiểm tra…', true);
   try {
+    const code = decodeCode($('#ghToken').value) || decodeCode($('#ghRepo').value);   // dán "mã kết nối" từ máy khác
+    if (code){ $('#ghToken').value = code.t || ''; $('#ghRepo').value = code.r || ''; $('#ghBranch').value = code.b || ''; $('#ghPath').value = (code.p && code.p !== DEFAULT_FILE) ? code.p : ''; }
     const token = $('#ghToken').value.trim(), repoIn = $('#ghRepo').value.trim();
     const branch = $('#ghBranch').value.trim(), path = $('#ghPath').value.trim() || DEFAULT_FILE;
     if (!token && !repoIn) throw new Error('Hãy nhập token (để lưu lên mạng) hoặc tên kho (để chỉ đọc).');
@@ -1040,6 +1063,12 @@ $('#ghDisconnect').onclick = () => {
 };
 $('#ghAuto').onchange = () => { GH.auto = $('#ghAuto').checked; saveGH(); if (GH.auto && SY.dirty) markDirty(); };
 $('#ghCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#ghShareUrl').value); toast('Đã chép liên kết'); } catch(e){ $('#ghShareUrl').select(); } };
+$('#ghCode').onclick = async () => {
+  if (!ghOn()) return ghSay('Hãy kết nối GitHub trước.', false);
+  const code = 'KT1:' + b64u(JSON.stringify({ r:GH.repo, t:GH.token, b:GH.branch, p:GH.path }));
+  try { await navigator.clipboard.writeText(code); toast('Đã chép mã kết nối. Trên máy kia dán vào ô "Mã token" rồi bấm Kết nối.'); }
+  catch(e){ prompt('Sao chép mã kết nối:', code); }
+};
 $('#syncBadge').onclick = () => syncNow({});
 $('#setSync').onclick = () => { show('#settings', false); syncNow({}); };
 
