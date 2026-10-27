@@ -242,6 +242,10 @@ details a{color:var(--accent)}
 .stxt span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .srow .seg{flex:none}
 .srow .seg button{padding:7px 11px;font-size:13px}
+.fgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px}
+.fld span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.fld select{height:42px;padding:0 28px 0 12px;-webkit-appearance:none;appearance:none;
+  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center}
 .fsline{display:flex;align-items:center;gap:10px}
 .fsline input{flex:1;accent-color:var(--accent)}
 .fsa{font-family:var(--serif);color:var(--muted);line-height:1}
@@ -349,9 +353,11 @@ details a{color:var(--accent)}
         </div>
       </div>
       <div class="srow col">
-        <div class="stxt"><b>Cỡ chữ</b><span><span id="fsVal"></span> px</span></div>
-        <div class="fsline"><span class="fsa s">A</span><input type="range" id="fsRange" min="14" max="36" step="1" aria-label="Cỡ chữ"><span class="fsa l">A</span></div>
-        <div class="preview">Xem trước cỡ chữ khi đọc Kinh Thánh.</div>
+        <div class="fgrid">
+          <label class="fld"><span>Font chữ</span><select id="fontSel" aria-label="Font chữ"></select></label>
+          <label class="fld"><span>Cỡ chữ</span><select id="fsSel" aria-label="Cỡ chữ"></select></label>
+        </div>
+        <div class="preview">Xem trước: Ban đầu có Lời, và Lời ở với Thiên Chúa.</div>
       </div>
       <div class="srow"><div class="stxt"><b>Kiểu hiển thị</b><span>Trang sách hoặc từng câu một dòng</span></div>
         <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
@@ -605,7 +611,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -640,7 +646,7 @@ function choose(title, msg, opts){
 }
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
-const S = { theme:'auto', fs:18, book:null, chapter:1, wake:false, view:'print' };
+const S = { theme:'auto', fs:18, font:'Lora', book:null, chapter:1, wake:false, view:'print' };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
 
@@ -652,8 +658,34 @@ function applyTheme(){
 }
 function applyFs(){
   document.documentElement.style.setProperty('--fs', S.fs + 'px');
-  $('#fsRange').value = S.fs; $('#fsVal').textContent = S.fs;
+  $('#fsSel').value = String(S.fs);
 }
+/* Font chữ: áp dụng ngay cho toàn app (biến --serif và --sans), lưu tự động trong localStorage ('kt.settings').
+   Font được tải từ Google Fonts khi chọn (chỉ tải font đang dùng); chưa có mạng thì dùng font dự phòng. */
+const FONTS = {
+  'Lora':         { q:'Lora:ital,wght@0,400;0,600;0,700;1,400',         s:'"Lora",Georgia,"Times New Roman",serif' },
+  'Merriweather': { q:'Merriweather:ital,wght@0,400;0,700;1,400',       s:'"Merriweather",Georgia,"Times New Roman",serif' },
+  'Inter':        { q:'Inter:wght@400;600;700',                         s:'"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif' },
+  'Roboto':       { q:'Roboto:ital,wght@0,400;0,500;0,700;1,400',       s:'"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' },
+  'Open Sans':    { q:'Open+Sans:ital,wght@0,400;0,600;0,700;1,400',    s:'"Open Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' }
+};
+function loadFont(name){
+  const f = FONTS[name]; if (!f || document.getElementById('gf-' + name)) return;
+  const l = document.createElement('link'); l.id = 'gf-' + name; l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' + f.q + '&display=swap';
+  document.head.appendChild(l);
+}
+function applyFont(){
+  if (!FONTS[S.font]) S.font = 'Lora';
+  loadFont(S.font);
+  const st = document.documentElement.style;
+  st.setProperty('--serif', FONTS[S.font].s); st.setProperty('--sans', FONTS[S.font].s);
+  $('#fontSel').value = S.font;
+}
+$('#fontSel').innerHTML = Object.keys(FONTS).map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}">${n}</option>`).join('');
+$('#fsSel').innerHTML = Array.from({ length:23 }, (_, i) => `<option value="${14 + i}">${14 + i}</option>`).join('');
+$('#fontSel').onchange = e => { S.font = e.target.value; saveS(); applyFont(); };
+$('#fsSel').onchange = e => { S.fs = +e.target.value; saveS(); applyFs(); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
 /* ============ INDEXEDDB ============ */
@@ -2600,7 +2632,6 @@ $('#exFile').onchange = async e => {
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
-$('#fsRange').oninput = e => { S.fs = +e.target.value; saveS(); applyFs(); };
 let wakeLock = null;
 async function setWake(on){
   try {
@@ -2674,7 +2705,7 @@ async function dropDemoBook(){
 }
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
-  applyTheme(); applyFs(); applyView(); updateOnline();
+  applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
   $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
   setupPWA();
   // Liên kết chia sẻ: ?kho=ten-nguoi-dung/ten-kho → tự kết nối ở chế độ chỉ đọc
