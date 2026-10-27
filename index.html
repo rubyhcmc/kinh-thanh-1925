@@ -73,6 +73,10 @@ body.searching .top .sfield{display:flex}
 .bsopts{padding-top:10px!important}
 .top .sfield input{flex:1;min-width:0;height:36px;padding:0 36px 0 34px;border-radius:18px;font-size:16px}
 .top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:5px;padding:0;border:0;background:none;transform:none}
+.nf{position:relative;min-width:0}
+.nf select{pointer-events:none}
+.nf::before{content:'';position:absolute;inset:0;z-index:1;cursor:pointer}
+.numpad-in{font-size:22px!important;text-align:center;letter-spacing:.05em}
 .top .navrow select{height:36px;padding:0 17px 0 8px;background-position:right 5px center;text-overflow:ellipsis}
 .top .right{margin-left:auto;flex:none}
 .top .iconbtn{min-width:34px;padding:0 4px}
@@ -213,8 +217,8 @@ details a{color:var(--accent)}
   <h1 id="title">Kinh Thánh</h1>
   <div class="navrow">
     <select id="selBook" aria-label="Sách"></select>
-    <select id="selChap" aria-label="Chương"></select>
-    <select id="selVerse" aria-label="Câu"></select>
+    <div class="nf" id="nfChap"><select id="selChap" aria-label="Chương"></select></div>
+    <div class="nf" id="nfVerse"><select id="selVerse" aria-label="Câu"></select></div>
   </div>
   <div class="sfield">
     <svg class="sico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
@@ -490,7 +494,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.27-d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.27-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -635,6 +639,38 @@ $('#selVerse').onchange = e => {
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   e.target.value = '';
 };
+/* Bấm vào ô Chương / Câu → hiện bàn phím số để gõ nhanh */
+function askNumber(kind){
+  if (!curBook) return;
+  const isChap = kind === 'chap';
+  const verses = curBook.chapters[S.chapter - 1] || [];
+  const nums = isChap ? null : new Set(verses.map(v => v.n));
+  const max = isChap ? curBook.chapters.length : (verses.length ? Math.max(...verses.map(v => v.n)) : 0);
+  if (!max) return toast(isChap ? 'Sách chưa có chương nào' : 'Chương này chưa có câu nào');
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70; o.style.alignItems = 'flex-start';
+  o.innerHTML = `<div class="sheet" style="border-radius:0 0 18px 18px;padding-top:calc(18px + env(safe-area-inset-top))">
+    <h3>${isChap ? 'Đến chương' : 'Đến câu'} <span style="font-weight:400;font-size:14px;color:var(--muted)">(1–${max})</span></h3>
+    <input type="text" class="numpad-in" inputmode="numeric" pattern="[0-9]*" enterkeyhint="go" autocomplete="off" placeholder="${isChap ? S.chapter : ''}">
+    <div class="log err" style="margin-top:6px"></div>
+    <div class="btns"><button class="btn" data-k="x">Hủy</button><button class="btn primary" data-k="go" style="margin-left:auto">Đi</button></div></div>`;
+  document.body.appendChild(o);
+  const inp = o.querySelector('input'), err = o.querySelector('.log');
+  const close = () => o.remove();
+  const go = () => {
+    const n = parseInt(inp.value, 10);
+    if (!(n >= 1) || n > max){ err.textContent = `Nhập số từ 1 đến ${max}.`; return; }
+    if (!isChap && !nums.has(n)){ err.textContent = `Không có câu ${n}.`; return; }
+    close();
+    const sel = isChap ? $('#selChap') : $('#selVerse');
+    sel.value = n; sel.onchange({ target: sel });
+  };
+  inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 3); err.textContent = ''; });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } else if (e.key === 'Escape') close(); });
+  o.addEventListener('click', e => { if (e.target === o) return close(); const b = e.target.closest('[data-k]'); if (!b) return; b.dataset.k === 'go' ? go() : close(); });
+  inp.focus();
+}
+$('#nfChap').addEventListener('click', () => askNumber('chap'));
+$('#nfVerse').addEventListener('click', () => askNumber('verse'));
 $('#prevChap').onclick = () => stepChapter(-1);
 $('#nextChap').onclick = () => stepChapter(1);
 
