@@ -174,9 +174,16 @@ body.searching .top .navrow{display:none}
 mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-weight:700}
 
 /* Thanh sao chép câu */
-.copybar{position:fixed;left:12px;right:12px;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 10px);z-index:25;
-  display:flex;gap:8px;padding:10px;border-radius:14px;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:736px;margin:0 auto}
-.copybar .btn{flex:1}
+.copybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px);z-index:25;
+  display:flex;gap:4px;padding:4px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:nowrap}
+.copybar .btn{border-radius:99px;padding:8px 16px;font-size:14px;border-color:transparent}
+.copybar .btn:not(.primary){background:none;color:var(--muted)}
+/* Menu chạm giữ câu */
+.vmenu{position:fixed;z-index:61;min-width:210px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.32);overflow:hidden}
+.vmenu .vh{padding:8px 14px 6px;font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent);border-bottom:1px solid var(--line)}
+.vmenu button{display:block;width:100%;text-align:left;border:0;background:none;padding:12px 14px;font-family:var(--sans);font-size:15px;color:var(--fg)}
+.vmenu button+button{border-top:1px solid var(--line)}
+.vmenu button:active{background:var(--accent-soft)}
 
 /* Sheet & lớp phủ */
 .overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -986,6 +993,43 @@ function openMarks(){
 }
 $('#btnMarks').onclick = openMarks;
 
+/* Menu nhỏ hiện khi chạm giữ một câu */
+function showVerseMenu(n, x, y){
+  if (!curBook) return;
+  try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
+  $$('.vmenu-bg').forEach(e => e.remove());
+  const bg = document.createElement('div'); bg.className = 'vmenu-bg';
+  bg.style.cssText = 'position:fixed;inset:0;z-index:60;background:transparent';
+  const m = document.createElement('div'); m.className = 'vmenu';
+  m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
+    <button data-a="mark">🔖 Đã đọc đến đây</button>
+    <button data-a="copy">📋 Sao chép câu này</button>
+    <button data-a="multi">☑️ Chọn nhiều câu</button>`;
+  bg.appendChild(m); document.body.appendChild(bg);
+  const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
+  m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
+  const below = y + 24, top = below + r.height > H - 10 ? Math.max(10, y - r.height - 24) : below;
+  m.style.top = top + 'px';
+  const opened = Date.now(), close = () => bg.remove();
+  const onScroll = () => { close(); removeEventListener('scroll', onScroll); };
+  addEventListener('scroll', onScroll, { passive:true });
+  bg.addEventListener('click', e => {
+    e.stopPropagation(); e.preventDefault();
+    if (Date.now() - opened < 450) return;              // bỏ qua cú thả tay sau khi giữ
+    const b = e.target.closest('[data-a]'); close();
+    if (!b) return;
+    const a = b.dataset.a;
+    if (a === 'mark') addBookmark(n);
+    else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
+    else if (a === 'multi'){
+      selected.clear(); selected.add(n);
+      const el = $('#v' + n); if (el) el.classList.add('sel');
+      $('#copyBar').hidden = false; $('#copyGo').textContent = 'Sao chép (1)';
+    }
+  });
+  bg.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 /* Chạm giữ (cảm ứng + chuột) */
 (function(){
   const root = $('#bibleText'), HOLD = 550;
@@ -995,7 +1039,7 @@ $('#btnMarks').onclick = openMarks;
     const p = el.closest && el.closest('.v'); fired = false; cancel();
     if (!p || !curBook) return;
     sx = x; sy = y;
-    timer = setTimeout(() => { timer = null; fired = true; clearSelection(); addBookmark(+p.dataset.n); }, HOLD);
+    timer = setTimeout(() => { timer = null; fired = true; clearSelection(); showVerseMenu(+p.dataset.n, sx, sy); }, HOLD);
   };
   root.addEventListener('touchstart', e => {
     lastTouch = Date.now();
