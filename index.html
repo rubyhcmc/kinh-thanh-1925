@@ -74,9 +74,16 @@ body.searching .top .sfield{display:flex}
 .top .sfield input{flex:1;min-width:0;height:36px;padding:0 36px 0 34px;border-radius:18px;font-size:16px}
 .top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:5px;padding:0;border:0;background:none;transform:none}
 .nf{position:relative;min-width:0}
-.nf select{pointer-events:none}
-.nf::before{content:'';position:absolute;inset:0;z-index:1;cursor:pointer}
-.numpad-in{font-size:22px!important;text-align:center;letter-spacing:.05em}
+.top .navrow .nf input{height:36px;padding:0 6px 0 8px;border-radius:8px;font-size:16px;background:transparent;text-overflow:ellipsis;-webkit-appearance:none;appearance:none}
+.nf input::placeholder{color:var(--fg);opacity:1}
+.nf input:focus{border-color:var(--accent);outline:0}
+.nf input:focus::placeholder{color:var(--muted);opacity:.55}
+.nf input:disabled{opacity:.5}
+.rng{position:absolute;top:calc(100% + 6px);left:0;z-index:35;display:flex;align-items:center;gap:8px;white-space:nowrap;padding:5px 6px 5px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
+#nfVerse .rng{left:auto;right:0}
+.rng.bad{color:var(--danger)}
+.rng button{border:0;border-radius:99px;background:var(--accent);color:#fff;padding:5px 14px;font-size:12px;font-weight:700}
+[data-theme=dark] .rng button{color:#1a1409}
 .top .navrow select{height:36px;padding:0 17px 0 8px;background-position:right 5px center;text-overflow:ellipsis}
 .top .right{margin-left:auto;flex:none}
 .top .iconbtn{min-width:34px;padding:0 4px}
@@ -217,8 +224,8 @@ details a{color:var(--accent)}
   <h1 id="title">Kinh Thánh</h1>
   <div class="navrow">
     <select id="selBook" aria-label="Sách"></select>
-    <div class="nf" id="nfChap"><select id="selChap" aria-label="Chương"></select></div>
-    <div class="nf" id="nfVerse"><select id="selVerse" aria-label="Câu"></select></div>
+    <div class="nf" id="nfChap"><input type="text" id="niChap" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" aria-label="Chương" disabled><select id="selChap" hidden></select><div class="rng" id="rngChap" hidden><span></span><button type="button">Xong</button></div></div>
+    <div class="nf" id="nfVerse"><input type="text" id="niVerse" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" placeholder="Câu" aria-label="Câu" disabled><select id="selVerse" hidden></select><div class="rng" id="rngVerse" hidden><span></span><button type="button">Xong</button></div></div>
   </div>
   <div class="sfield">
     <svg class="sico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
@@ -494,7 +501,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.27-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.27-f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -588,7 +595,7 @@ async function loadBibleMeta(){
 function renderBibleEmpty(){
   $('#bibleText').className = 'reader';
   $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
-  $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = '';
+  $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = ''; syncNav();
   $('#chapNav').hidden = true;
   $('#bibleText').insertAdjacentHTML('beforeend', '<div class="log" id="emptySync" style="text-align:center;padding:0 20px 30px"></div>');
   updateSyncUI();
@@ -618,6 +625,7 @@ function renderChapter(){
   $('#bibleText').innerHTML = paperHTML(curBook.name, S.chapter, verses, S.view);
   $('#chapNav').hidden = false;
   const idx = bibleMeta.findIndex(m => m.name === curBook.name);
+  syncNav();
   $('#prevChap').disabled = idx === 0 && S.chapter === 1;
   $('#nextChap').disabled = idx === bibleMeta.length - 1 && S.chapter === curBook.chapters.length;
   window.scrollTo(0, 0);
@@ -639,38 +647,67 @@ $('#selVerse').onchange = e => {
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   e.target.value = '';
 };
-/* Bấm vào ô Chương / Câu → hiện bàn phím số để gõ nhanh */
-function askNumber(kind){
-  if (!curBook) return;
-  const isChap = kind === 'chap';
-  const verses = curBook.chapters[S.chapter - 1] || [];
-  const nums = isChap ? null : new Set(verses.map(v => v.n));
-  const max = isChap ? curBook.chapters.length : (verses.length ? Math.max(...verses.map(v => v.n)) : 0);
-  if (!max) return toast(isChap ? 'Sách chưa có chương nào' : 'Chương này chưa có câu nào');
-  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70; o.style.alignItems = 'flex-start';
-  o.innerHTML = `<div class="sheet" style="border-radius:0 0 18px 18px;padding-top:calc(18px + env(safe-area-inset-top))">
-    <h3>${isChap ? 'Đến chương' : 'Đến câu'} <span style="font-weight:400;font-size:14px;color:var(--muted)">(1–${max})</span></h3>
-    <input type="text" class="numpad-in" inputmode="numeric" pattern="[0-9]*" enterkeyhint="go" autocomplete="off" placeholder="${isChap ? S.chapter : ''}">
-    <div class="log err" style="margin-top:6px"></div>
-    <div class="btns"><button class="btn" data-k="x">Hủy</button><button class="btn primary" data-k="go" style="margin-left:auto">Đi</button></div></div>`;
-  document.body.appendChild(o);
-  const inp = o.querySelector('input'), err = o.querySelector('.log');
-  const close = () => o.remove();
-  const go = () => {
-    const n = parseInt(inp.value, 10);
-    if (!(n >= 1) || n > max){ err.textContent = `Nhập số từ 1 đến ${max}.`; return; }
-    if (!isChap && !nums.has(n)){ err.textContent = `Không có câu ${n}.`; return; }
-    close();
-    const sel = isChap ? $('#selChap') : $('#selVerse');
-    sel.value = n; sel.onchange({ target: sel });
-  };
-  inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 3); err.textContent = ''; });
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } else if (e.key === 'Escape') close(); });
-  o.addEventListener('click', e => { if (e.target === o) return close(); const b = e.target.closest('[data-k]'); if (!b) return; b.dataset.k === 'go' ? go() : close(); });
-  inp.focus();
+/* Ô Chương / Câu: nhập số trực tiếp (bàn phím số), đủ số hợp lệ là nhảy ngay */
+function syncNav(){
+  const c = $('#niChap'), v = $('#niVerse'), on = !!curBook;
+  c.disabled = v.disabled = !on;
+  c.placeholder = on ? S.chapter : '';
+  if (document.activeElement !== c) c.value = on ? S.chapter : '';
+  if (document.activeElement !== v) v.value = '';
 }
-$('#nfChap').addEventListener('click', () => askNumber('chap'));
-$('#nfVerse').addEventListener('click', () => askNumber('verse'));
+function setupNav(kind){
+  const isC = kind === 'chap', LB = isC ? 'CHƯƠNG' : 'CÂU';
+  const inp = $(isC ? '#niChap' : '#niVerse'), pill = $(isC ? '#rngChap' : '#rngVerse');
+  const txt = pill.firstElementChild, sel = $(isC ? '#selChap' : '#selVerse');
+  let busy = false;
+  const cfg = () => {
+    if (!curBook) return null;
+    const nums = isC ? Array.from({ length:curBook.chapters.length }, (_, i) => i + 1)
+                     : (curBook.chapters[S.chapter - 1] || []).map(v => v.n);
+    return { nums:new Set(nums), max:nums.length ? Math.max(...nums) : 0 };
+  };
+  const say = (m, bad) => { txt.textContent = m; pill.classList.toggle('bad', !!bad); pill.hidden = false; };
+  const range = c => say(`1-${c.max} ${LB}`);
+  const bad = (c, n) => say(isC ? `Chỉ có 1-${c.max} ${LB}` : (n > c.max || n < 1 ? `Chỉ có 1-${c.max} ${LB}` : `Không có câu ${n} (1-${c.max} ${LB})`), true);
+  const canExtend = (c, n) => { const s = String(n); for (const m of c.nums) if (m > n && String(m).startsWith(s)) return true; return false; };
+  const jump = n => {
+    if (!(isC && n === S.chapter)){ sel.value = n; sel.onchange({ target:sel }); }
+    if (!isC) inp.value = '';
+    pill.hidden = true; inp.blur();
+  };
+  const commit = () => {                       // true nếu hợp lệ và đã nhảy
+    const c = cfg(); if (!c) return false;
+    const n = parseInt(inp.value, 10);
+    if (!(n >= 1) || !c.nums.has(n)) return false;
+    jump(n); return true;
+  };
+  inp.addEventListener('focus', () => {
+    const c = cfg(); if (!c){ inp.blur(); return; }
+    if (isC) inp.value = '';                   // gõ thẳng số mới, số hiện tại nằm ở placeholder
+    range(c);
+  });
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 4);
+    const c = cfg(); if (!c) return;
+    if (!inp.value) return range(c);
+    const n = parseInt(inp.value, 10), ok = c.nums.has(n);
+    if (ok && !canExtend(c, n)) return void commit();          // đủ số hợp lệ → nhảy luôn
+    if (!ok && !canExtend(c, n)) bad(c, n); else range(c);     // quá phạm vi → báo; còn có thể gõ tiếp → chờ
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Done'){ e.preventDefault(); if (!commit()){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } }
+    else if (e.key === 'Escape'){ inp.value = ''; inp.blur(); }
+  });
+  inp.addEventListener('blur', () => {         // bấm "Xong" của bàn phím → blur → nhảy nếu hợp lệ
+    if (busy) return; busy = true;
+    const c = cfg(), v = inp.value;
+    if (c && v && !commit()) toast(isC ? `Chỉ có 1-${c.max} chương` : `Không có câu ${parseInt(v, 10)} (1-${c.max})`);
+    pill.hidden = true; inp.value = ''; syncNav(); busy = false;
+  });
+  pill.addEventListener('mousedown', e => e.preventDefault());   // giữ bàn phím khi bấm nút Xong
+  pill.querySelector('button').addEventListener('click', () => { if (!commit()){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } });
+}
+setupNav('chap'); setupNav('verse');
 $('#prevChap').onclick = () => stepChapter(-1);
 $('#nextChap').onclick = () => stepChapter(1);
 
