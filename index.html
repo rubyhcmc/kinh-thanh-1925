@@ -225,6 +225,12 @@ details a{color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
   background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
+/* ===== Chú thích bấm để bung/ẩn ===== */
+.fnk{cursor:pointer;border-radius:4px;padding:.15em .3em;margin-left:0;-webkit-user-select:none;user-select:none}
+.fnk:active,.fnk[aria-expanded=true]{background:var(--accent-soft)}
+.fnk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fnx{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.78em;line-height:1.55;color:var(--muted);
+  margin:.4em 0 .55em;padding:.45em .75em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;cursor:pointer;-webkit-hyphens:none;hyphens:none}
 /* ===== Trang cài đặt ===== */
 #settings .sheet{max-width:520px;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:var(--bg)}
 .sgrab{width:38px;height:4px;border-radius:99px;background:var(--line);margin:4px auto 10px}
@@ -611,7 +617,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1160,6 +1166,24 @@ function showVerseMenu(n, x, y){
   // thả tay sau khi giữ không bị tính là chạm chọn câu
   root.addEventListener('click', e => { if (fired){ fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
+
+/* Bấm dấu chú thích → bung/ẩn nội dung; bấm vào khung chú thích → thu lại. Chạy ở pha capture để không bị tính là chạm chọn câu. */
+function toggleFn(e){
+  const k = e.target.closest('.fnk'), x = e.target.closest('.fnx');
+  if (!k && !x) return;
+  e.stopPropagation(); e.preventDefault();
+  const mk = k || (x.previousElementSibling && x.previousElementSibling.classList.contains('fnk') ? x.previousElementSibling : null);
+  const box = x || (k.nextElementSibling && k.nextElementSibling.classList.contains('fnx') ? k.nextElementSibling : null);
+  if (!box) return;
+  const open = box.hidden;                       // đang ẩn → bung ra
+  box.hidden = !open;
+  if (mk) mk.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+['#bibleText', '#edPreview'].forEach(id => {
+  const r = $(id);
+  r.addEventListener('click', toggleFn, true);
+  r.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('fnk')) toggleFn(e); }, true);
+});
 
 $('#bibleText').addEventListener('click', e => { if (e.target.id === 'emptyRetry') syncNow({}); });
 // Chạm vào câu để chọn → sao chép
@@ -1856,9 +1880,26 @@ const isHeadLine = s => s.length <= 110 && /^\p{Lu}/u.test(s) && (/\([^()]*\)$/.
 const isRefLine  = s => /^\(.{2,40}\)$/.test(s);
 // Chú thích [ … ] (không phải số câu như [3]): tự xuống dòng riêng, chữ nghiêng nhỏ hơn
 const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
-function richText(s){
-  return esc(s).replace(NOTE_RE, m => `<span class="note">${m}</span>`)
-               .replace(/\[(\d{1,3})\]/g, '<sup class="fnm">[$1]</sup>');
+// Chú thích bấm để bung/ẩn: quét mọi đoạn [ … ] bằng một regex duy nhất
+//  · [n]        (số) → dấu chú thích; nếu có dòng giải nghĩa "[n] …" thì bấm để bung nội dung (fm = bản đồ số → nội dung đã escape)
+//  · [chữ …]    → thu gọn thành dấu [*], bấm để bung nội dung bên trong
+//  · [3-4], [1,2] (chỉ số/dấu) → giữ nguyên là chữ thường
+const BRACKET_RE = /\[([^\[\]]+)\]/g;
+function fnMapOf(list){
+  const m = {};
+  (list || []).forEach(f => { const x = String(f).match(/^\[(\d{1,3})\]\s*([\s\S]*)$/); if (x && x[2].trim()) m[x[1]] = esc(x[2].trim()); });
+  return m;
+}
+function richText(s, fm){
+  fm = fm || {};
+  return esc(s).replace(BRACKET_RE, (m, c) => {
+    const t = c.trim();
+    if (/^\d{1,3}$/.test(t))
+      return fm[t] ? `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích ${t}">[${t}]</sup><span class="fnx" hidden>${fm[t]}</span>`
+                   : `<sup class="fnm">[${t}]</sup>`;
+    if (/^[\d\s,.\-–]+$/.test(t)) return m;
+    return `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích">[*]</sup><span class="fnx" hidden>${t}</span>`;
+  });
 }
 
 function markerOK(t, m){
@@ -2062,12 +2103,16 @@ function secHTML(h){
 function paperHTML(book, ch, verses, view, idp){
   idp = idp || 'v';
   const print = view !== 'verse';
+  const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
+  verses.forEach(v => String(v.t).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));
+  const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   let out = `<div class="chhead"><div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
   verses.forEach((v, i) => {
     const isPoem = Array.isArray(v.q) && v.q.length;
+    const vm = Object.assign({}, fm, fnMapOf(v.fn));
     if (v.h){ close(); out += secHTML(v.h); }
     const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
     const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
@@ -2075,19 +2120,19 @@ function paperHTML(book, ch, verses, view, idp){
     const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
     if (!print){
       close();
-      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).map(f => `<div class="fn">${esc(f)}</div>`).join('');
+      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t, vm).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).filter(showFn).map(f => `<div class="fn">${esc(f)}</div>`).join('');
       return;
     }
     const want = isPoem ? 'q' : 'p';
     if (!cur || cur !== want || v.p){ close(); cur = want; out += want === 'p' ? '<p class="para">' : '<div class="poem">'; }
     if (isPoem){
       out += `<span ${attrs}>` + v.t.split('\n').map((ln, k) =>
-        `<span class="pl q${v.q[k] || 1}">${k === 0 ? dc + num : ''}${richText(ln)}</span>`).join('') + '</span>';
-    } else out += `<span ${attrs}>${dc}${num}${richText(v.t)}</span> `;
+        `<span class="pl q${v.q[k] || 1}">${k === 0 ? dc + num : ''}${richText(ln, vm)}</span>`).join('') + '</span>';
+    } else out += `<span ${attrs}>${dc}${num}${richText(v.t, vm)}</span> `;
   });
   close();
   if (print){
-    const fns = verses.flatMap(v => v.fn || []);
+    const fns = verses.flatMap(v => v.fn || []).filter(showFn);
     if (fns.length) out += `<div class="fns">${fns.map(f => `<div class="fn">${esc(f)}</div>`).join('')}</div>`;
   }
   return out;
