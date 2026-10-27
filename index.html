@@ -480,6 +480,16 @@ const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
+// Kho dữ liệu mặc định: thiết bị mới mở app sẽ tự đọc (chế độ chỉ đọc) từ kho này.
+// Nếu app chạy trên GitHub Pages (tên-người-dùng.github.io/tên-kho/) thì tự suy ra; không thì dùng giá trị dưới.
+const DEFAULT_SYNC_REPO = 'rubyhcmc/kinh-thanh-data';
+function guessRepo(){
+  try {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i), seg = location.pathname.split('/').filter(Boolean)[0];
+    if (m && seg && !/\.html?$/i.test(seg)) return m[1] + '/' + seg;
+  } catch(e){}
+  return DEFAULT_SYNC_REPO;
+}
 
 /* ============ TIỆN ÍCH ============ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1044,7 +1054,7 @@ async function ghConnect(){
       } else { GH = old; throw e; }
     }
     GH = { repo, token, branch:branch || info.default_branch || 'main', path, auto:$('#ghAuto').checked };
-    saveGH();
+    saveGH(); try { localStorage.removeItem('kt.nodefault'); } catch(e){}
     const canWrite = !token || (info.permissions && info.permissions.push);
     if (token && !canWrite){ GH.token = ''; saveGH(); ghSay('⚠ Token không có quyền ghi vào kho này nên máy chỉ ở chế độ đọc.', false); }
     else ghSay('✔ Đã kết nối kho ' + repo + (token ? ' (đọc & ghi).' : ' (chỉ đọc).'), true);
@@ -1059,6 +1069,7 @@ $('#ghDisconnect').onclick = () => {
   if (!ghOn()) return;
   if (!confirm('Ngắt kết nối GitHub? Dữ liệu trong máy vẫn được giữ nguyên.')) return;
   GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0 };
+  try { localStorage.setItem('kt.nodefault', '1'); } catch(e){}
   saveGH(); saveSY(); fillGhFields(); setSync('off'); ghSay('Đã ngắt kết nối.', true);
 };
 $('#ghAuto').onchange = () => { GH.auto = $('#ghAuto').checked; saveGH(); if (GH.auto && SY.dirty) markDirty(); };
@@ -2067,6 +2078,10 @@ addEventListener('scroll', () => {
     const k = normRepo(new URLSearchParams(location.search).get('kho'));
     if (k.includes('/') && !GH.repo){ GH = { repo:k, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
     if (k) history.replaceState(null, '', location.pathname);
+  } catch(e){}
+  try {   // thiết bị mới chưa cấu hình: tự nối với kho mặc định (chỉ đọc) để có dữ liệu ngay
+    const dr = guessRepo();
+    if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
   try { db = await openDB(); await reloadAll(); }
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
