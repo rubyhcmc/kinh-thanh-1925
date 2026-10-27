@@ -14,7 +14,7 @@
 :root{
   --bg:#f7f3ea; --card:#fffdf8; --fg:#2a2118; --muted:#7a6e60;
   --accent:#8a5a1f; --accent-soft:#f0e3cc; --line:#e4dccb; --hl:#fff1c2;
-  --danger:#b3261e; --fs:18px; --hh:calc(52px + env(safe-area-inset-top)); --tabh:0px;
+  --danger:#b3261e; --fs:18px; --hh:calc(42px + env(safe-area-inset-top)); --tabh:0px;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
@@ -30,29 +30,40 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 [hidden]{display:none!important}
 
-/* Thanh tiêu đề */
-.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 14px 0;
-  display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--line)}
-.top h1{font-size:19px;margin:0;font-family:var(--serif)}
-.top .right{display:flex;gap:8px;align-items:center}
-.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
-.syncb{border:0;font-family:inherit;white-space:nowrap}
-.syncb.err,.syncb.conflict{background:#fde7e5;color:var(--danger)}
-[data-theme=dark] .syncb.err,[data-theme=dark] .syncb.conflict{background:#3a1f1d}
-.syncb.dirty,.syncb.busy,.syncb.offline{background:var(--hl);color:var(--fg)}
-.iconbtn{border:1px solid var(--line);background:var(--bg);border-radius:10px;min-width:42px;height:36px;padding:0 10px;font-weight:600}
+/* Thanh tiêu đề tối giản – như đầu trang sách */
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:30}
+.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 6px 0 18px;
+  display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--line);
+  transition:transform .25s ease}
+.top h1{font-size:12px;margin:0;font-family:var(--serif);font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.top .right{display:flex;align-items:center}
+.iconbtn{border:0;background:none;color:var(--fg);min-width:40px;height:36px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}
+.iconbtn:active{background:var(--accent-soft)}
+.iconbtn svg{display:block}
+.iconbtn.aa{font-family:var(--serif);font-size:19px;font-weight:600;letter-spacing:-.03em}
+.iconbtn.aa small{font-size:.7em}
+.offtag{font-size:10px;color:var(--muted);letter-spacing:.04em;margin-right:2px}
+.syncb{color:var(--muted)}
+.syncb.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.syncb.dirty,.syncb.offline{color:var(--accent)}
+.syncb.err,.syncb.conflict{color:var(--danger)}
+body.hdr-hide .top{transform:translateY(-100%)}
+body.hdr-hide .navrow{transform:translateY(calc(-100% - var(--hh)))}
 
 main{max-width:760px;margin:0 auto}
 
 /* Chọn sách / chương / câu */
-.navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;
-  padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+.navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px;
+  padding:6px 12px 7px;background:var(--bg);border-bottom:1px solid var(--line);transition:transform .25s ease}
+.navrow select{height:34px;padding:0 22px 0 10px;border-radius:8px;font-size:16px;-webkit-appearance:none;appearance:none;
+  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center}
 select,input[type=search],input[type=password],input[type=text],input[type=number],textarea{
   width:100%;padding:10px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 select{min-width:0}
 
 /* Khu vực đọc */
-.reader{padding:16px 18px 24px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
+.reader{padding:10px 18px 24px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
 .reader h2{font-size:1.25em;margin:.2em 0 .6em;line-height:1.3}
 .reader .sub{font-family:var(--sans);font-size:.7em;color:var(--muted);margin:-.4em 0 1em}
 .verse.flash,.v.flash{animation:flash 1.6s ease}
@@ -186,10 +197,10 @@ details a{color:var(--accent)}
 <header class="top">
   <h1 id="title">Kinh Thánh</h1>
   <div class="right">
-    <span class="badge" id="offlineBadge" hidden>Ngoại tuyến</span>
-    <button class="badge syncb" id="syncBadge" hidden aria-label="Đồng bộ GitHub"></button>
-    <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh">🔍</button>
-    <button class="iconbtn" id="btnSettings" aria-label="Cài đặt">Aa</button>
+    <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
+    <button class="iconbtn syncb" id="syncBadge" hidden aria-label="Đồng bộ GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.5 7.5H7z"/></svg></button>
+    <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
+    <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
 </header>
 
@@ -912,7 +923,7 @@ function setSync(st, msg){ syncState = st; syncMsg = msg || ''; updateSyncUI(); 
 function updateSyncUI(){
   const on = ghOn(), b = $('#syncBadge');
   let st = syncState; if (st === 'ok' && SY.dirty && ghCanPush()) st = 'dirty';
-  b.hidden = !on; b.textContent = SYNC_TXT[st] || ''; b.className = 'badge syncb ' + st;
+  b.hidden = !on; b.className = 'iconbtn syncb ' + st; b.title = SYNC_TXT[st] || 'Đồng bộ'; b.setAttribute('aria-label', SYNC_TXT[st] || 'Đồng bộ GitHub');
   $('#setSyncRow').hidden = !on;
   $('#stSync').textContent = on ? 'Bật' : 'Tắt';
   const at = SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa lần nào';
@@ -1647,6 +1658,20 @@ function setupPWA(){
 }
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline);
+
+/* Thanh đầu trang tự ẩn khi cuộn xuống để dành chỗ cho chữ, hiện lại khi cuộn lên */
+let lastY = 0, hdrBusy = false;
+addEventListener('scroll', () => {
+  if (hdrBusy) return; hdrBusy = true;
+  requestAnimationFrame(() => {
+    const y = Math.max(0, window.scrollY), d = y - lastY, cl = document.body.classList;
+    if (y < 60 || !$('#bSearch').hidden) cl.remove('hdr-hide');
+    else if (d > 8) cl.add('hdr-hide');
+    else if (d < -8) cl.remove('hdr-hide');
+    if (Math.abs(d) > 8 || y < 60) lastY = y;
+    hdrBusy = false;
+  });
+}, { passive:true });
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
