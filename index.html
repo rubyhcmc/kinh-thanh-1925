@@ -365,15 +365,10 @@ details a{color:var(--accent)}
     <div class="sgroup about">
       <div class="abhead">
         <div class="abicon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></svg></div>
-        <div><div class="abname">Kinh Thánh</div><div class="absub">Ứng dụng đọc Kinh Thánh tiếng Việt</div></div>
+        <div><div class="abname" id="abName">Kinh Thánh</div><div class="absub" id="abSub">Ứng dụng đọc Kinh Thánh tiếng Việt</div></div>
       </div>
-      <p class="abtxt">Giao diện trang sách in, yên tĩnh và dễ đọc. Nội dung được lưu ngay trên thiết bị nên đọc được cả khi không có mạng.</p>
-      <ul class="abfeat">
-        <li><b>Tìm kiếm</b> toàn bộ Kinh Thánh, gõ không dấu cũng được</li>
-        <li><b>Đánh dấu</b> nơi đọc dở bằng cách chạm giữ một câu</li>
-        <li><b>Lật trang</b> bằng cách vuốt sang trái hoặc phải</li>
-        <li><b>Đồng bộ</b> nội dung qua GitHub giữa các thiết bị</li>
-      </ul>
+      <p class="abtxt" id="abText"></p>
+      <ul class="abfeat" id="abFeat"></ul>
       <div id="verTag" class="abver"></div>
     </div>
 
@@ -506,6 +501,25 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
+      <h4>Giới thiệu ứng dụng</h4>
+      <p class="hint">Nội dung này hiện trong Cài đặt → Giới thiệu. Lưu xong là đổi ngay, và tự đồng bộ lên GitHub nếu đã kết nối.</p>
+      <label class="lbl" for="abeName">Tên ứng dụng</label>
+      <input type="text" id="abeName" autocomplete="off">
+      <label class="lbl" for="abeSub">Dòng phụ đề</label>
+      <input type="text" id="abeSub" autocomplete="off">
+      <label class="lbl" for="abeText">Nội dung giới thiệu</label>
+      <textarea id="abeText" style="min-height:110px;font-family:inherit;font-size:15px" spellcheck="false"></textarea>
+      <label class="lbl" for="abeFeat">Các điểm nổi bật (mỗi dòng một ý)</label>
+      <textarea id="abeFeat" style="min-height:110px;font-family:inherit;font-size:15px" spellcheck="false"></textarea>
+      <p class="hint" style="margin:6px 0 0">Muốn in đậm phần đầu dòng, viết dạng: <b>Tìm kiếm :: toàn bộ Kinh Thánh</b>. Có thể để trống ô để ẩn mục đó.</p>
+      <div class="log" id="abeLog"></div>
+      <div class="btns">
+        <button class="btn primary" id="abeSave">Lưu phần giới thiệu</button>
+        <button class="btn" id="abeReset">Về nội dung mặc định</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h4>Đổi mật khẩu quản lý</h4>
       <div class="grid2">
         <input type="password" id="pwOld" placeholder="Mật khẩu hiện tại" autocomplete="current-password">
@@ -591,7 +605,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1416,14 +1430,14 @@ async function buildBooks(){
   const map = new Map(recs.map(b => [b.name, b]));
   return metas.map(m => ({ name:m.name, abbr:m.abbr || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
-const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books } });
+const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
 
 async function ghPull(sha){
   const res = await ghReq(`/repos/${GH.repo}/contents/${ghFile()}${ghRef()}`, { raw:true });
   let j; try { j = JSON.parse(await res.text()); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); }
   const books = normBible(j.bible || j);
   if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
-  await importBible(books, 'replace');
+  await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha, dirty:false, at:Date.now() }; saveSY();
   const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
 }
@@ -1474,7 +1488,7 @@ async function syncReadOnly(o){
     syncBusy = true;
     if (c !== 0){ setSync('conflict', 'Chưa chọn bản nào.'); return; }
   }
-  await importBible(books, 'replace');
+  await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha:sig, dirty:false, at:Date.now() }; saveSY();
   const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
   setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); if (!o.auto || !hasLocal) toast('Đã tải dữ liệu từ GitHub');
@@ -1618,6 +1632,48 @@ setInterval(() => { if (ghOn() && document.visibilityState === 'visible' && Date
 const isAdmin = () => sessionStorage.getItem('kt.admin') === '1';
 function show(id, on = true){ $(id).hidden = !on; }
 
+/* Phần "Giới thiệu" trong Cài đặt: Admin chỉnh sửa được (Quản lý dữ liệu → Giới thiệu ứng dụng) */
+const ABOUT_DEF = {
+  name:'Kinh Thánh', sub:'Ứng dụng đọc Kinh Thánh tiếng Việt',
+  text:'Giao diện trang sách in, yên tĩnh và dễ đọc. Nội dung được lưu ngay trên thiết bị nên đọc được cả khi không có mạng.',
+  feat:['Tìm kiếm :: toàn bộ Kinh Thánh, gõ không dấu cũng được', 'Đánh dấu :: nơi đọc dở bằng cách chạm giữ một câu', 'Lật trang :: bằng cách vuốt sang trái hoặc phải', 'Đồng bộ :: nội dung qua GitHub giữa các thiết bị']
+};
+let ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] };
+try { const a = JSON.parse(localStorage.getItem('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
+if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
+const saveAbout = () => { try { localStorage.setItem('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
+function renderAbout(){
+  $('#abName').textContent = ABOUT.name || ABOUT_DEF.name;
+  $('#abSub').textContent = ABOUT.sub || ''; $('#abSub').hidden = !ABOUT.sub;
+  $('#abText').textContent = ABOUT.text || ''; $('#abText').hidden = !ABOUT.text;
+  const fl = ABOUT.feat.map(s => String(s).trim()).filter(Boolean);
+  $('#abFeat').innerHTML = fl.map(s => {
+    const i = s.indexOf('::');
+    return i > 0 ? `<li><b>${esc(s.slice(0, i).trim())}</b> ${esc(s.slice(i + 2).trim())}</li>` : `<li>${esc(s)}</li>`;
+  }).join('');
+  $('#abFeat').hidden = !fl.length;
+}
+function fillAbout(){
+  $('#abeName').value = ABOUT.name || ''; $('#abeSub').value = ABOUT.sub || '';
+  $('#abeText').value = ABOUT.text || ''; $('#abeFeat').value = ABOUT.feat.join('\n');
+}
+function applyAbout(a){
+  if (!a || typeof a !== 'object') return;
+  ABOUT = { ...ABOUT_DEF, ...a }; if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
+  saveAbout(); renderAbout();
+}
+renderAbout();
+function aboutSay(m, ok){ const l = $('#abeLog'); l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+$('#abeSave').onclick = () => {
+  ABOUT = { name:$('#abeName').value.trim() || ABOUT_DEF.name, sub:$('#abeSub').value.trim(), text:$('#abeText').value.trim(),
+            feat:$('#abeFeat').value.split('\n').map(s => s.trim()).filter(Boolean) };
+  saveAbout(); renderAbout(); markDirty(); aboutSay('✔ Đã lưu phần giới thiệu.', true);
+};
+$('#abeReset').onclick = () => {
+  if (!confirm('Đưa phần giới thiệu về nội dung mặc định?')) return;
+  ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] }; saveAbout(); renderAbout(); fillAbout(); markDirty(); aboutSay('Đã về nội dung mặc định.', true);
+};
+
 $('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
@@ -1691,7 +1747,7 @@ async function refreshStats(){
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = ghOn() ? 'Bật' : 'Tắt';
 }
-function openAdmin(){ if (!isAdmin()) return; fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
+function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
 async function reloadAll(){ await initBible(); await refreshStats(); }
 
 function setLog(msg, ok){ const l = $('#impLog'); l.textContent = msg; l.className = 'log ' + (ok ? 'ok' : 'err'); }
