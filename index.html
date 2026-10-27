@@ -1305,17 +1305,29 @@ function markerOK(t, m){
   return true;
 }
 // Tìm số câu theo THỨ TỰ (1,2,3…) để không nhầm với số trong lời văn (vd "40 ngày")
-function findMarkers(t, start, from){
+function findMarkers(t, start, from, strictFirst){
   const marks = []; let pos = from || 0, n = start;
   const spans = []; t.replace(NOTE_RE, (s, i) => { spans.push([i, i + s.length]); return s; });
   const inNote = i => spans.some(([a, b]) => i >= a && i < b);
+  // Số câu ĐẦU TIÊN dễ bị nhầm với số nằm trong tiêu đề (vd "(đoạn 1 đến đoạn 30)"):
+  // ưu tiên (0) đứng đầu dòng + theo sau là chữ hoa, (1) theo sau là chữ hoa, (2) bất kỳ
+  const lineStart = i => /(^|\n)[ \t]*$/.test(t.slice(Math.max(0, i - 40), i));
+  const upperNext = e => /^\s*["“‘'«(\[]?\p{Lu}/u.test(t.slice(e, e + 8));
   for (;;){
     let found = null;
-    for (let k = 0; k < 4 && !found; k++){          // cho phép nhảy qua câu bị thiếu
-      const re = /(?:\((\d{1,3})\)|(\d{1,3}))[.:]?/g; re.lastIndex = pos; let m;
-      while ((m = re.exec(t))){
-        if (+(m[1] || m[2]) === n + k && markerOK(t, m) && !inNote(m.index)){ found = { n:n + k, idx:m.index, end:m.index + m[0].length }; break; }
+    const passes = strictFirst && !marks.length ? [0, 1, 2] : [2];
+    for (const pass of passes){
+      for (let k = 0; k < 4 && !found; k++){          // cho phép nhảy qua câu bị thiếu
+        const re = /(?:\((\d{1,3})\)|(\d{1,3}))[.:]?/g; re.lastIndex = pos; let m;
+        while ((m = re.exec(t))){
+          if (+(m[1] || m[2]) !== n + k || !markerOK(t, m) || inNote(m.index)) continue;
+          const e = m.index + m[0].length;
+          if (pass === 0 && !(lineStart(m.index) && upperNext(e))) continue;
+          if (pass === 1 && !upperNext(e)) continue;
+          found = { n:n + k, idx:m.index, end:e }; break;
+        }
       }
+      if (found) break;
     }
     if (!found) break;
     marks.push(found); pos = found.end; n = found.n + 1;
@@ -1362,7 +1374,7 @@ function detectVerses(raw, o){
     while ((m = re.exec(t))) marks.push({ n:+m[1], idx:m.index, end:m.index + m[0].length });
     if (marks.length > 1 && marks[0].n >= marks[1].n) marks[0].n = startAt;   // số chương chữ lớn ở đầu
   } else {                                              // số câu là chữ số thường
-    marks = findMarkers(t, startAt, 0);
+    marks = findMarkers(t, startAt, 0, true);
     if (!marks.length || marks[0].n > startAt){         // câu đầu không có số (thay bằng số chương)
       const lead = t.match(/^\s*(\d{1,3})(?=\s)/);
       const from = (lead && o.chapter && +lead[1] === +o.chapter && startAt === 1) ? lead[0].length : 0;
@@ -1379,6 +1391,7 @@ function detectVerses(raw, o){
     if (/^#\s+/.test(l)) hs.push(l.replace(/^#\s+/, ''));
     else if (/^\d{1,3}$/.test(l)) { /* số chương đứng riêng */ }
     else if (isHeadLine(l) || isRefLine(l)) hs.push(l);
+    else if (l.length <= 200 && !/^(chương|chapter)\s*\d+$/i.test(l)) hs.push(l);   // dòng trước câu 1 luôn là tiêu đề/dẫn nhập, đừng làm mất
   });
   if (hs.length) pendH = hs.join('\n');
 
