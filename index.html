@@ -218,6 +218,20 @@ details a{color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
   background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
+/* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
+.reader .v{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.v.bm{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
+.v.bm .vn{text-decoration:underline;text-underline-offset:2px}
+.v.bm.sel{background:var(--hl)}
+.bmhint{font-size:12px;color:var(--muted);margin:-6px 0 10px}
+.bmitem{display:flex;align-items:stretch;gap:4px;border-bottom:1px solid var(--line)}
+.bmmain{flex:1;min-width:0;text-align:left;border:0;background:none;padding:10px 4px;font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--fg)}
+.bmmain b{display:block;font-family:var(--sans);font-size:13px;color:var(--accent);margin-bottom:2px}
+.bmmain .bmt{display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.bmmain small{display:block;font-family:var(--sans);font-size:11px;color:var(--muted);margin-top:3px}
+.bmitem .iconbtn{align-self:center;color:var(--muted)}
+.bmlast{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+[data-theme=dark] .bmlast{color:#1a1409}
 /* ===== Lật trang như sách giấy ===== */
 .fl-stage{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:hidden;pointer-events:none}
 .fl-book{position:absolute;top:0;bottom:0;perspective-origin:0% 50%}
@@ -249,6 +263,7 @@ details a{color:var(--accent)}
   <div class="right">
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
+    <button class="iconbtn" id="btnMarks" aria-label="Vị trí đã đánh dấu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4.2L6 21z"/></svg></button>
     <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
 </header>
@@ -515,7 +530,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.27-h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.27-i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -643,6 +658,7 @@ function renderChapter(){
   $('#prevChap').disabled = idx === 0 && S.chapter === 1;
   $('#nextChap').disabled = idx === bibleMeta.length - 1 && S.chapter === curBook.chapters.length;
   window.scrollTo(0, 0);
+  markBookmarks();
 }
 async function stepChapter(d){
   const idx = bibleMeta.findIndex(m => m.name === curBook.name);
@@ -900,6 +916,105 @@ $('#nextChap').onclick = () => stepChapter(1);
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
     if (free()) flip(e.key === 'ArrowRight' ? 1 : -1);
   });
+})();
+
+/* =========================================================
+ *  ĐÁNH DẤU VỊ TRÍ ĐỌC (BOOKMARK)
+ *  - Chạm giữ một câu → lưu vị trí (sách · chương · câu)
+ *  - Mở lại app → tự về đúng câu đánh dấu gần nhất
+ *  - Nút 🔖 trên thanh đầu trang → lịch sử các vị trí đã đánh dấu
+ * ========================================================= */
+const BM_KEY = 'kt.marks', BM_MAX = 100;
+let BM = [];
+try { BM = JSON.parse(localStorage.getItem(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
+const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); } catch(e){} };
+
+function markBookmarks(){
+  $$('#bibleText .v.bm').forEach(e => e.classList.remove('bm'));
+  if (!curBook) return;
+  BM.forEach(b => {
+    if (b.book !== curBook.name || b.ch !== S.chapter) return;
+    const el = $('#v' + b.n); if (el) el.classList.add('bm');
+  });
+}
+function addBookmark(n){
+  if (!curBook) return;
+  const v = (curBook.chapters[S.chapter - 1] || []).find(x => x.n === n); if (!v) return;
+  const text = String(v.t).replace(/\[\d{1,3}\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  BM = BM.filter(b => !(b.book === curBook.name && b.ch === S.chapter && b.n === n));
+  BM.unshift({ book:curBook.name, ch:S.chapter, n, text, at:Date.now() });
+  if (BM.length > BM_MAX) BM.length = BM_MAX;
+  saveBM(); markBookmarks();
+  try { navigator.vibrate && navigator.vibrate(25); } catch(e){}
+  toast(`🔖 Đã đánh dấu ${curBook.name} ${S.chapter}:${n}`);
+}
+function scrollToVerse(n){
+  const el = $('#v' + n); if (!el) return;
+  el.scrollIntoView({ block:'start' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+async function goBookmark(b){
+  if (!bibleMeta.some(m => m.name === b.book)){ toast('Sách "' + b.book + '" không còn trong máy'); return; }
+  if (document.body.classList.contains('searching')) setSearch(false);
+  if (!curBook || curBook.name !== b.book || S.chapter !== b.ch) await openBook(b.book, b.ch);
+  setTimeout(() => scrollToVerse(b.n), 60);
+}
+async function restoreBookmark(){        // gọi một lần khi mở app
+  const b = BM[0];
+  if (!b || !bibleMeta.some(m => m.name === b.book)) return;
+  await goBookmark(b);
+}
+const bmWhen = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function openMarks(){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+  const draw = () => {
+    o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
+      <p class="bmhint">Chạm giữ một câu trong khi đọc để đánh dấu. Mở lại app sẽ tự về vị trí gần nhất.</p>
+      ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}${i === 0 ? '<span class="bmlast">Đang đọc dở</span>' : ''}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
+        : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
+      <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+  };
+  draw();
+  o.addEventListener('click', async e => {
+    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
+    const g = e.target.closest('[data-go]'), d = e.target.closest('[data-del]');
+    if (d){ BM.splice(+d.dataset.del, 1); saveBM(); markBookmarks(); draw(); return; }
+    if (e.target.closest('[data-clear]')){ if (confirm('Xóa toàn bộ vị trí đã đánh dấu?')){ BM = []; saveBM(); markBookmarks(); draw(); } return; }
+    if (g){ const b = BM[+g.dataset.go]; o.remove(); if (b) await goBookmark(b); }
+  });
+  document.body.appendChild(o);
+}
+$('#btnMarks').onclick = openMarks;
+
+/* Chạm giữ (cảm ứng + chuột) */
+(function(){
+  const root = $('#bibleText'), HOLD = 550;
+  let timer = null, sx = 0, sy = 0, fired = false, lastTouch = 0;
+  const cancel = () => { clearTimeout(timer); timer = null; };
+  const start = (el, x, y) => {
+    const p = el.closest && el.closest('.v'); fired = false; cancel();
+    if (!p || !curBook) return;
+    sx = x; sy = y;
+    timer = setTimeout(() => { timer = null; fired = true; clearSelection(); addBookmark(+p.dataset.n); }, HOLD);
+  };
+  root.addEventListener('touchstart', e => {
+    lastTouch = Date.now();
+    if (e.touches.length !== 1){ cancel(); return; }
+    start(e.target, e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive:true });
+  root.addEventListener('touchmove', e => {
+    if (!timer) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) cancel();
+  }, { passive:true });
+  ['touchend', 'touchcancel'].forEach(k => root.addEventListener(k, cancel, { passive:true }));
+  addEventListener('scroll', cancel, { passive:true });
+  root.addEventListener('mousedown', e => { if (e.button !== 0 || Date.now() - lastTouch < 800) return; start(e.target, e.clientX, e.clientY); });
+  root.addEventListener('mousemove', e => { if (timer && (Math.abs(e.clientX - sx) > 6 || Math.abs(e.clientY - sy) > 6)) cancel(); });
+  ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
+  root.addEventListener('contextmenu', e => { if (e.target.closest('.v')) e.preventDefault(); });
+  // thả tay sau khi giữ không bị tính là chạm chọn câu
+  root.addEventListener('click', e => { if (fired){ fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 
 $('#bibleText').addEventListener('click', e => { if (e.target.id === 'emptyRetry') syncNow({}); });
@@ -2418,7 +2533,7 @@ async function dropDemoBook(){
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try { db = await openDB(); await dropDemoBook(); await reloadAll(); }
+  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreBookmark(); }
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (ghOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên GitHub
