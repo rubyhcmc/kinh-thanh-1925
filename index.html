@@ -210,7 +210,6 @@ details a{color:var(--accent)}
   </div>
   <div class="right">
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
-    <button class="iconbtn syncb" id="syncBadge" hidden aria-label="Đồng bộ GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.5 7.5H7z"/></svg></button>
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
     <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
@@ -255,16 +254,12 @@ details a{color:var(--accent)}
     <div>
       <b>Cỡ chữ: <span id="fsVal"></span>px</b>
       <input type="range" id="fsRange" min="14" max="36" step="1">
-      <div class="preview">Ban đầu có Ngôi Lời, Ngôi Lời ở cùng Thiên Chúa.</div>
     </div>
     <div class="row"><b>Kiểu hiển thị Kinh Thánh</b>
       <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
     </div>
     <div class="row"><b>Giữ màn hình sáng</b>
       <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
-    </div>
-    <div class="row" id="setSyncRow" hidden><b>Nội dung mới từ GitHub</b>
-      <button class="btn" id="setSync">☁ Cập nhật ngay</button>
     </div>
     <div class="btns">
       <button class="btn" id="btnAdmin">🔒 Quản lý dữ liệu</button>
@@ -415,7 +410,6 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <h4>Sao lưu &amp; xóa</h4>
       <div class="btns" style="margin-top:0">
         <button class="btn" id="doExport">⬇️ Tải tệp sao lưu</button>
-        <button class="btn" id="loadDemo">Nạp dữ liệu thử</button>
       </div>
       <div class="btns">
         <button class="btn danger" id="clearBible">Xóa toàn bộ Kinh Thánh trong máy</button>
@@ -817,6 +811,7 @@ function parseBibleText(t){
 /* --- Ghi vào IndexedDB --- */
 async function importBible(books, mode){
   if (!books.length) throw new Error('Không tìm thấy sách Kinh Thánh hợp lệ.');
+  books = books.filter(b => !isDemoBook(b));
   if (mode === 'replace'){ await dbClear('bookMeta'); await dbClear('books'); }
   const existing = await dbAll('bookMeta');
   const map = new Map(existing.map(m => [m.name, m]));
@@ -827,7 +822,7 @@ async function importBible(books, mode){
   });
   await dbPut('books', books.map(b => ({ name:b.name, chapters:b.chapters })));
   await dbPut('bookMeta', metas);
-  return { msg:`${books.length} sách Kinh Thánh`, first:books[0].name };
+  return { msg:`${books.length} sách Kinh Thánh`, first:books.length ? books[0].name : null };
 }
 async function importData(type, text, mode){
   const p = parseInput(text);
@@ -854,10 +849,8 @@ const SAMPLES = {
 }`,
   backup: `{ "bible": { "books": [] } }`
 };
-const DEMO = { books:[{ name:'Sách Mẫu', abbr:'Mẫu', chapters:[
-  ['Đây là câu mẫu thứ nhất của chương một.', 'Đây là câu mẫu thứ hai.', 'Đây là câu mẫu thứ ba.'],
-  ['Chương hai, câu một (nội dung thử nghiệm).', 'Chương hai, câu hai (nội dung thử nghiệm).']
-] }] };
+// Sách mẫu cũ (đã bỏ tính năng): tự nhận ra và xóa nếu còn sót trong dữ liệu
+const isDemoBook = b => b && b.name === 'Sách Mẫu' && b.chapters && b.chapters[0] && b.chapters[0][0] && (b.chapters[0][0].t || b.chapters[0][0]) === 'Đây là câu mẫu thứ nhất của chương một.';
 
 /* =========================================================
  *  ĐỒNG BỘ GITHUB
@@ -984,7 +977,7 @@ async function syncReadOnly(o){
   const books = normBible(j.bible || j);
   if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
   if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
-    if (o.auto){ setSync('conflict', 'Máy này đã có dữ liệu riêng khác với GitHub. Bấm vào nhãn ở trên để chọn.'); toast('Dữ liệu máy này khác GitHub – bấm biểu tượng đám mây để chọn'); return; }
+    if (o.auto){ setSync('conflict', 'Máy này đã có dữ liệu riêng khác với GitHub. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.'); toast('Dữ liệu máy này khác GitHub – vào Quản lý dữ liệu → Đồng bộ ngay để chọn'); return; }
     syncBusy = false;
     const c = await choose('Dữ liệu khác nhau', 'Máy này đang có dữ liệu riêng. Thay bằng dữ liệu từ GitHub?', [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)', cls:'primary' }, { t:'Để sau' }]);
     syncBusy = true;
@@ -1001,10 +994,8 @@ const SYNC_TXT = { off:'', ok:'☁ Đã đồng bộ', busy:'⟳ Đang đồng b
 let syncState = 'off', syncMsg = '', syncBusy = false, pushTimer, lastCheck = 0;
 function setSync(st, msg){ syncState = st; syncMsg = msg || ''; updateSyncUI(); }
 function updateSyncUI(){
-  const on = ghOn(), b = $('#syncBadge');
+  const on = ghOn();
   let st = syncState; if (st === 'ok' && SY.dirty && ghCanPush()) st = 'dirty';
-  b.hidden = !on; b.className = 'iconbtn syncb ' + st; b.title = SYNC_TXT[st] || 'Đồng bộ'; b.setAttribute('aria-label', SYNC_TXT[st] || 'Đồng bộ GitHub');
-  $('#setSyncRow').hidden = !on;
   $('#stSync').textContent = on ? 'Bật' : 'Tắt';
   const at = SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa lần nào';
   const l = $('#ghStatus');
@@ -1038,7 +1029,7 @@ async function syncNow(o = {}){
     } else {
       const conflict = ghCanPush() ? (SY.dirty || (!SY.sha && hasLocal)) : (!SY.sha && hasLocal);
       if (!conflict){ await ghPull(remote.sha); setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); toast('Đã cập nhật nội dung mới'); }
-      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Bấm vào nhãn ở trên để chọn.'); toast('Dữ liệu máy này và GitHub khác nhau – bấm biểu tượng đám mây để chọn bản giữ lại'); }
+      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.'); toast('Dữ liệu máy này và GitHub khác nhau – vào Quản lý dữ liệu → Đồng bộ ngay để chọn bản giữ lại'); }
       else {
         syncBusy = false;
         const opts = [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)' }];
@@ -1124,8 +1115,6 @@ $('#ghCode').onclick = async () => {
   try { await navigator.clipboard.writeText(code); toast('Đã chép mã kết nối. Trên máy kia dán vào ô "Mã token" rồi bấm Kết nối.'); }
   catch(e){ prompt('Sao chép mã kết nối:', code); }
 };
-$('#syncBadge').onclick = () => syncNow({});
-$('#setSync').onclick = () => { show('#settings', false); syncNow({}); };
 
 // Tự kiểm tra nội dung mới khi mở lại app / có mạng trở lại
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ghOn() && Date.now() - lastCheck > 60000) syncNow({ auto:true }); });
@@ -1249,11 +1238,6 @@ $('#doImport').onclick = async () => {
     setTimeout(() => { show('#admin', false); window.scrollTo(0, 0); toast('Đã nạp ' + res.msg); }, 900);
   } catch(e){ setLog('✖ ' + e.message, false); }
   btn.disabled = false;
-};
-$('#loadDemo').onclick = async () => {
-  await importBible(normBible(DEMO), 'merge');
-  S.book = 'Sách Mẫu'; S.chapter = 1; saveS();
-  await reloadAll(); markDirty(); toast('Đã nạp dữ liệu thử');
 };
 $('#clearBible').onclick = async () => {
   if (!confirm('Xóa toàn bộ Kinh Thánh trong máy? Không thể hoàn tác.\n(Nếu đã bật GitHub, bản trên GitHub vẫn còn cho đến khi bạn đồng bộ.)')) return;
@@ -2125,6 +2109,12 @@ addEventListener('scroll', () => {
   });
 }, { passive:true });
 
+async function dropDemoBook(){
+  try {
+    const d = await dbGet('books', 'Sách Mẫu');
+    if (isDemoBook(d)){ await dbDel('books', 'Sách Mẫu'); await dbDel('bookMeta', 'Sách Mẫu'); if (S.book === 'Sách Mẫu'){ S.book = null; S.chapter = 1; saveS(); } SY.dirty = true; saveSY(); }
+  } catch(e){}
+}
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
   applyTheme(); applyFs(); applyView(); updateOnline();
@@ -2140,7 +2130,7 @@ addEventListener('scroll', () => {
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try { db = await openDB(); await reloadAll(); }
+  try { db = await openDB(); await dropDemoBook(); await reloadAll(); }
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (ghOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên GitHub
