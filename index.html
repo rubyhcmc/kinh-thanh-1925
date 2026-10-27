@@ -359,7 +359,7 @@ details a{color:var(--accent)}
       </div>
       <textarea id="impText" placeholder="Dán JSON hoặc văn bản vào đây…" spellcheck="false"></textarea>
       <div class="btns">
-        <input type="file" id="impFile" accept=".json,.txt,.md,text/plain,application/json" hidden multiple>
+        <input type="file" id="impFile" accept=".json,.pdf,.txt,.md,text/plain,application/json,application/pdf" hidden multiple>
         <button class="btn" id="pickFile">📂 Chọn tệp…</button>
         <button class="btn" id="fillSample">Chèn mẫu định dạng</button>
         <button class="btn primary" id="doImport" style="margin-left:auto">Nhập vào máy</button>
@@ -374,6 +374,18 @@ details a{color:var(--accent)}
 
 JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       </details>
+    </div>
+
+    <div class="card">
+      <h4>4. Xuất trọn bộ 1 sách (PDF + JSON) &amp; khôi phục</h4>
+      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục.</p>
+      <select id="exBook" aria-label="Chọn sách cần xuất"></select>
+      <div class="btns">
+        <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
+        <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
+      </div>
+      <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
+      <div class="log" id="exLog"></div>
     </div>
 
     <div class="card">
@@ -446,6 +458,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn primary" id="edSave">💾 Lưu chương</button>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
+      <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -803,7 +816,7 @@ async function importData(type, text, mode){
     if (!src) throw new Error('Không có dữ liệu Kinh Thánh trong tệp sao lưu.');
     return importBible(normBible(src), mode);
   }
-  return importBible(p.json ? normBible(p.json) : parseBibleText(p.text), mode);
+  return importBible(p.json ? normBible(p.json.bible || p.json) : parseBibleText(p.text), mode);
 }
 
 /* ============ MẪU ĐỊNH DẠNG & DỮ LIỆU THỬ ============ */
@@ -1108,6 +1121,9 @@ $('#adminClose').onclick = () => show('#admin', false);
 async function refreshStats(){
   const metas = await dbAll('bookMeta');
   $('#stBible').textContent = metas.length;
+  const exSel = $('#exBook'), exCur = exSel.value || S.book;
+  exSel.innerHTML = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('') || '<option value="">(chưa có sách)</option>';
+  if (metas.some(m => m.name === exCur)) exSel.value = exCur;
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = ghOn() ? 'Bật' : 'Tắt';
 }
@@ -1120,9 +1136,20 @@ $('#fillSample').onclick = () => { $('#impText').value = SAMPLES[$('#impType').v
 $('#pickFile').onclick = () => $('#impFile').click();
 $('#impFile').onchange = async e => {
   const files = [...e.target.files]; if (!files.length) return;
-  const texts = await Promise.all(files.map(f => f.text()));
-  $('#impText').value = texts.length === 1 ? texts[0] : texts.join('\n\n');
-  setLog(`Đã đọc ${files.length} tệp (${files.map(f => f.name).join(', ')}). Bấm "Nhập vào máy" để lưu.`, true);
+  try {
+    const rs = await Promise.all(files.map(fileToText));
+    let text = rs.map(r => r.text).join('\n\n'), forceBackup = rs.some(r => r.pdf);
+    const isJ = t => /^[\s\uFEFF]*[\[{]/.test(t);
+    if (rs.length > 1 && rs.every(r => isJ(r.text))){
+      try {
+        const books = rs.flatMap(r => { const j = JSON.parse(r.text.replace(/^\uFEFF/, '')); return normBible(j.bible || j); });
+        text = JSON.stringify({ bible:{ books } }); forceBackup = true;
+      } catch(err){}
+    }
+    $('#impText').value = text;
+    if (forceBackup || (rs.length === 1 && isJ(text) && /"bible"\s*:/.test(text.slice(0, 400)))) $('#impType').value = 'backup';
+    setLog(`Đã đọc ${files.length} tệp (${files.map(f => f.name).join(', ')}). Bấm "Nhập vào máy" để lưu.`, true);
+  } catch(err){ setLog('✖ ' + err.message, false); }
   e.target.value = '';
 };
 $('#doImport').onclick = async () => {
@@ -1614,6 +1641,334 @@ $('#edDel').onclick = async () => {
 };
 // Tránh mất chữ khi đóng/khóa màn hình: lưu ngay khi app bị ẩn
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !$('#editor').hidden) edAuto(); });
+
+/* =========================================================
+ *  XUẤT SÁCH → PDF (kèm dữ liệu khôi phục) + JSON
+ *  - PDF dàn trang như sách in (khổ A5), vẽ bằng canvas nên mọi
+ *    chữ tiếng Việt đều đúng, không cần nhúng phông.
+ *  - Toàn bộ dữ liệu sách được NHÚNG vào PDF dưới dạng tệp đính kèm
+ *    (kinhthanh-data.json) → nhập lại PDF là khôi phục được.
+ *  - Song song tạo tệp JSON cùng nội dung.
+ * ========================================================= */
+const PG = { W:419.53, H:595.28, L:44, R:44, T:52, B:58 };
+const PDF_SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif';
+const pdfFont = (sz, st) => `${/i/.test(st) ? 'italic ' : ''}${/b/.test(st) ? 'bold ' : ''}${sz}px ${PDF_SERIF}`;
+let _mctx = null;
+function pdfW(s, sz, st){
+  if (!_mctx) _mctx = document.createElement('canvas').getContext('2d');
+  _mctx.font = pdfFont(sz, st); return _mctx.measureText(s).width;
+}
+// Tách chú thích [ … ] và dấu chú thích [n] ra khỏi văn bản câu
+function pdfRuns(t){
+  const out = [], re = /(\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\])|\[(\d{1,3})\]/g; let last = 0, m;
+  t = String(t);
+  while ((m = re.exec(t))){
+    if (m.index > last) out.push({ s:t.slice(last, m.index), k:'n' });
+    out.push(m[1] ? { s:m[1], k:'note' } : { s:m[2], k:'fn' });
+    last = re.lastIndex;
+  }
+  if (last < t.length) out.push({ s:t.slice(last), k:'n' });
+  return out;
+}
+function pdfTokens(runs, size, bst, bcol){
+  const toks = []; let space = false, noSp = true;
+  const push = (s, sz, st, color, sup, sp, gap) => toks.push({ s, sz, st, color, sup, sp, gap:gap || 0, w:pdfW(s, sz, st) });
+  for (const r of runs){
+    if (r.k === 'vn'){ push(r.s, size * 0.62, 'b', '#8a5a1f', true, toks.length > 0, 1.4); space = false; noSp = true; continue; }
+    if (r.k === 'fn'){ push('[' + r.s + ']', size * 0.62, 'i', '#8a5a1f', true, false, 0); space = false; continue; }
+    const note = r.k === 'note', sz = note ? size * 0.86 : size, st = note ? 'i' : bst, col = note ? '#6b6150' : bcol;
+    for (const p of r.s.split(/(\s+)/)){
+      if (!p) continue;
+      if (/^\s+$/.test(p)){ space = true; continue; }
+      push(p, sz, st, col, false, toks.length > 0 && !noSp && space, 0); space = false; noSp = false;
+    }
+  }
+  return toks;
+}
+function makeLayout(){
+  const pages = [], marks = []; let ops = null, y = 0;
+  const L = { pages, marks };
+  L.newPage = () => { ops = []; pages.push(ops); y = PG.T; };
+  L.setY = v => { y = v; };
+  L.space = () => PG.H - PG.B - y;
+  L.ensure = h => { if (h > PG.H - PG.B - y && y > PG.T) L.newPage(); };
+  L.gap = n => { if (y > PG.T) y += n; };
+  L.rule = () => ops.push({ ln:1, x1:PG.L, x2:PG.W - PG.R, y });
+  L.cross = (cx, cy, s) => {
+    ops.push({ r:1, x:cx - s * .09, y:cy - s * .5, w:s * .18, h:s, c:'#8a5a1f' });
+    ops.push({ r:1, x:cx - s * .32, y:cy - s * .22, w:s * .64, h:s * .16, c:'#8a5a1f' });
+  };
+  L.flow = (runs, o) => {
+    const size = o.size || 10.5, lh = o.lh || size * 1.55, x0 = o.x == null ? PG.L : o.x, w = o.w == null ? PG.W - PG.R - x0 : o.w;
+    const bst = o.st || 'n', toks = pdfTokens(runs, size, bst, o.color), sp = pdfW(' ', size, bst);
+    const first = o.first || 0, hang = o.hang || 0, avail = i => w - (i === 0 ? first : hang);
+    const lines = []; let cur = [], lw = 0;
+    for (const t of toks){
+      const add = (cur.length && t.sp ? sp : 0) + t.w + t.gap;
+      if (cur.length && lw + add > avail(lines.length) + 0.01){ lines.push({ cur, lw }); cur = [t]; lw = t.w + t.gap; }
+      else { cur.push(t); lw += add; }
+    }
+    if (cur.length) lines.push({ cur, lw });
+    lines.forEach((ln, i) => {
+      if (y + lh > PG.H - PG.B) L.newPage();
+      const base = y + size, av = avail(i);
+      let x = x0 + (i === 0 ? first : hang), extra = 0;
+      const gaps = ln.cur.filter((t, k) => k > 0 && t.sp).length;
+      if (o.align === 'center') x = x0 + (w - ln.lw) / 2;
+      else if (o.justify && i < lines.length - 1 && gaps) extra = Math.max(0, (av - ln.lw) / gaps);
+      ln.cur.forEach((t, k) => {
+        if (k > 0 && t.sp) x += sp + extra;
+        ops.push({ s:t.s, x, y:base - (t.sup ? size * 0.36 : 0), f:pdfFont(t.sz, t.st), c:t.color || o.color || '#1b1710' });
+        x += t.w + t.gap;
+      });
+      y += lh;
+    });
+  };
+  return L;
+}
+function pdfHeading(L, h){
+  const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
+  const isRef = l => /^\([^()]*\)$/.test(l), multi = ls.filter(l => !isRef(l)).length > 1; let k = 0;
+  const ref = t => L.flow([{ s:t, k:'n' }], { size:8.5, lh:12, align:'center', st:'i', color:'#7a6e60' });
+  L.gap(11); L.ensure(56);
+  ls.forEach(l => {
+    if (isRef(l)){ ref(l); return; }
+    const big = !multi || k === 0; k++;
+    const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
+    L.flow([{ s:(m && m[1]) ? m[1] : l, k:'n' }], { size:big ? 11.5 : 10, lh:big ? 15.5 : 14, align:'center', st:'b' });
+    if (m && m[1]) ref(m[2]);
+  });
+  L.gap(5);
+}
+function layoutBook(book){
+  const L = makeLayout(), SZ = 10.5, LH = 16.2;
+  const done = book.chapters.filter(c => c && c.length);
+  const nv = done.reduce((a, c) => a + c.length, 0);
+  // Trang bìa
+  L.newPage();
+  L.cross(PG.W / 2, 120, 46);
+  L.setY(190);
+  L.flow([{ s:'KINH THÁNH', k:'n' }], { size:9, lh:14, align:'center', color:'#8a5a1f', st:'b' });
+  L.gap(8);
+  L.flow([{ s:book.name, k:'n' }], { size:26, lh:32, align:'center', st:'b' });
+  L.gap(10);
+  L.flow([{ s:`${done.length} chương · ${nv} câu`, k:'n' }], { size:10, lh:15, align:'center', color:'#6b6150', st:'i' });
+  L.setY(PG.H - 130);
+  L.flow([{ s:'Xuất ngày ' + new Date().toLocaleDateString('vi-VN') + '. Tệp PDF này có kèm sẵn dữ liệu để khôi phục: mở ứng dụng → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn tệp này.', k:'n' }],
+    { size:7.5, lh:11, align:'center', color:'#7a6e60', st:'i' });
+  // Nội dung
+  let first = true;
+  book.chapters.forEach((vs, ci) => {
+    if (!vs || !vs.length) return;
+    if (first || L.space() < PG.H * 0.3) L.newPage(); else L.gap(22);
+    first = false;
+    L.ensure(70);
+    L.marks.push({ title:`${book.name} ${ci + 1}`, page:L.pages.length - 1 });
+    L.flow([{ s:book.name.toUpperCase(), k:'n' }], { size:12.5, lh:17, align:'center', st:'b' });
+    L.flow([{ s:'CHƯƠNG ' + (ci + 1), k:'n' }], { size:8, lh:12, align:'center', color:'#7a6e60' });
+    L.gap(10);
+    let para = null, wasPoem = false;
+    const flush = () => { if (para && para.length){ L.flow(para, { size:SZ, lh:LH, justify:true }); L.gap(5); } para = null; };
+    vs.forEach(v => {
+      const poem = Array.isArray(v.q) && v.q.length;
+      if (v.h){ flush(); pdfHeading(L, v.h); wasPoem = false; }
+      if (poem){
+        flush();
+        String(v.t).split('\n').forEach((ln, k) => {
+          const runs = []; if (k === 0) runs.push({ s:String(v.n), k:'vn' });
+          runs.push(...pdfRuns(ln));
+          L.flow(runs, { size:SZ, lh:LH, x:PG.L + ((v.q[k] || 1) - 1) * 16, hang:12 });
+        });
+        L.gap(1.5); wasPoem = true;
+      } else {
+        if (wasPoem){ L.gap(6); wasPoem = false; }
+        if (!para || v.p){ flush(); para = []; }
+        para.push({ s:String(v.n), k:'vn' }, ...pdfRuns(v.t));
+      }
+    });
+    flush();
+    const fns = vs.flatMap(v => v.fn || []);
+    if (fns.length){
+      L.gap(8); L.ensure(34); L.rule(); L.gap(5);
+      fns.forEach(f => L.flow([{ s:f, k:'n' }], { size:8.2, lh:11.5, st:'i', color:'#6b6150' }));
+    }
+  });
+  return L;
+}
+async function renderPages(pages, name, cb){
+  const S = 2.5, cv = document.createElement('canvas');
+  cv.width = Math.round(PG.W * S); cv.height = Math.round(PG.H * S);
+  const ctx = cv.getContext('2d'), out = [];
+  for (let i = 0; i < pages.length; i++){
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(S, 0, 0, S, 0, 0); ctx.textBaseline = 'alphabetic';
+    for (const o of pages[i]){
+      if (o.r){ ctx.fillStyle = o.c; ctx.fillRect(o.x, o.y, o.w, o.h); }
+      else if (o.ln){ ctx.strokeStyle = '#b9ae9a'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(o.x1, o.y); ctx.lineTo(o.x2, o.y); ctx.stroke(); }
+      else { ctx.font = o.f; ctx.fillStyle = o.c; ctx.fillText(o.s, o.x, o.y); }
+    }
+    if (i > 0){
+      const ft = `${name} · ${i}`; ctx.font = pdfFont(8, 'n'); ctx.fillStyle = '#7a6e60';
+      ctx.fillText(ft, (PG.W - ctx.measureText(ft).width) / 2, PG.H - 30);
+    }
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.86));
+    if (!blob) throw new Error('Trình duyệt không tạo được ảnh trang.');
+    out.push(new Uint8Array(await blob.arrayBuffer()));
+    cb(i + 1, pages.length);
+    await new Promise(r => setTimeout(r, 0));
+  }
+  return { images:out, w:cv.width, h:cv.height };
+}
+async function pdfDeflate(bytes){
+  if (typeof CompressionStream === 'undefined') return null;
+  try { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer()); }
+  catch(e){ return null; }
+}
+async function pdfInflate(bytes){
+  if (typeof DecompressionStream === 'undefined') throw new Error('Trình duyệt chưa hỗ trợ giải nén PDF này. Hãy dùng tệp JSON đi kèm.');
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+}
+function buildPdfParts(o){
+  const enc = new TextEncoder(), parts = [], offs = []; let pos = 0;
+  const put = u => { if (typeof u === 'string') u = enc.encode(u); parts.push(u); pos += u.length; };
+  const hex = s => { let h = '<FEFF'; for (let i = 0; i < s.length; i++) h += s.charCodeAt(i).toString(16).padStart(4, '0'); return h + '>'; };
+  const n = o.images.length, m = o.marks.length, pb = 7 + m, total = 6 + m + 3 * n;
+  const begin = id => { offs[id] = pos; put(id + ' 0 obj\n'); }, end = 'endobj\n';
+  const stream = (dict, bytes) => { put(dict.replace('%L', bytes.length)); put('\nstream\n'); put(bytes); put('\nendstream\n'); };
+  const W = o.W.toFixed(2), H = o.H.toFixed(2);
+  put('%PDF-1.7\n'); put(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+  begin(1); put(`<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(kinhthanh-data.json) 5 0 R] >> >> /AF [5 0 R]${m ? ' /Outlines 6 0 R /PageMode /UseOutlines' : ''} >>\n${end}`);
+  begin(2); put(`<< /Type /Pages /Kids [${Array.from({ length:n }, (_, i) => (pb + 3 * i) + ' 0 R').join(' ')}] /Count ${n} >>\n${end}`);
+  begin(3); put(`<< /Title ${hex(o.title)} /Producer (Kinh Thanh PWA) /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z) >>\n${end}`);
+  begin(4); stream(`<< /Type /EmbeddedFile /Subtype /application#2Fjson /KTData 1 /Length %L${o.flate ? ' /Filter /FlateDecode' : ''} /Params << /Size ${o.rawSize} >> >>`, o.data); put(end);
+  begin(5); put(`<< /Type /Filespec /F (kinhthanh-data.json) /UF (kinhthanh-data.json) /AFRelationship /Data /Desc (Du lieu khoi phuc Kinh Thanh) /EF << /F 4 0 R /UF 4 0 R >> >>\n${end}`);
+  begin(6); put(m ? `<< /Type /Outlines /First 7 0 R /Last ${6 + m} 0 R /Count ${m} >>\n${end}` : `<< /Type /Outlines /Count 0 >>\n${end}`);
+  for (let i = 0; i < m; i++){
+    begin(7 + i);
+    put(`<< /Title ${hex(o.marks[i].title)} /Parent 6 0 R${i ? ` /Prev ${6 + i} 0 R` : ''}${i < m - 1 ? ` /Next ${8 + i} 0 R` : ''} /Dest [${pb + 3 * o.marks[i].page} 0 R /Fit] >>\n${end}`);
+  }
+  for (let i = 0; i < n; i++){
+    const p = pb + 3 * i;
+    begin(p); put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${p + 2} 0 R >> >> /Contents ${p + 1} 0 R >>\n${end}`);
+    begin(p + 1); stream('<< /Length %L >>', enc.encode(`q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`)); put(end);
+    begin(p + 2); stream(`<< /Type /XObject /Subtype /Image /Width ${o.w} /Height ${o.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length %L >>`, o.images[i]); put(end);
+  }
+  const xo = pos; let x = 'xref\n0 ' + (total + 1) + '\n0000000000 65535 f \n';
+  for (let id = 1; id <= total; id++) x += String(offs[id]).padStart(10, '0') + ' 00000 n \n';
+  put(x); put(`trailer\n<< /Size ${total + 1} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xo}\n%%EOF\n`);
+  return parts;
+}
+// Lấy dữ liệu khôi phục (JSON) ra khỏi PDF do ứng dụng xuất
+async function pdfToJson(buf){
+  const u = new Uint8Array(buf), enc = new TextEncoder();
+  const find = (pat, from) => {
+    const p = enc.encode(pat);
+    outer: for (let i = from || 0; i <= u.length - p.length; i++){
+      if (u[i] !== p[0]) continue;
+      for (let j = 1; j < p.length; j++) if (u[i + j] !== p[j]) continue outer;
+      return i;
+    }
+    return -1;
+  };
+  const k = find('/KTData');
+  if (k < 0) throw new Error('PDF này không chứa dữ liệu khôi phục (chỉ PDF do ứng dụng này xuất mới khôi phục được). Hãy dùng tệp JSON.');
+  const sp = find('stream\n', k);
+  if (sp < 0) throw new Error('PDF bị hỏng, không đọc được dữ liệu khôi phục.');
+  let head = ''; for (let i = k; i < sp; i++) head += String.fromCharCode(u[i]);
+  const lm = head.match(/\/Length (\d+)/); if (!lm) throw new Error('PDF bị hỏng (thiếu độ dài dữ liệu).');
+  let data = u.slice(sp + 7, sp + 7 + (+lm[1]));
+  if (/FlateDecode/.test(head)) data = await pdfInflate(data);
+  return new TextDecoder('utf-8').decode(data);
+}
+async function fileToText(f){
+  if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') return { text:await pdfToJson(await f.arrayBuffer()), pdf:true };
+  return { text:await f.text() };
+}
+
+/* --- Giao diện xuất --- */
+let exBusy = false;
+async function saveFiles(files){
+  if (matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files })){
+    try { await navigator.share({ files }); return; } catch(e){ if (e.name === 'AbortError') return; }
+  }
+  for (let i = 0; i < files.length; i++){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(files[i]); a.download = files[i].name;
+    document.body.appendChild(a); a.click(); a.remove();
+    const u = a.href; setTimeout(() => URL.revokeObjectURL(u), 60000);
+    if (i < files.length - 1) await new Promise(r => setTimeout(r, 700));
+  }
+}
+function exportResult(name, pdf, json, pages){
+  const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
+  o.innerHTML = `<div class="sheet"><h3>Đã xuất xong: ${esc(name)}</h3>
+    <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)}) và JSON (${mb(json)}). Hãy cất cả hai nơi an toàn.</p>
+    <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn một trong hai tệp.</p>
+    <div class="btns" style="flex-direction:column">
+      <button class="btn primary" data-k="both">⬇️ Tải cả hai tệp</button>
+      <button class="btn" data-k="pdf">📕 Chỉ tải PDF</button>
+      <button class="btn" data-k="json">🧾 Chỉ tải JSON</button>
+      <button class="btn" data-k="x">Xong</button></div></div>`;
+  o.addEventListener('click', async e => {
+    const b = e.target.closest('[data-k]');
+    if (!b){ if (e.target === o) o.remove(); return; }
+    const k = b.dataset.k;
+    if (k === 'x') return o.remove();
+    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
+  });
+  document.body.appendChild(o);
+}
+async function exportBook(name){
+  if (exBusy) return;
+  name = String(name || '').trim(); if (!name) return toast('Hãy chọn sách cần xuất');
+  const rec = await dbGet('books', name);
+  if (!rec) return toast('Chưa có sách "' + name + '" trong máy');
+  const meta = bibleMeta.find(m => m.name === name) || {};
+  const filled = rec.chapters.filter(c => c && c.length).length, empty = rec.chapters.length - filled;
+  if (!filled) return toast('Sách này chưa có chương nào có nội dung');
+  if (empty && !confirm(`Sách còn ${empty} chương trống (sẽ bị bỏ qua trong PDF). Vẫn xuất?`)) return;
+  exBusy = true;
+  const pr = document.createElement('div'); pr.className = 'overlay'; pr.style.zIndex = 90;
+  pr.innerHTML = '<div class="sheet"><h3>Đang tạo PDF…</h3><p id="exProg" style="margin:0">Đang dàn trang…</p></div>';
+  document.body.appendChild(pr);
+  const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
+  try {
+    await new Promise(r => setTimeout(r, 30));
+    const book = { name:rec.name, abbr:meta.abbr || '', chapters:rec.chapters };
+    const lay = layoutBook(book);
+    const r = await renderPages(lay.pages, book.name, (i, n) => say(`Đang vẽ trang ${i}/${n}…`));
+    say('Đang đóng gói dữ liệu khôi phục…');
+    const payload = { app:'kinhthanh', version:1, kind:'book', updatedAt:new Date().toISOString(), bible:{ books:[book] } };
+    const jsonStr = JSON.stringify(payload), raw = new TextEncoder().encode(jsonStr), packed = await pdfDeflate(raw);
+    const parts = buildPdfParts({ images:r.images, w:r.w, h:r.h, W:PG.W, H:PG.H, marks:lay.marks, title:book.name + ' - Kinh Thánh',
+      data:packed || raw, flate:!!packed, rawSize:raw.length });
+    const slug = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sach';
+    const base = `KinhThanh-${slug}-${new Date().toISOString().slice(0, 10)}`;
+    const pdf = new File(parts, base + '.pdf', { type:'application/pdf' });
+    const json = new File([jsonStr], base + '.json', { type:'application/json' });
+    pr.remove(); exportResult(name, pdf, json, lay.pages.length);
+  } catch(e){ pr.remove(); console.error(e); toast('Lỗi xuất sách: ' + (e.message || e)); }
+  finally { exBusy = false; }
+}
+$('#exGo').onclick = () => exportBook($('#exBook').value);
+$('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
+$('#exRestore').onclick = () => $('#exFile').click();
+$('#exFile').onchange = async e => {
+  const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
+  const log = $('#exLog'); log.className = 'log ok'; log.textContent = 'Đang đọc tệp…';
+  try {
+    let first = null; const names = [];
+    for (const f of files){
+      const { text } = await fileToText(f);
+      const isJson = /^[\s﻿]*[\[{]/.test(text);
+      const res = await importData(isJson ? 'backup' : 'bible', text, 'merge');
+      first = first || res.first; names.push(f.name);
+    }
+    S.book = first; S.chapter = 1; saveS();
+    await reloadAll(); markDirty();
+    log.textContent = '✔ Đã khôi phục từ: ' + names.join(', '); toast('Đã khôi phục dữ liệu');
+  } catch(err){ log.className = 'log err'; log.textContent = '✖ ' + err.message; }
+};
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
