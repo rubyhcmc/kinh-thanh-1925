@@ -14,7 +14,7 @@
 :root{
   --bg:#f7f3ea; --card:#fffdf8; --fg:#2a2118; --muted:#7a6e60;
   --accent:#8a5a1f; --accent-soft:#f0e3cc; --line:#e4dccb; --hl:#fff1c2;
-  --danger:#b3261e; --fs:18px; --hh:calc(42px + env(safe-area-inset-top)); --tabh:0px;
+  --danger:#b3261e; --fs:18px; --hh:calc(46px + env(safe-area-inset-top)); --tabh:0px;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
@@ -32,7 +32,7 @@ button{cursor:pointer}
 
 /* Thanh tiêu đề tối giản – như đầu trang sách */
 body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:30}
-.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 6px 0 18px;
+.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 4px 0 10px;gap:4px;
   display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--line);
   transition:transform .25s ease}
 .top h1{font-size:12px;margin:0;font-family:var(--serif);font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
@@ -49,7 +49,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area
 .syncb.dirty,.syncb.offline{color:var(--accent)}
 .syncb.err,.syncb.conflict{color:var(--danger)}
 body.hdr-hide .top{transform:translateY(-100%)}
-body.hdr-hide .navrow{transform:translateY(calc(-100% - var(--hh)))}
+
 
 main{max-width:760px;margin:0 auto}
 
@@ -62,6 +62,12 @@ select,input[type=search],input[type=password],input[type=text],input[type=numbe
   width:100%;padding:10px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 select{min-width:0}
 
+/* Một hàng duy nhất: chọn Sách/Chương/Câu bên trái, biểu tượng bên phải */
+.top h1{display:none}
+.top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:5px;padding:0;border:0;background:none;transform:none}
+.top .navrow select{height:36px;padding:0 17px 0 8px;background-position:right 5px center;text-overflow:ellipsis}
+.top .right{margin-left:auto;flex:none}
+.top .iconbtn{min-width:34px;padding:0 4px}
 /* Khu vực đọc */
 .reader{padding:10px 18px 24px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
 .reader h2{font-size:1.25em;margin:.2em 0 .6em;line-height:1.3}
@@ -90,7 +96,7 @@ select{min-width:0}
 .para{margin:0 0 .75em}
 .dc{float:left;font-size:3.5em;line-height:.8;font-weight:700;color:var(--accent);margin:.07em .12em 0 0}
 .vn{font-family:var(--sans);font-size:.58em;font-weight:700;vertical-align:super;line-height:0;margin:0 .22em 0 .12em;color:var(--accent)}
-.v{border-radius:4px;scroll-margin-top:calc(var(--hh) + 70px)}
+.v{border-radius:4px;scroll-margin-top:calc(var(--hh) + 14px)}
 .v.sel{background:var(--hl)}
 .poem{margin:0 0 .9em;text-align:left}
 .poem .v{display:block}
@@ -133,7 +139,8 @@ select{min-width:0}
 .searchbar input{flex:1;min-width:0}
 
 /* Tìm kiếm Kinh Thánh */
-#tab-bible.searching>.navrow,#tab-bible.searching>.reader,#tab-bible.searching>.chapnav{display:none!important}
+body.searching .top .navrow{display:none}
+#tab-bible.searching>.reader,#tab-bible.searching>.chapnav{display:none!important}
 .bsopts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 12px 8px;font-size:14px;color:var(--muted)}
 .bsopts label{display:flex;gap:6px;align-items:center}
 .bsopts input[type=checkbox]{width:auto}
@@ -196,6 +203,11 @@ details a{color:var(--accent)}
 
 <header class="top">
   <h1 id="title">Kinh Thánh</h1>
+  <div class="navrow">
+    <select id="selBook" aria-label="Sách"></select>
+    <select id="selChap" aria-label="Chương"></select>
+    <select id="selVerse" aria-label="Câu"></select>
+  </div>
   <div class="right">
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
     <button class="iconbtn syncb" id="syncBadge" hidden aria-label="Đồng bộ GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.5 7.5H7z"/></svg></button>
@@ -217,11 +229,6 @@ details a{color:var(--accent)}
       <div class="bsinfo" id="bsInfo"></div>
       <div id="bsItems"></div>
       <div class="pager" id="bsPager"></div>
-    </div>
-    <div class="navrow">
-      <select id="selBook" aria-label="Sách"></select>
-      <select id="selChap" aria-label="Chương"></select>
-      <select id="selVerse" aria-label="Câu"></select>
     </div>
     <article class="reader" id="bibleText"></article>
     <div class="chapnav" id="chapNav" hidden>
@@ -588,14 +595,14 @@ async function openBook(name, chapter){
   const total = curBook.chapters.length;
   S.book = name; S.chapter = Math.min(Math.max(1, chapter || 1), total); saveS();
   $('#selBook').value = name;
-  $('#selChap').innerHTML = Array.from({length: total}, (_, i) => `<option value="${i+1}">Ch. ${i+1}</option>`).join('');
+  $('#selChap').innerHTML = Array.from({length: total}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('');
   renderChapter();
 }
 function renderChapter(){
   clearSelection();
   const verses = curBook.chapters[S.chapter - 1] || [];
   $('#selChap').value = S.chapter;
-  $('#selVerse').innerHTML = `<option value="">Câu…</option>` + verses.map(v => `<option value="${v.n}">Câu ${v.n}</option>`).join('');
+  $('#selVerse').innerHTML = `<option value="">Câu</option>` + verses.map(v => `<option value="${v.n}">Câu ${v.n}</option>`).join('');
   $('#bibleText').className = 'reader' + (S.view !== 'verse' ? ' print' : '');
   $('#bibleText').innerHTML = paperHTML(curBook.name, S.chapter, verses, S.view);
   $('#chapNav').hidden = false;
@@ -734,7 +741,7 @@ function bsRender(){
     <button class="btn" data-p="1" ${bs.page >= pages - 1 ? 'disabled' : ''}>Sau ›</button>` : '';
 }
 function setSearch(on){
-  $('#tab-bible').classList.toggle('searching', on);
+  $('#tab-bible').classList.toggle('searching', on); document.body.classList.toggle('searching', on);
   $('#bSearch').hidden = !on;
   if (on){ clearSelection(); bsFillScope(); bsBuild(); setTimeout(() => $('#bsQ').focus(), 50); }
   window.scrollTo(0, 0);
