@@ -572,6 +572,8 @@ function renderBibleEmpty(){
   $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
   $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = '';
   $('#chapNav').hidden = true;
+  $('#bibleText').insertAdjacentHTML('beforeend', '<div class="log" id="emptySync" style="text-align:center;padding:0 20px 30px"></div>');
+  updateSyncUI();
 }
 async function initBible(){
   await loadBibleMeta(); bs.idx = null; bsFillScope();
@@ -622,6 +624,7 @@ $('#selVerse').onchange = e => {
 $('#prevChap').onclick = () => stepChapter(-1);
 $('#nextChap').onclick = () => stepChapter(1);
 
+$('#bibleText').addEventListener('click', e => { if (e.target.id === 'emptyRetry') syncNow({}); });
 // Chạm vào câu để chọn → sao chép
 $('#bibleText').addEventListener('click', e => {
   const p = e.target.closest('.v'); if (!p) return;
@@ -955,6 +958,37 @@ async function ghPush(auto){
   SY = { sha:r.content.sha, dirty:false, at:Date.now() }; saveSY();
 }
 
+/* --- Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt --- */
+async function rawFetch(){
+  const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
+  const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
+  let res;
+  try { res = await fetch(url, { cache:'no-store' }); }
+  catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
+  if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
+  if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
+  return res.text();
+}
+const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
+async function syncReadOnly(o){
+  const text = await rawFetch(), sig = sigOf(text), hasLocal = bibleMeta.length > 0;
+  if (sig === SY.sha && hasLocal){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
+  let j; try { j = JSON.parse(text.replace(/^\uFEFF/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); }
+  const books = normBible(j.bible || j);
+  if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
+  if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
+    if (o.auto){ setSync('conflict', 'Máy này đã có dữ liệu riêng khác với GitHub. Bấm vào nhãn ở trên để chọn.'); toast('Dữ liệu máy này khác GitHub – bấm biểu tượng đám mây để chọn'); return; }
+    syncBusy = false;
+    const c = await choose('Dữ liệu khác nhau', 'Máy này đang có dữ liệu riêng. Thay bằng dữ liệu từ GitHub?', [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)', cls:'primary' }, { t:'Để sau' }]);
+    syncBusy = true;
+    if (c !== 0){ setSync('conflict', 'Chưa chọn bản nào.'); return; }
+  }
+  await importBible(books, 'replace');
+  SY = { sha:sig, dirty:false, at:Date.now() }; saveSY();
+  const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
+  setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); if (!o.auto || !hasLocal) toast('Đã tải dữ liệu từ GitHub');
+}
+
 /* --- Trạng thái hiển thị --- */
 const SYNC_TXT = { off:'', ok:'☁ Đã đồng bộ', busy:'⟳ Đang đồng bộ…', dirty:'● Chờ đồng bộ', err:'⚠ Lỗi đồng bộ', conflict:'⚠ Cần chọn', offline:'☁ Chưa có mạng' };
 let syncState = 'off', syncMsg = '', syncBusy = false, pushTimer, lastCheck = 0;
@@ -969,6 +1003,8 @@ function updateSyncUI(){
   const l = $('#ghStatus');
   l.textContent = on ? `Kho: ${GH.repo}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${ghCanPush() ? 'đọc & ghi (có token)' : 'chỉ đọc (không có token)'}` : 'Chưa kết nối GitHub.';
   l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
+  const es = $('#emptySync');
+  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
   const sh = $('#ghShare'); sh.hidden = !on;
   if (on) $('#ghShareUrl').value = location.origin + location.pathname + '?kho=' + GH.repo;
 }
@@ -984,6 +1020,7 @@ async function syncNow(o = {}){
   if (!navigator.onLine){ setSync('offline', 'Sẽ tự đồng bộ khi có mạng.'); return; }
   syncBusy = true; setSync('busy'); lastCheck = Date.now();
   try {
+    if (!ghCanPush()){ await syncReadOnly(o); return; }
     const remote = await ghRemote(), hasLocal = bibleMeta.length > 0;
     if (!remote){
       if (ghCanPush() && hasLocal){ await ghPush(o.auto); setSync('ok', 'Đã tạo tệp dữ liệu trên GitHub.'); }
