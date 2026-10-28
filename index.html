@@ -312,6 +312,9 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abfeat li.abh{padding:0;margin:1.2em 0 .45em;padding-bottom:.35em;border-bottom:1px solid var(--line);font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .abfeat li.abh::before{display:none}
 .abfeat li.abh:first-child{margin-top:0}
+.updwrap{text-align:center;margin-top:10px}
+.updwrap .btn{padding:8px 16px;font-size:13.5px}
+.updmsg{min-height:1.4em;margin-top:6px;font-size:12px;color:var(--muted)}
 .abver{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.03em;color:var(--muted);text-align:center}
 .adminlink{display:flex;align-items:center;gap:5px;margin:16px auto 0;border:0;background:none;color:var(--muted);opacity:.65;font-size:11px;letter-spacing:.04em;padding:6px 12px}
 .adminlink:active{opacity:1}
@@ -446,6 +449,7 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
       <div class="abtxt" id="abText"></div>
       <div class="abfeatbox"><ul class="abfeat" id="abFeat"></ul></div>
       <div id="verTag" class="abver"></div>
+      <div class="updwrap"><button class="btn" id="btnUpd">🔄 Kiểm tra cập nhật</button><div class="updmsg" id="updMsg" aria-live="polite"></div></div>
     </div>
 
     <button class="adminlink" id="btnAdmin" aria-label="Đăng nhập quản trị viên"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Quản trị viên</button>
@@ -715,7 +719,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1901,7 +1905,21 @@ $('#abeReset').onclick = () => {
   }, { passive:false });
 })();
 
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; show('#settings'); };
+$('#btnUpd').onclick = async () => {
+  const btn = $('#btnUpd'), msg = $('#updMsg'); if (btn.disabled) return;
+  if (!navigator.onLine){ msg.textContent = 'Đang offline – chưa kiểm tra được.'; return; }
+  btn.disabled = true; msg.textContent = 'Đang kiểm tra…';
+  try {
+    const u = new URL(location.href); u.hash = ''; u.searchParams.set('_u', Date.now());       // đuôi ngẫu nhiên để vượt bộ nhớ đệm CDN
+    const res = await fetch(u.href, { cache:'no-store' }); if (!res.ok) throw new Error('HTTP ' + res.status);
+    const m = (await res.text()).match(/const APP_VERSION\s*=\s*'([^']+)'/);
+    if (!m) throw new Error('không đọc được số phiên bản');
+    if (m[1] === APP_VERSION){ msg.textContent = '✔ Bạn đang dùng bản mới nhất (' + APP_VERSION + ').'; }
+    else { msg.textContent = 'Có bản mới ' + m[1] + ' – đang tải lại…'; setTimeout(() => location.replace(u.href), 700); return; }
+  } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
+  btn.disabled = false;
+};
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 $('#btnAdmin').onclick = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', setTimeout(() => $('#pw').focus(), 50)); };
