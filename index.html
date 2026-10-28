@@ -341,6 +341,26 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
   background:linear-gradient(to right,rgba(0,0,0,.05),rgba(0,0,0,.55))}
 .fl-strip{position:absolute;top:0;bottom:0;width:46px;opacity:0;pointer-events:none;
   background:linear-gradient(to right,rgba(0,0,0,.38),rgba(0,0,0,0))}
+
+/* Cửa sổ trượt viết bài học cá nhân */
+.lssheet{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .22s}
+.lssheet.open{opacity:1}
+.lspanel{width:100%;max-width:560px;height:min(86vh,86dvh);display:flex;flex-direction:column;background:var(--card);border-radius:20px 20px 0 0;overflow:hidden;transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom)}
+.lssheet.open .lspanel{transform:none}
+.lsgrip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:9px auto 0;flex:none}
+.lstop{flex:none;padding:14px 20px 14px;background:var(--accent-soft);border-bottom:1px solid var(--line);max-height:38%;overflow:auto;overscroll-behavior:contain}
+.lsref{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.lsref::before{content:'';width:18px;height:1px;background:var(--accent)}
+.lsverse{margin:0;font-family:var(--serif,Georgia,serif);font-style:italic;font-size:17px;line-height:1.65;color:var(--fg);text-align:justify;text-justify:inter-word;hyphens:auto}
+.lsverse::before{content:'“';color:var(--accent);font-size:1.4em;line-height:0;margin-right:.08em}
+.lsverse::after{content:'”';color:var(--accent);font-size:1.4em;line-height:0;margin-left:.05em}
+.lsbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 20px 8px}
+.lslabel{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.lsbody textarea{flex:1;min-height:120px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;line-height:1.6;resize:none}
+.lsbody textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.lsbtns{flex:none;display:flex;gap:8px;padding:10px 20px 14px}
+.lsbtns .btn{flex:1;white-space:nowrap}
+.lsbtns .primary{flex:1.6}
 </style>
 </head>
 <body>
@@ -606,6 +626,24 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
   </div>
 </div>
 
+<!-- CỬA SỔ VIẾT BÀI HỌC CÁ NHÂN -->
+<div class="lssheet" id="lsSheet" hidden>
+  <div class="lspanel" role="dialog" aria-modal="true" aria-label="Viết bài học cá nhân">
+    <div class="lsgrip"></div>
+    <div class="lstop"><div class="lsref" id="lsRef"></div><p class="lsverse" id="lsVerse"></p></div>
+    <div class="lsbody">
+      <label class="lslabel" for="lsText">Bài học cá nhân</label>
+      <textarea id="lsText" placeholder="Điều Chúa dạy bạn qua đoạn này…" autocomplete="off"></textarea>
+    </div>
+    <div class="lsbtns">
+      <button class="btn danger" id="lsDel" hidden>Xóa</button>
+      <button class="btn" id="lsShare">Chia sẻ</button>
+      <button class="btn" id="lsClose">Đóng</button>
+      <button class="btn primary" id="lsSave">Lưu ghi chú</button>
+    </div>
+  </div>
+</div>
+
 <!-- TRÌNH SOẠN THẢO KINH THÁNH -->
 <div class="admin" id="editor" style="z-index:48" hidden>
   <div class="bar"><h3>Soạn thảo Kinh Thánh</h3>
@@ -677,7 +715,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-z8';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1159,6 +1197,46 @@ function openMarks(){
 }
 $('#btnMarks').onclick = openMarks;
 
+/* Bài học cá nhân: cửa sổ viết ghi chú cho một câu (lưu trong máy: kt.lessons) */
+let LS = []; try { LS = JSON.parse(localStorage.getItem('kt.lessons') || '[]'); } catch(e){}
+const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } };
+const lsEl = $('#lsSheet'), lsTa = $('#lsText');
+let lsCur = null;
+function lsClose(){ lsEl.classList.remove('open'); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
+function lsShareText(){
+  const c = lsCur; return `${c.book} ${c.ch}:${c.n}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
+}
+window.addEventListener('openLesson', e => {
+  const { book, ch, n } = e.detail || {};
+  const el = $('#v' + n), quote = el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim() : '';
+  const old = LS.find(x => x.book === book && x.ch === ch && x.n === n);
+  lsCur = { book, ch, n, quote, old };
+  $('#lsRef').textContent = `${book} ${ch}:${n}`;
+  $('#lsVerse').textContent = quote;
+  lsTa.value = old ? old.text : '';
+  $('#lsDel').hidden = !old;
+  lsEl.hidden = false; void lsEl.offsetWidth; lsEl.classList.add('open');
+  setTimeout(() => lsTa.focus(), 280);
+});
+lsEl.addEventListener('click', e => { if (e.target === lsEl) lsClose(); });
+$('#lsClose').onclick = lsClose;
+$('#lsSave').onclick = () => {
+  const t = lsTa.value.trim(); if (!t){ toast('Hãy viết nội dung ghi chú'); lsTa.focus(); return; }
+  const { book, ch, n, old } = lsCur;
+  if (old){ old.text = t; old.at = Date.now(); } else { const o = { book, ch, n, text:t, at:Date.now() }; LS.unshift(o); lsCur.old = o; $('#lsDel').hidden = false; }
+  saveLS(); toast('✍️ Đã lưu ghi chú'); lsClose();
+};
+$('#lsDel').onclick = () => {
+  if (!lsCur.old || !confirm('Xóa ghi chú này?')) return;
+  LS = LS.filter(x => x !== lsCur.old); saveLS(); toast('Đã xóa ghi chú'); lsClose();
+};
+$('#lsShare').onclick = async () => {
+  if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
+  const text = lsShareText();
+  try { if (navigator.share){ await navigator.share({ title:`${lsCur.book} ${lsCur.ch}:${lsCur.n}`, text }); return; } } catch(err){ if (err && err.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('📋 Đã chép ghi chú để dán chia sẻ'); } catch(err){ toast('Không chia sẻ được trên máy này'); }
+};
+
 /* Menu nhỏ hiện khi chạm giữ một câu */
 function showVerseMenu(n, x, y){
   if (!curBook) return;
@@ -1170,7 +1248,8 @@ function showVerseMenu(n, x, y){
   m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
     <button data-a="mark">🔖 Đã đọc đến đây</button>
     <button data-a="copy">📋 Sao chép câu này</button>
-    <button data-a="multi">☑️ Chọn nhiều câu</button>`;
+    <button data-a="multi">☑️ Chọn nhiều câu</button>
+    <button data-a="lesson">✍️ Viết bài học cá nhân</button>`;
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
@@ -1187,6 +1266,7 @@ function showVerseMenu(n, x, y){
     const a = b.dataset.a;
     if (a === 'mark') addBookmark(n);
     else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
+    else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, n } }));
     else if (a === 'multi'){
       selected.clear(); selected.add(n);
       const el = $('#v' + n); if (el) el.classList.add('sel');
