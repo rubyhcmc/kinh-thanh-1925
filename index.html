@@ -273,10 +273,13 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abtxt ul{margin:.2em 0 .8em;padding-left:1.25em}
 .abtxt li{margin:.25em 0}
 .abtxt>:last-child{margin-bottom:0}
-.abfeat{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.5;color:var(--muted)}
-.abfeat li{position:relative;padding:3px 0 3px 16px}
-.abfeat li::before{content:'';position:absolute;left:3px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
-.abfeat b{color:var(--fg);font-weight:600}
+.abfeat{margin:.2em 0 0;padding:0;list-style:none;font-size:13.5px;line-height:1.65;color:var(--fg);text-align:left;overflow-wrap:anywhere}
+.abfeat li{position:relative;padding:.25em 0 .25em 18px}
+.abfeat li::before{content:'';position:absolute;left:4px;top:.95em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.abfeat b{color:var(--fg);font-weight:700}
+.abfeat li.abh{padding:0;margin:1.2em 0 .45em;padding-bottom:.35em;border-bottom:1px solid var(--line);font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.abfeat li.abh::before{display:none}
+.abfeat li.abh:first-child{margin-top:0}
 .abver{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
 .adminlink{display:flex;align-items:center;gap:5px;margin:16px auto 0;border:0;background:none;color:var(--muted);opacity:.65;font-size:11px;letter-spacing:.04em;padding:6px 12px}
 .adminlink:active{opacity:1}
@@ -533,7 +536,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <p class="hint" style="margin:6px 0 0">Định dạng: mỗi dòng là một đoạn · <b># Tiêu đề</b> cho đề mục · <b>- nội dung</b> cho gạch đầu dòng · <b>**chữ đậm**</b> để nhấn mạnh.</p>
       <label class="lbl" for="abeFeat">Các điểm nổi bật (mỗi dòng một ý)</label>
       <textarea id="abeFeat" style="min-height:110px;font-family:inherit;font-size:15px" spellcheck="false" placeholder="Mỗi dòng một ý (có thể để trống)"></textarea>
-      <p class="hint" style="margin:6px 0 0">Muốn in đậm phần đầu dòng, viết dạng: <b>Tìm kiếm :: toàn bộ Kinh Thánh</b>. Có thể để trống ô để ẩn mục đó.</p>
+      <p class="hint" style="margin:6px 0 0">Cùng định dạng với phần giới thiệu: <b># Tiêu đề</b> cho đề mục (không có dấu chấm) · <b>**chữ đậm**</b> · hoặc <b>Tìm kiếm :: toàn bộ Kinh Thánh</b> để in đậm phần đầu. Để trống ô để ẩn mục này.</p>
       <div class="log" id="abeLog"></div>
       <div class="btns">
         <button class="btn primary" id="abeSave">Lưu phần giới thiệu</button>
@@ -628,7 +631,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1720,14 +1723,17 @@ function aboutMd(t){
   });
   return out.map(x => Array.isArray(x) ? '<ul>' + x.map(i => '<li>' + i + '</li>').join('') + '</ul>' : x).join('');
 }
+const aboutInl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 function renderAbout(){
   $('#abName').textContent = ABOUT.name || ABOUT_DEF.name;
   $('#abSub').textContent = ABOUT.sub || ''; $('#abSub').hidden = !ABOUT.sub;
   $('#abText').innerHTML = aboutMd(ABOUT.text); $('#abText').hidden = !String(ABOUT.text || '').trim();
   const fl = ABOUT.feat.map(s => String(s).trim()).filter(Boolean);
   $('#abFeat').innerHTML = fl.map(s => {
+    const h = s.match(/^#{1,3}\s+(.+)$/);
+    if (h) return `<li class="abh">${aboutInl(h[1])}</li>`;
     const i = s.indexOf('::');
-    return i > 0 ? `<li><b>${esc(s.slice(0, i).trim())}</b> ${esc(s.slice(i + 2).trim())}</li>` : `<li>${esc(s)}</li>`;
+    return i > 0 ? `<li><b>${aboutInl(s.slice(0, i).trim())}</b> ${aboutInl(s.slice(i + 2).trim())}</li>` : `<li>${aboutInl(s)}</li>`;
   }).join('');
   $('#abFeat').hidden = !fl.length;
 }
@@ -1925,16 +1931,15 @@ function fnMapOf(list){
   (list || []).forEach(f => { const x = String(f).match(/^\[(\d{1,3})\]\s*([\s\S]*)$/); if (x && x[2].trim()) m[x[1]] = esc(x[2].trim()); });
   return m;
 }
-function richText(s, fm, open){        // open = true: bung sẵn mọi chú thích (dùng cho phần xem trước khi soạn thảo, để dò chính tả)
+function richText(s, fm){
   fm = fm || {};
-  const ex = open ? 'true' : 'false', hd = open ? '' : ' hidden';
   return esc(s).replace(BRACKET_RE, (m, c) => {
     const t = c.trim();
     if (/^\d{1,3}$/.test(t))
-      return fm[t] ? `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="${ex}" aria-label="Xem chú thích ${t}">[${t}]</sup><span class="fnx"${hd}>${fm[t]}</span>`
+      return fm[t] ? `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích ${t}">[${t}]</sup><span class="fnx" hidden>${fm[t]}</span>`
                    : `<sup class="fnm">[${t}]</sup>`;
     if (/^[\d\s,.\-–]+$/.test(t)) return m;
-    return `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="${ex}" aria-label="Xem chú thích">[*]</sup><span class="fnx"${hd}>${t}</span>`;
+    return `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích">[*]</sup><span class="fnx" hidden>${t}</span>`;
   });
 }
 
@@ -2181,7 +2186,7 @@ function secHTML(h){
                      : `<${tag} class="${cls}">${esc(l)}</${tag}>`;
   }).join('') + '</div>';
 }
-function paperHTML(book, ch, verses, view, idp, open){
+function paperHTML(book, ch, verses, view, idp){
   idp = idp || 'v';
   const print = view !== 'verse';
   const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
@@ -2201,15 +2206,15 @@ function paperHTML(book, ch, verses, view, idp, open){
     const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
     if (!print){
       close();
-      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t, vm, open).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).filter(showFn).map(f => `<div class="fn">${esc(f)}</div>`).join('');
+      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t, vm).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).filter(showFn).map(f => `<div class="fn">${esc(f)}</div>`).join('');
       return;
     }
     const want = isPoem ? 'q' : 'p';
     if (!cur || cur !== want || v.p){ close(); cur = want; out += want === 'p' ? '<p class="para">' : '<div class="poem">'; }
     if (isPoem){
       out += `<span ${attrs}>` + v.t.split('\n').map((ln, k) =>
-        `<span class="pl q${v.q[k] || 1}">${k === 0 ? dc + num : ''}${richText(ln, vm, open)}</span>`).join('') + '</span>';
-    } else out += `<span ${attrs}>${dc}${num}${richText(v.t, vm, open)}</span> `;
+        `<span class="pl q${v.q[k] || 1}">${k === 0 ? dc + num : ''}${richText(ln, vm)}</span>`).join('') + '</span>';
+    } else out += `<span ${attrs}>${dc}${num}${richText(v.t, vm)}</span> `;
   });
   close();
   if (print){
@@ -2268,7 +2273,7 @@ function edRefresh(){
   const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
   const name = ed.Book.value.trim() || 'Tên sách', ch = parseInt(ed.Chap.value, 10) || 1;
   ed.Preview.className = 'reader paper' + (S.view !== 'verse' ? ' print' : '');
-  ed.Preview.innerHTML = vs.length ? paperHTML(name, ch, vs, S.view, 'pv', true)
+  ed.Preview.innerHTML = vs.length ? paperHTML(name, ch, vs, S.view, 'pv')
     : '<div class="empty"><b>Chưa có nội dung</b>Dán văn bản chương vào ô soạn thảo.</div>';
   const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
   ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
@@ -2800,6 +2805,14 @@ function setupPWA(){
     m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
     document.head.appendChild(m);
   } catch(e){}
+  // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
+  const persist = async () => {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) return;
+      if (!(await navigator.storage.persisted())) await navigator.storage.persist();
+    } catch(e){}
+  };
+  persist();
   if ('serviceWorker' in navigator){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
@@ -2808,10 +2821,10 @@ function setupPWA(){
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
+      navigator.serviceWorker.ready.then(persist);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
     }).catch(() => {});
   }
-  navigator.storage?.persist?.().catch(() => {});   // xin trình duyệt không tự xóa dữ liệu
 }
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline);
