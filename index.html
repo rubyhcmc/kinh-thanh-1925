@@ -596,6 +596,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
           <button class="btn" id="edNorm">Chuẩn hóa</button>
+          <button class="btn" id="edClean">🧹 Dọn lỗi</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
         </div>
         <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương"></textarea>
@@ -625,7 +626,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2095,17 +2096,62 @@ function parseMarkup(text, startAt){
   }
   return vs;
 }
+// Kiểm tra chương: số câu (nhảy / thiếu / trùng / lùi), câu rỗng, khoảng trắng thừa, dấu câu thừa – thiếu, ngoặc & dấu trích dẫn
 function checkVerses(vs){
-  const w = [], miss = [], dup = [];
+  const w = [], miss = [], dup = [], back = [], jump = [];
+  const list = a => { const u = [...new Set(a)]; return u.slice(0, 10).join(', ') + (u.length > 10 ? '… (+' + (u.length - 10) + ')' : ''); };
   for (let i = 1; i < vs.length; i++){
     const a = vs[i - 1].n, b = vs[i].n;
-    if (b === a) dup.push(b); else for (let k = a + 1; k < b; k++) miss.push(k);
+    if (b === a) dup.push(b);
+    else if (b < a) back.push(a + '→' + b);
+    else if (b - a > 1){ jump.push(a + '→' + b); for (let k = a + 1; k < b; k++) miss.push(k); }
   }
   if (vs.length && vs[0].n !== 1) w.push('Bắt đầu từ câu ' + vs[0].n);
-  if (miss.length) w.push('Thiếu câu: ' + miss.slice(0, 12).join(', ') + (miss.length > 12 ? '…' : ''));
-  if (dup.length) w.push('Trùng số câu: ' + dup.join(', '));
-  vs.forEach(v => { if (!v.t.trim()) w.push('Câu ' + v.n + ' rỗng'); });
+  if (miss.length) w.push('Nhảy câu ' + list(jump) + ' → thiếu câu: ' + list(miss));
+  if (dup.length) w.push('Trùng số câu: ' + list(dup));
+  if (back.length) w.push('Số câu bị đảo ngược thứ tự: ' + list(back));
+  const E = { empty:[], sp2:[], sped:[], spb:[], spa:[], dp:[], mix:[], br:[] };
+  let dq = 0, lq = 0, rq = 0, lp = 0, rp = 0;
+  vs.forEach(v => {
+    const t = String(v.t);
+    if (!t.trim()){ E.empty.push(v.n); return; }
+    if (t.split('\n').some(l => /[ \t\u00A0]{2,}/.test(l))) E.sp2.push(v.n);
+    if (t.split('\n').some(l => l !== l.trim())) E.sped.push(v.n);
+    if (/[^\s(\[“"‘'«][ \t]+[,;:!?]/.test(t) || /[^\s.][ \t]+\.(?![.\d])/.test(t)) E.spb.push(v.n);
+    if (/\p{L}[,;:!?]\p{L}/u.test(t) || /\p{Ll}\.\p{Lu}/u.test(t)) E.spa.push(v.n);
+    if (/([,;:!?])\1/.test(t) || /(?<!\.)\.\.(?!\.)/.test(t) || /\.{4,}/.test(t) || /…[.…]|\.…/.test(t)) E.dp.push(v.n);
+    if (/[,;:][,;:.]/.test(t)) E.mix.push(v.n);
+    const o = (t.match(/\[/g) || []).length, c = (t.match(/\]/g) || []).length;
+    if (o !== c) E.br.push(v.n);
+    dq += (t.match(/"/g) || []).length; lq += (t.match(/“/g) || []).length; rq += (t.match(/”/g) || []).length;
+    lp += (t.match(/\(/g) || []).length; rp += (t.match(/\)/g) || []).length;
+  });
+  if (E.empty.length) w.push('Câu rỗng: ' + list(E.empty));
+  if (E.sp2.length) w.push('Dư khoảng trắng liên tiếp ở câu: ' + list(E.sp2));
+  if (E.sped.length) w.push('Thừa khoảng trắng đầu/cuối dòng ở câu: ' + list(E.sped));
+  if (E.spb.length) w.push('Thừa khoảng trắng trước dấu câu ở câu: ' + list(E.spb));
+  if (E.spa.length) w.push('Thiếu khoảng trắng sau dấu câu ở câu: ' + list(E.spa));
+  if (E.dp.length) w.push('Thừa dấu câu lặp (,, ;; .. ....) ở câu: ' + list(E.dp));
+  if (E.mix.length) w.push('Dấu câu đứng sát nhau bất thường (,. ;, :,…) ở câu: ' + list(E.mix));
+  if (E.br.length) w.push('Ngoặc vuông [ ] không đủ cặp ở câu: ' + list(E.br));
+  if (lp !== rp) w.push('Ngoặc tròn ( ) không đủ cặp (' + lp + ' mở, ' + rp + ' đóng)');
+  if (dq % 2) w.push('Dấu nháy kép " không đủ cặp');
+  if (lq !== rq) w.push('Dấu nháy kép “ ” không đủ cặp (' + lq + ' mở, ' + rq + ' đóng)');
+  if (E.sp2.length || E.sped.length || E.spb.length || E.spa.length || E.dp.length) w.push('Gợi ý: bấm “🧹 Dọn lỗi” để tự sửa khoảng trắng và dấu câu lặp.');
   return w;
+}
+// Tự dọn khoảng trắng & dấu câu lặp trong một câu (không đụng tới chữ)
+function cleanVerseText(t){
+  return String(t).split('\n').map(l => l
+    .replace(/[ \t\u00A0]+/g, ' ')
+    .replace(/\s+([,;:!?])/g, '$1')
+    .replace(/([^\s.])\s+\.(?![.\d])/g, '$1.')
+    .replace(/([,;:!?])\1+/g, '$1')
+    .replace(/(?<!\.)\.\.(?!\.)/g, '.')
+    .replace(/\.{4,}/g, '...')
+    .replace(/(\p{L})([,;:!?])(?=\p{L})/gu, '$1$2 ')
+    .replace(/(\p{Ll})\.(?=\p{Lu})/gu, '$1. ')
+    .trim()).join('\n');
 }
 
 // Dựng HTML: "print" = đoạn liền, số câu nhỏ, số chương chữ lớn như sách giấy; "verse" = mỗi câu một dòng
@@ -2305,6 +2351,13 @@ $('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' +
 $('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
 $('#edPara').onclick = () => edLines((l, i) => i === 0 ? '\n' + l : l);
 $('#edNorm').onclick = () => { ed.Text.value = serializeVerses(parseMarkup(ed.Text.value, +ed.Start.value || 1)); edRefresh(); edQueue(); };
+$('#edClean').onclick = () => {
+  const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+  if (!vs.length) return toast('Chưa có nội dung để dọn');
+  let n = 0; vs.forEach(v => { const c = cleanVerseText(v.t); if (c !== v.t){ v.t = c; n++; } });
+  ed.Text.value = serializeVerses(vs); edRefresh(); edQueue();
+  toast(n ? `Đã dọn lỗi khoảng trắng / dấu câu ở ${n} câu` : 'Không có lỗi khoảng trắng hay dấu câu lặp để sửa');
+};
 $('#edClear').onclick = () => { if (confirm('Xóa toàn bộ nội dung trong ô soạn thảo?')){ ed.Text.value = ''; edRefresh(); } };
 
 ed.Text.addEventListener('input', edQueue);
