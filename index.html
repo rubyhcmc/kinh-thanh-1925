@@ -262,7 +262,14 @@ details a{color:var(--accent)}
 .abicon{width:48px;height:48px;border-radius:12px;background:#3b2a1a;color:#e8c675;display:flex;align-items:center;justify-content:center;flex:none}
 .abname{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.2}
 .absub{font-size:12.5px;color:var(--muted);margin-top:2px}
-.abtxt{font-size:13.5px;line-height:1.6;margin:12px 0 8px;color:var(--fg)}
+.abtxt{font-size:13.5px;line-height:1.65;margin:12px 0 8px;color:var(--fg);text-align:left;overflow-wrap:anywhere}
+.abtxt p{margin:0 0 .7em}
+.abtxt b{font-weight:700}
+.abtxt .abh{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.2em 0 .45em;padding-bottom:.35em;border-bottom:1px solid var(--line)}
+.abtxt .abh:first-child{margin-top:0}
+.abtxt ul{margin:.2em 0 .8em;padding-left:1.25em}
+.abtxt li{margin:.25em 0}
+.abtxt>:last-child{margin-bottom:0}
 .abfeat{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.5;color:var(--muted)}
 .abfeat li{position:relative;padding:3px 0 3px 16px}
 .abfeat li::before{content:'';position:absolute;left:3px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
@@ -379,7 +386,7 @@ details a{color:var(--accent)}
         <div class="abicon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></svg></div>
         <div><div class="abname" id="abName">Kinh Thánh</div><div class="absub" id="abSub">Ứng dụng đọc Kinh Thánh tiếng Việt</div></div>
       </div>
-      <p class="abtxt" id="abText"></p>
+      <div class="abtxt" id="abText"></div>
       <ul class="abfeat" id="abFeat"></ul>
       <div id="verTag" class="abver"></div>
     </div>
@@ -521,6 +528,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <input type="text" id="abeSub" autocomplete="off">
       <label class="lbl" for="abeText">Nội dung giới thiệu</label>
       <textarea id="abeText" style="min-height:110px;font-family:inherit;font-size:15px" spellcheck="false"></textarea>
+      <p class="hint" style="margin:6px 0 0">Định dạng: mỗi dòng là một đoạn · <b># Tiêu đề</b> cho đề mục · <b>- nội dung</b> cho gạch đầu dòng · <b>**chữ đậm**</b> để nhấn mạnh.</p>
       <label class="lbl" for="abeFeat">Các điểm nổi bật (mỗi dòng một ý)</label>
       <textarea id="abeFeat" style="min-height:110px;font-family:inherit;font-size:15px" spellcheck="false"></textarea>
       <p class="hint" style="margin:6px 0 0">Muốn in đậm phần đầu dòng, viết dạng: <b>Tìm kiếm :: toàn bộ Kinh Thánh</b>. Có thể để trống ô để ẩn mục đó.</p>
@@ -617,7 +625,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1698,10 +1706,23 @@ let ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] };
 try { const a = JSON.parse(localStorage.getItem('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
 if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
 const saveAbout = () => { try { localStorage.setItem('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
+/* Định dạng nội dung giới thiệu: mỗi dòng = một đoạn · "# Tiêu đề" · "- ý gạch đầu dòng" · **chữ đậm** */
+function aboutMd(t){
+  const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  const out = []; let list = null;
+  String(t || '').replace(/\r\n?/g, '\n').split('\n').forEach(raw => {
+    const l = raw.trim(); let m;
+    if (!l){ list = null; return; }
+    if ((m = l.match(/^#{1,3}\s+(.+)$/))){ list = null; out.push(`<h4 class="abh">${inl(m[1])}</h4>`); }
+    else if ((m = l.match(/^[-•]\s+(.+)$/))){ if (!list){ list = []; out.push(list); } list.push(inl(m[1])); }
+    else { list = null; out.push(`<p>${inl(l)}</p>`); }
+  });
+  return out.map(x => Array.isArray(x) ? '<ul>' + x.map(i => '<li>' + i + '</li>').join('') + '</ul>' : x).join('');
+}
 function renderAbout(){
   $('#abName').textContent = ABOUT.name || ABOUT_DEF.name;
   $('#abSub').textContent = ABOUT.sub || ''; $('#abSub').hidden = !ABOUT.sub;
-  $('#abText').textContent = ABOUT.text || ''; $('#abText').hidden = !ABOUT.text;
+  $('#abText').innerHTML = aboutMd(ABOUT.text); $('#abText').hidden = !String(ABOUT.text || '').trim();
   const fl = ABOUT.feat.map(s => String(s).trim()).filter(Boolean);
   $('#abFeat').innerHTML = fl.map(s => {
     const i = s.indexOf('::');
