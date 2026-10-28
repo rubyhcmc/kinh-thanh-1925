@@ -608,7 +608,10 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
         <div class="log" id="edStatus"></div>
         <div class="log ok" id="edAuto"></div>
       </div>
-      <div class="edpane" id="paneView"><article class="reader paper" id="edPreview"></article></div>
+      <div class="edpane" id="paneView">
+        <div class="tbar"><button class="btn primary" id="edCopySrc">📋 Chép bản soạn</button><button class="btn" id="edCopyPlain">📄 Chép văn bản thuần</button></div>
+        <article class="reader paper" id="edPreview"></article>
+      </div>
     </div>
     <div class="btns edact">
       <button class="btn primary" id="edSave">💾 Lưu chương</button>
@@ -631,7 +634,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2355,6 +2358,29 @@ ed.Text.addEventListener('paste', e => {
   else t.setRangeText((s > 0 && t.value[s - 1] !== '\n' ? '\n' : '') + txt + '\n', s, en, 'end');
   toast(`Đã nhận dạng ${vs.length} câu`); edRefresh(); edQueue();
 });
+
+// Nút chép trên trang Xem trước: "bản soạn" giữ nguyên # > [chú thích] để dán lại được; "văn bản thuần" chỉ có số câu + chữ
+async function edCopy(txt, label){
+  if (!txt.trim()) return toast('Chưa có nội dung để chép');
+  try { await navigator.clipboard.writeText(txt); toast('✔ Đã chép ' + label); }
+  catch(e){
+    const t = document.createElement('textarea'); t.value = txt; t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(t); t.focus(); t.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch(err){}
+    t.remove(); ok ? toast('✔ Đã chép ' + label) : prompt('Sao chép nội dung:', txt);
+  }
+}
+$('#edCopySrc').onclick = () => edCopy(ed.Text.value, 'bản soạn');
+$('#edCopyPlain').onclick = () => {
+  const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1), out = [];
+  vs.forEach((v, i) => {
+    if (v.h){ if (out.length) out.push(''); out.push(v.h); }
+    else if (v.p && i > 0) out.push('');
+    out.push(v.n + ' ' + v.t);
+    (v.fn || []).forEach(f => out.push(f));
+  });
+  edCopy(out.join('\n'), 'văn bản thuần');
+};
 
 // Thanh công cụ
 function edLines(fn){
