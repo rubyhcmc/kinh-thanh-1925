@@ -720,7 +720,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1209,14 +1209,17 @@ const lsEl = $('#lsSheet'), lsTa = $('#lsText');
 let lsCur = null;
 function lsClose(){ lsEl.classList.remove('open'); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
 function lsShareText(){
-  const c = lsCur; return `${c.book} ${c.ch}:${c.n}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
+  const c = lsCur; return `${c.book} ${c.ch}:${c.key}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
 }
 window.addEventListener('openLesson', e => {
-  const { book, ch, n } = e.detail || {};
-  const el = $('#v' + n), quote = el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim() : '';
-  const old = LS.find(x => x.book === book && x.ch === ch && x.n === n);
-  lsCur = { book, ch, n, quote, old };
-  $('#lsRef').textContent = `${book} ${ch}:${n}`;
+  const d = e.detail || {}, book = d.book, ch = d.ch, ns = (d.ns || [d.n]).filter(Boolean);
+  if (!ns.length) return;
+  const key = compressRange(ns), n = ns[0];
+  const data = (curBook && curBook.name === book && curBook.chapters[ch - 1]) || [];
+  let quote = ns.map(k => { const v = data.find(x => x.n === k); if (v) return v.t.replace(/\s+/g, ' ').trim(); const el = $('#v' + k); return el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
+  const old = LS.find(x => x.book === book && x.ch === ch && compressRange(x.ns || [x.n]) === key);
+  lsCur = { book, ch, n, ns, key, quote, old };
+  $('#lsRef').textContent = `${book} ${ch}:${key}`;
   $('#lsVerse').textContent = quote;
   lsTa.value = old ? old.text : '';
   $('#lsDel').hidden = !old;
@@ -1227,8 +1230,8 @@ lsEl.addEventListener('click', e => { if (e.target === lsEl) lsClose(); });
 $('#lsClose').onclick = lsClose;
 $('#lsSave').onclick = () => {
   const t = lsTa.value.trim(); if (!t){ toast('Hãy viết nội dung ghi chú'); lsTa.focus(); return; }
-  const { book, ch, n, old } = lsCur;
-  if (old){ old.text = t; old.at = Date.now(); } else { const o = { book, ch, n, text:t, at:Date.now() }; LS.unshift(o); lsCur.old = o; $('#lsDel').hidden = false; }
+  const { book, ch, n, ns, old } = lsCur;
+  if (old){ old.text = t; old.at = Date.now(); } else { const o = { book, ch, n, ns, text:t, at:Date.now() }; LS.unshift(o); lsCur.old = o; $('#lsDel').hidden = false; }
   saveLS(); toast('✍️ Đã lưu ghi chú'); lsClose();
 };
 $('#lsDel').onclick = () => {
@@ -1238,7 +1241,7 @@ $('#lsDel').onclick = () => {
 $('#lsShare').onclick = async () => {
   if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
   const text = lsShareText();
-  try { if (navigator.share){ await navigator.share({ title:`${lsCur.book} ${lsCur.ch}:${lsCur.n}`, text }); return; } } catch(err){ if (err && err.name === 'AbortError') return; }
+  try { if (navigator.share){ await navigator.share({ title:`${lsCur.book} ${lsCur.ch}:${lsCur.key}`, text }); return; } } catch(err){ if (err && err.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(text); toast('📋 Đã chép ghi chú để dán chia sẻ'); } catch(err){ toast('Không chia sẻ được trên máy này'); }
 };
 
@@ -1271,7 +1274,7 @@ function showVerseMenu(n, x, y){
     const a = b.dataset.a;
     if (a === 'mark') addBookmark(n);
     else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
-    else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, n } }));
+    else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns:[n] } }));
     else if (a === 'multi'){
       selected.clear(); selected.add(n);
       const el = $('#v' + n); if (el) el.classList.add('sel');
@@ -1290,7 +1293,18 @@ function showVerseMenu(n, x, y){
     const p = el.closest && el.closest('.v'); fired = false; cancel();
     if (!p || !curBook) return;
     sx = x; sy = y;
-    timer = setTimeout(() => { timer = null; fired = true; clearSelection(); showVerseMenu(+p.dataset.n, sx, sy); }, HOLD);
+    timer = setTimeout(() => {
+      timer = null; fired = true;
+      if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
+        selected.add(+p.dataset.n);
+        const ns = [...selected].sort((a, b) => a - b);
+        try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
+        clearSelection();
+        window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns } }));
+        return;
+      }
+      clearSelection(); showVerseMenu(+p.dataset.n, sx, sy);
+    }, HOLD);
   };
   root.addEventListener('touchstart', e => {
     lastTouch = Date.now();
