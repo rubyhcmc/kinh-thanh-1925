@@ -265,7 +265,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abicon{width:48px;height:48px;border-radius:12px;background:#3b2a1a;color:#e8c675;display:flex;align-items:center;justify-content:center;flex:none}
 .abname{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.2}
 .absub{font-size:12.5px;color:var(--muted);margin-top:2px}
-.abtxt{font-size:13.5px;line-height:1.7;margin:16px 0 0;color:var(--fg);text-align:left;overflow-wrap:anywhere}
+.abtxt{font-size:13.5px;line-height:1.7;margin:16px 0 0;color:var(--fg);text-align:justify;text-justify:inter-word;overflow-wrap:break-word}
+.abtxt .abh{text-align:left}
 .abtxt p{margin:0 0 .85em}
 .abtxt b{font-weight:700}
 .abtxt .abh{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.2em 0 .45em;padding-bottom:.35em;border-bottom:1px solid var(--line)}
@@ -277,7 +278,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abfeatbox{margin:26px 0 0;padding:14px 16px 12px;background:var(--bg);border:1px solid var(--line);border-radius:12px}
 .abfeatbox:has(#abFeat[hidden]){display:none}
 .abfeatbox::before{content:'Điểm nổi bật';display:block;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
-.abfeat{margin:0;padding:0;list-style:none;font-size:13.5px;line-height:1.65;color:var(--fg);text-align:left;overflow-wrap:anywhere}
+.abfeat{margin:0;padding:0;list-style:none;font-size:13.5px;line-height:1.65;color:var(--fg);text-align:justify;text-justify:inter-word;overflow-wrap:break-word}
+.abfeat li.abh{text-align:left}
 .abfeat li{position:relative;padding:.35em 0 .35em 18px}
 .abfeat li::before{content:'';position:absolute;left:4px;top:1.05em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .abfeat b{color:var(--fg);font-weight:700}
@@ -638,7 +640,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
