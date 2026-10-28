@@ -2799,6 +2799,14 @@ function setupPWA(){
     m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
     document.head.appendChild(m);
   } catch(e){}
+  // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
+  const persist = async () => {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) return;
+      if (!(await navigator.storage.persisted())) await navigator.storage.persist();
+    } catch(e){}
+  };
+  persist();
   if ('serviceWorker' in navigator){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
@@ -2807,10 +2815,10 @@ function setupPWA(){
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
+      navigator.serviceWorker.ready.then(persist);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
     }).catch(() => {});
   }
-  navigator.storage?.persist?.().catch(() => {});   // xin trình duyệt không tự xóa dữ liệu
 }
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline);

@@ -1,17 +1,71 @@
-/* Service worker: ưu tiên mạng (để luôn nhận bản mới), mất mạng thì dùng bản đã lưu */
-const CACHE = 'kinhthanh-v2';
+const VER = 'kt-v1';
+const SHELL = VER + '-shell';
+const FONTS = VER + '-fonts';
+const SCOPE = self.registration.scope;
+
 self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])).catch(() => {}));
+  e.waitUntil(
+    caches.open(SHELL)
+      .then(c => c.addAll([SCOPE, SCOPE + 'index.html']))
+      .catch(() => {})
+      .then(() => self.skipWaiting())
+  );
 });
+
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(
+    caches.keys()
+      .then(ks => Promise.all(ks.filter(k => !k.startsWith(VER)).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
+
 self.addEventListener('fetch', e => {
-  const r = e.request;
-  if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // Đồng bộ GitHub: luôn đi thẳng mạng, không cache
+  if (url.hostname === 'api.github.com' || url.hostname === 'raw.githubusercontent.com') return;
+
+  // Google Fonts: cache-first
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.open(FONTS).then(async c => {
+        const hit = await c.match(req);
+        if (hit) return hit;
+        try {
+          const res = await fetch(req);
+          if (res.ok || res.type === 'opaque') c.put(req, res.clone());
+          return res;
+        } catch (err) { return hit || Response.error(); }
+      })
+    );
+    return;
+  }
+
+  if (url.origin !== location.origin) return;
+
+  // Trang chính: mạng trước (nhận bản mới), mất mạng thì dùng bản cache
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) caches.open(SHELL).then(c => c.put(SCOPE + 'index.html', res.clone()));
+        return res;
+      }).catch(async () => {
+        const c = await caches.open(SHELL);
+        return (await c.match(SCOPE + 'index.html')) || (await c.match(SCOPE)) || Response.error();
+      })
+    );
+    return;
+  }
+
+  // Tài nguyên cùng nguồn khác: cache trước, cập nhật ngầm
   e.respondWith(
-    fetch(r).then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)).catch(() => {}); return res; })
-      .catch(() => caches.match(r, { ignoreSearch:true }).then(m => m || caches.match('./index.html')))
+    caches.open(SHELL).then(async c => {
+      const hit = await c.match(req);
+      const net = fetch(req).then(res => { if (res.ok) c.put(req, res.clone()); return res; }).catch(() => hit);
+      return hit || net;
+    })
   );
 });
