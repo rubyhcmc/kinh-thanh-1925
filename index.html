@@ -125,7 +125,7 @@ body.searching .top .sfield{display:flex}
 .pl.q2{padding-left:2.6em}
 .vline{margin:0 0 .55em}
 .note{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.5;color:var(--muted);margin:.3em 0 .45em}
-.fnm{font-family:var(--sans);font-style:normal;font-weight:700;font-size:.64em;letter-spacing:.02em;line-height:0;color:var(--accent);margin:0 .12em 0 .14em;padding:.2em .42em .18em;border-radius:999px;background:var(--accent-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 38%,transparent);font-variant-numeric:lining-nums;white-space:nowrap}
+.fnm{font-family:var(--sans);font-style:normal;font-weight:700;font-size:.66em;letter-spacing:.01em;line-height:0;color:var(--accent);margin:0 .1em 0 .12em;font-variant-numeric:lining-nums;white-space:nowrap}
 .fns{margin-top:1.5em;padding-top:.7em;border-top:1px solid var(--line);text-align:left}
 .fn{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.55;color:var(--muted);margin:.2em 0}
 
@@ -249,8 +249,8 @@ details a{color:var(--accent)}
 /* ===== Chú thích bấm để bung/ẩn ===== */
 .fnk{cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
 .fnk::after{content:'';position:absolute;inset:-12px -8px}
-.fnk:active{transform:scale(.94)}
-.fnk[aria-expanded=true]{background:var(--accent);color:var(--card,#fff);box-shadow:none}
+.fnk:active{opacity:.55}
+.fnk[aria-expanded=true]{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.22em}
 .fnk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .fnx{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.78em;line-height:1.55;color:var(--muted);
   margin:.4em 0 .55em;padding:.45em .75em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;cursor:pointer;-webkit-hyphens:none;hyphens:none}
@@ -676,7 +676,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-z6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-z7';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
