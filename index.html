@@ -226,6 +226,8 @@ details a{color:var(--accent)}
   background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
 /* ===== Quản lý tên sách trong trình soạn thảo ===== */
+.edsub{width:100%;margin:8px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:var(--ink,inherit);font:inherit;font-size:14px;line-height:1.45;resize:vertical;box-sizing:border-box}
+.chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
 .edbook{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
 .edbook .btn{padding:7px 10px;font-size:13px}
 .edhint{flex:1;min-width:170px;font-size:12.5px;color:var(--muted);line-height:1.4}
@@ -616,6 +618,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
         <button class="btn" id="edNext" aria-label="Chương sau">›</button>
       </div>
     </div>
+    <textarea id="edSub" class="edsub" rows="2" placeholder="Tiêu đề phía trên tên sách (vd: SÁCH THỨ HAI CỦA MÔI-SE / GỌI LÀ) – mỗi dòng một hàng, hiện ở chương 1" autocomplete="off"></textarea>
     <datalist id="bookList"></datalist>
     <div class="edbook">
       <div class="edhint" id="edBookHint"></div>
@@ -670,7 +673,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-z2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-z3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1403,7 +1406,7 @@ function normChapters(cs){
 }
 function normBible(j){
   const books = Array.isArray(j) ? j : Array.isArray(j.books) ? j.books : Object.keys(j).map(k => ({ name:k, chapters:j[k] }));
-  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), chapters:normChapters(b.chapters) }))
+  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), sub:String(b.sub || '').trim(), chapters:normChapters(b.chapters) }))
               .filter(b => b.name && b.chapters.length);
 }
 function parseBibleText(t){
@@ -1434,7 +1437,7 @@ async function importBible(books, mode){
   let max = existing.reduce((a, m) => Math.max(a, m.order), 0);
   const metas = books.map(b => {
     const m = map.get(b.name) || { name:b.name, order:++max };
-    m.abbr = b.abbr || m.abbr || ''; m.chapterCount = b.chapters.length; return m;
+    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; m.chapterCount = b.chapters.length; return m;
   });
   await dbPut('books', books.map(b => ({ name:b.name, chapters:b.chapters })));
   await dbPut('bookMeta', metas);
@@ -1539,7 +1542,7 @@ function toB64(str){
 async function buildBooks(){
   const metas = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order), recs = await dbAll('books');
   const map = new Map(recs.map(b => [b.name, b]));
-  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
+  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
 const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
 
@@ -2233,13 +2236,18 @@ function secHTML(h){
                      : `<${tag} class="${cls}">${esc(l)}</${tag}>`;
   }).join('') + '</div>';
 }
+function subOf(book){
+  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Sub.value; } catch(_){}
+  return (bibleMeta.find(m => m.name === book) || {}).sub || '';
+}
 function paperHTML(book, ch, verses, view, idp){
   idp = idp || 'v';
   const print = view !== 'verse';
   const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
   verses.forEach(v => String(v.t).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
-  let out = `<div class="chhead"><div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
+  const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
+  let out = `<div class="chhead">${sub.length && +ch === 1 ? `<div class="bksub">${sub.map(esc).join('<br>')}</div>` : ''}<div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
@@ -2312,7 +2320,7 @@ function htmlToMarked(html){
  *  ở trang chủ và tự đẩy lên GitHub (nếu đã kết nối).
  * ========================================================= */
 const ed = {};
-['Book','Abbr','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
+['Book','Abbr','Sub','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
 let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
 const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
 
@@ -2334,14 +2342,14 @@ function edRefresh(){
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
-async function persistChapter(name, ch, vs, abbr){
+async function persistChapter(name, ch, vs, abbr, sub){
   const rec = (await dbGet('books', name)) || { name, chapters:[] };
   while (rec.chapters.length < ch) rec.chapters.push([]);
   rec.chapters[ch - 1] = vs;
   const metas = await dbAll('bookMeta');
   let meta = metas.find(m => m.name === name);
   if (!meta) meta = { name, order: metas.reduce((a, m) => Math.max(a, m.order), 0) + 1 };
-  meta.abbr = abbr || meta.abbr || ''; meta.chapterCount = rec.chapters.length;
+  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); meta.chapterCount = rec.chapters.length;
   await dbPut('books', [rec]); await dbPut('bookMeta', [meta]);
   S.book = name; S.chapter = ch; saveS();
   await initBible(); await refreshStats(); markDirty();
@@ -2354,7 +2362,7 @@ async function edAuto(){
   const vs = parseMarkup(text, +ed.Start.value || 1); if (!vs.length) return;
   try {
     const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
-    await persistChapter(name, ch, vs, abbr);
+    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined);
     edLoaded = text;
     try { localStorage.removeItem(draftKey()); } catch(e){}
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -2368,6 +2376,7 @@ async function edLoad(){
   const rec = await dbGet('books', name);
   const meta = bibleMeta.find(m => m.name === name);
   if (meta && !ed.Abbr.value) ed.Abbr.value = meta.abbr || '';
+  if (meta && !ed.Sub.value) ed.Sub.value = meta.sub || '';
   edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
   let txt = edLoaded;
   try {
@@ -2491,7 +2500,7 @@ async function edDeleteBook(){
     if (S.book === name){ S.book = null; S.chapter = 1; saveS(); }
     BM = BM.filter(b => b.book !== name); saveBM();
     try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => localStorage.removeItem(k)); } catch(e){}
-    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Chap.value = 1;
+    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Chap.value = 1;
     await initBible(); await refreshStats(); markDirty(); edBookList(); edRefresh();
     toast(`Đã xóa sách "${name}"`);
   } catch(e){ toast('Lỗi xóa sách: ' + (e.message || e)); }
@@ -2501,13 +2510,23 @@ $('#edBookDel').onclick = edDeleteBook;
 $('#edClear').onclick =() => { if (confirm('Xóa toàn bộ nội dung trong ô soạn thảo?')){ ed.Text.value = ''; edRefresh(); } };
 
 ed.Text.addEventListener('input', edQueue);
+let edSubTimer;
+ed.Sub.addEventListener('input', () => {                 // tiêu đề phía trên tên sách: xem trước ngay, tự lưu cho sách đã có
+  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200);
+  clearTimeout(edSubTimer); edSubTimer = setTimeout(async () => {
+    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
+    const v = ed.Sub.value.trim(); if (v === (meta.sub || '')) return;
+    const m2 = Object.assign({}, meta, { sub:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
+    ed.Auto.textContent = '✔ Đã lưu tiêu đề sách';
+  }, 1200);
+});
 ed.Start.addEventListener('input', edQueue);
 ed.Book.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
 ed.Chap.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
 ed.Poem.onchange = edQueue;
 // Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
 ed.Chap.onchange = async () => { await edAuto(); edLoad(); };
-ed.Book.onchange = async () => { await edAuto(); ed.Abbr.value = (bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}).abbr || ''; edLoad(); };
+ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; edLoad(); };
 $('#edPrev').onclick = async () => { await edAuto(); ed.Chap.value = Math.max(1, (parseInt(ed.Chap.value, 10) || 1) - 1); edLoad(); };
 $('#edNext').onclick = async () => { await edAuto(); ed.Chap.value = (parseInt(ed.Chap.value, 10) || 0) + 1; edLoad(); };
 $$('#edSeg button').forEach(b => b.onclick = () => {
@@ -2528,7 +2547,7 @@ async function edSave(goNext){
   const w = checkVerses(vs);
   if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
   try {
-    await persistChapter(name, ch, vs, ed.Abbr.value.trim());
+    await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value);
     try { localStorage.removeItem(draftKey()); } catch(e){}
     edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
     toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
@@ -2855,7 +2874,7 @@ async function exportBook(name){
   const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
   try {
     await new Promise(r => setTimeout(r, 30));
-    const book = { name:rec.name, abbr:meta.abbr || '', chapters:rec.chapters };
+    const book = { name:rec.name, abbr:meta.abbr || '', sub:meta.sub || '', chapters:rec.chapters };
     const lay = layoutBook(book);
     const r = await renderPages(lay.pages, book.name, (i, n) => say(`Đang vẽ trang ${i}/${n}…`));
     say('Đang đóng gói dữ liệu khôi phục…');
