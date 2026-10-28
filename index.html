@@ -670,7 +670,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.28-z1';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.28-z2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2129,8 +2129,9 @@ function serializeVerses(vs){
 function parseMarkup(text, startAt){
   const vs = []; let pendH = null, pendP = false;
   const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
-  for (const raw of String(text).replace(/\r\n?/g, '\n').split('\n')){
-    const line = raw.trim();
+  const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  for (let li = 0; li < lines.length; li++){
+    const line = lines[li].trim();
     if (!line){ pendP = true; continue; }
     let m = line.match(/^#\s+(.+)$/);
     if (m){ pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
@@ -2151,6 +2152,8 @@ function parseMarkup(text, startAt){
       const v = vs[vs.length - 1];
       if (lvl){ if (!v.q) v.q = [1]; v.t = v.t ? v.t + '\n' + body : body; v.q.push(lvl); }
       else v.t = v.t ? v.t + ' ' + body : body;
+    } else if (!lvl && body.length <= 200 && lines.slice(li + 1).some(x => /^(?:>{1,2}\s*)?(?:\((\d{1,3})\)|(\d{1,3}))(?:[.:]|\s)/.test(x.trim()))){
+      pendH = pendH ? pendH + '\n' + body : body;        // dòng trước câu 1 (kể cả không viết hoa) → tiêu đề / dẫn nhập
     } else {
       const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; pendH = null; pendP = false; vs.push(v);
     }
