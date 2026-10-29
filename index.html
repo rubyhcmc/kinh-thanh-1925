@@ -811,7 +811,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2768,7 +2768,8 @@ ed.Text.addEventListener('paste', e => {
   const whole = !t.value.trim() || (s === 0 && en === t.value.length);
   if (whole) t.value = txt;
   else t.setRangeText((s > 0 && t.value[s - 1] !== '\n' ? '\n' : '') + txt + '\n', s, en, 'end');
-  toast(`Đã nhận dạng ${vs.length} câu`); edRefresh(); edQueue();
+  ed.lastPaste = whole ? { raw, out:t.value } : null;               // nhớ bản gốc (còn nguyên xuống dòng) để đổi "Giữ như thơ" / "Nối thành văn xuôi" sau khi dán
+  toast(`Đã nhận dạng ${vs.length} câu` + (ed.Poem.value === '1' ? ' (dạng thơ)' : '')); edRefresh(); edQueue();
 });
 
 // Nút chép trên trang Xem trước: "bản soạn" giữ nguyên # > [chú thích] để dán lại được; "văn bản thuần" chỉ có số câu + chữ
@@ -2896,7 +2897,27 @@ ed.Sub.addEventListener('input', () => {
 ed.Start.addEventListener('input', edQueue);
 ed.Book.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
 ed.Chap.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
-ed.Poem.onchange = edQueue;
+/* Đổi "Xuống dòng trong câu": áp dụng NGAY cho nội dung đang soạn (trước đây chỉ có tác dụng ở lần dán kế tiếp nên bấm không thấy gì) */
+function edApplyPoem(){
+  const txt = ed.Text.value; if (!txt.trim()) return;
+  const poem = ed.Poem.value === '1', startAt = +ed.Start.value || 1;
+  let vs, src = txt;
+  if (ed.lastPaste && ed.Text.value === ed.lastPaste.out) src = ed.lastPaste.raw;   // chưa sửa gì sau khi dán → dựng lại từ bản gốc còn xuống dòng
+  if (poem){
+    if (src === txt && /^>{1,2}\s/m.test(txt)) return toast('Nội dung đã ở dạng thơ');
+    vs = detectVerses(src, { startAt, chapter:parseInt(ed.Chap.value, 10) || 0, poem:true });
+    if (!vs.length) vs = parseMarkup(txt, startAt);
+    if (!vs.some(v => Array.isArray(v.q) && v.q.length)) return toast('Không thấy dòng thơ để giữ. Hãy dán lại văn bản gốc có xuống dòng, hoặc dùng nút "＞ Thơ".');
+  } else {
+    vs = parseMarkup(txt, startAt);
+    vs.forEach(v => { if (Array.isArray(v.q) && v.q.length){ delete v.q; v.t = String(v.t).split('\n').map(x => x.trim()).filter(Boolean).join(' '); } });
+  }
+  ed.Text.value = serializeVerses(vs);
+  if (ed.lastPaste) ed.lastPaste.out = ed.Text.value;
+  edRefresh(); edQueue();
+  toast(poem ? '✔ Đã chuyển sang dạng thơ (xuống dòng theo từng dòng)' : '✔ Đã nối thành văn xuôi');
+}
+ed.Poem.onchange = edApplyPoem;
 // Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
 ed.Chap.onchange = async () => { await edAuto(); edLoad(); };
 ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; edSubFit(); edLoad(); };
