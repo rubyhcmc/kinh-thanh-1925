@@ -168,7 +168,7 @@ body.searching .top .sfield{display:flex}
 
 /* Tìm kiếm Kinh Thánh */
 body.searching .top .navrow{display:none}
-#tab-bible.searching>.reader,#tab-bible.searching>.chapnav{display:none!important}
+#tab-bible.searching>.reader,#tab-bible.searching>.pgv,#tab-bible.searching>.chapnav{display:none!important}
 .bsopts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 12px 8px;font-size:14px;color:var(--muted)}
 .bsopts label{display:flex;gap:6px;align-items:center}
 .bsopts input[type=checkbox]{width:auto}
@@ -400,7 +400,20 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .lslinks button{border:1px solid var(--accent);border-radius:99px;background:var(--accent-soft);color:var(--accent);padding:5px 11px;font:600 12.5px var(--sans);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lslinks button.rel{border-color:var(--line);color:var(--fg);background:var(--bg);font-weight:500}
 
-/* Chế độ Giấy: lề rộng, dòng thưa như sách giấy (vẫn cuộn + lật chương như cũ) */
+/* Chế độ Giấy: chia trang ngang, lật trang như tờ giấy; ẩn thanh đầu trang (chạm dải trên cùng để hiện) */
+.pgv{display:contents}
+#pgFoot{display:none;position:fixed;z-index:6;left:0;right:0;bottom:0;height:calc(36px + env(safe-area-inset-bottom));padding:0 18px env(safe-area-inset-bottom);align-items:center;justify-content:space-between;font:12px var(--sans);letter-spacing:.04em;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
+body.pg:not(.searching) #pgFoot{display:flex}
+body.pg:not(.searching){overflow:hidden}
+body.pg:not(.searching) main{perspective:none;overflow:visible;min-height:0;max-width:none}
+body.pg:not(.searching) #chapNav{display:none!important}
+body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(-100%)}
+body.pg.pgchrome:not(.searching) .top{transform:none}
+body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
+body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
+body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;will-change:transform;-webkit-user-select:none;user-select:none}
+body.pg .pgv>.reader .chhead{break-inside:avoid}
+/* Chế độ Giấy: lề rộng, dòng thưa */
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
 html[data-paper] .reader.print{text-align:justify}
 </style>
@@ -441,7 +454,8 @@ html[data-paper] .reader.print{text-align:justify}
       <div id="bsItems"></div>
       <div class="pager" id="bsPager"></div>
     </div>
-    <article class="reader" id="bibleText"></article>
+    <div class="pgv" id="pgView"><article class="reader" id="bibleText"></article></div>
+    <div id="pgFoot" role="status"><span id="pgPos"></span><span id="pgBook"></span></div>
     <div class="chapnav" id="chapNav" hidden>
       <button class="btn" id="prevChap">‹ Trước</button>
       <button class="btn" id="nextChap">Sau ›</button>
@@ -762,7 +776,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -804,6 +818,8 @@ const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S
 function applyTheme(){
   const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
   document.documentElement.toggleAttribute('data-paper', !!S.paper);
+  document.body.classList.toggle('pg', !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
+  try { pgRefresh(); } catch(e){}
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   $('meta[name=theme-color]').content = dark ? '#1c1b19' : '#fffdf8';
@@ -933,7 +949,7 @@ $('#selBook').onchange = e => openBook(e.target.value, 1);
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
 $('#selVerse').onchange = e => {
   const el = $('#v' + e.target.value); if (!el) return;
-  el.scrollIntoView({ block:'start', behavior:'smooth' });
+  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start', behavior:'smooth' });
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   e.target.value = '';
 };
@@ -1011,7 +1027,7 @@ $('#nextChap').onclick = () => stepChapter(1);
   let busy = false, swallow = false, st = null, nbr = { book:null, key:'', v:{}, p:{} };
 
   const canGo = d => !!curBook && !$('#chapNav').hidden && !(d > 0 ? $('#nextChap') : $('#prevChap')).disabled;
-  const free = () => curBook && !busy && !document.body.classList.contains('searching') &&
+  const free = () => curBook && !busy && !document.body.classList.contains('searching') && !document.body.classList.contains('pg') &&
     $('#editor').hidden && $('#admin').hidden && $('#settings').hidden && $('#login').hidden;
 
   /* --- Dựng sẵn HTML của chương kế / chương trước --- */
@@ -1210,7 +1226,7 @@ function addBookmark(n){
 }
 function scrollToVerse(n){
   const el = $('#v' + n); if (!el) return;
-  el.scrollIntoView({ block:'start' });
+  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' });
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 async function goBookmark(b){
@@ -1632,7 +1648,7 @@ $('#bsItems').addEventListener('click', async e => {
   setSearch(false);
   await openBook(r.b, r.c);
   const el = $('#v' + r.n);
-  if (el){ el.scrollIntoView({ block:'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  if (el){ if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 });
 
 /* =========================================================
@@ -3281,6 +3297,196 @@ async function dropDemoBook(){
     if (isDemoBook(d)){ await dbDel('books', 'Sách Mẫu'); await dbDel('bookMeta', 'Sách Mẫu'); if (S.book === 'Sách Mẫu'){ S.book = null; S.chapter = 1; saveS(); } SY.dirty = true; saveSY(); }
   } catch(e){}
 }
+
+
+/* ============ CHẾ ĐỘ GIẤY: CHIA TRANG + LẬT TRANG NHƯ TỜ GIẤY ============ */
+const pg = { page:0, pages:1, toEnd:false, key:'', busy:false };
+const pgOn = () => document.body.classList.contains('pg') && !document.body.classList.contains('searching');
+const pgW = () => $('#pgView').clientWidth || innerWidth;
+const pgReduce = matchMedia('(prefers-reduced-motion: reduce)');
+const pgPagesOf = (art, W) => {                                    // số trang của một khối chữ đã dàn cột
+  const r = document.createRange(); r.selectNodeContents(art);
+  return Math.max(1, Math.ceil((r.getBoundingClientRect().right - art.getBoundingClientRect().left - 2) / W));
+};
+const pgSetX = (art, page, W) => { art.style.transform = 'translate3d(' + (-page * W) + 'px,0,0)'; };
+function pgCount(){ pg.pages = pgPagesOf($('#bibleText'), pgW()); }
+function pgFoot(){
+  $('#pgPos').textContent = `Trang ${pg.page + 1} / ${pg.pages}`;
+  $('#pgBook').textContent = curBook ? `${curBook.name} · ${S.chapter}` : '';
+}
+function pgGo(p){
+  if (!pgOn()) return;
+  pgCount(); pg.page = Math.max(0, Math.min(p, pg.pages - 1));
+  pgSetX($('#bibleText'), pg.page, pgW()); pgFoot();
+}
+const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
+function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
+function pgFirstVisible(){
+  const b = $('#pgView').getBoundingClientRect();
+  const v = $$('#bibleText .v').find(x => x.getBoundingClientRect().right > b.left + 12);
+  return v ? v.dataset.n : null;
+}
+function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
+  const art = $('#bibleText'); if (!art) return;
+  if (!pgOn()){ art.style.transform = ''; return; }
+  const n = keepVerse === undefined ? pgFirstVisible() : keepVerse;
+  pgCount();
+  const el = n ? $('#v' + n) : null;
+  if (pg.toEnd){ pg.toEnd = false; pgGo(pg.pages - 1); }
+  else if (el) pgGo(pgPageOf(el)); else pgGo(pg.page);
+}
+{ const _rcPg = renderChapter;
+  renderChapter = function(){
+    const key = S.book + '|' + S.chapter, same = pg.key === key, keep = same && pgOn() ? pgFirstVisible() : null;
+    pg.key = key; if (!same && !pg.toEnd) pg.page = 0;
+    _rcPg.apply(this, arguments);
+    if (!pgOn()) return;
+    pgRefresh(keep);
+    if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => pgRefresh(keep));
+  }; }
+
+/* --- Lật trang: tờ giấy quay quanh gáy sách (cạnh trái), lộ trang kế bên dưới, có bóng đổ --- */
+const pgDiv = c => { const d = document.createElement('div'); d.className = c; return d; };
+const pgEase = k => 1 - Math.pow(1 - k, 3), pgEaseIO = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+function pgClone(page){                                            // ảnh chụp DOM của trang hiện tại ở số trang `page`
+  const n = $('#pgView').cloneNode(true), W = pgW();
+  n.removeAttribute('id'); n.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  n.querySelectorAll('.sel,.flash').forEach(e => e.classList.remove('sel', 'flash'));
+  pgSetX(n.firstElementChild, page, W); return n;
+}
+async function pgNbrHTML(d){
+  const idx = bibleMeta.findIndex(m => m.name === curBook.name), c = S.chapter + d;
+  let name, ch, verses;
+  if (c >= 1 && c <= curBook.chapters.length){ name = curBook.name; ch = c; verses = curBook.chapters[c - 1] || []; }
+  else {
+    const nb = bibleMeta[idx + d]; if (!nb) return null;
+    const rec = await dbGet('books', nb.name); if (!rec) return null;
+    name = nb.name; ch = d > 0 ? 1 : rec.chapters.length; verses = rec.chapters[ch - 1] || [];
+  }
+  return paperHTML(name, ch, verses, S.view, 'x');
+}
+function pgApply(sg, prog){
+  const t = sg.dir > 0 ? prog : 1 - prog, a = -100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
+  sg.leaf.style.transform = 'rotateY(' + a + 'deg)';
+  sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
+  sg.cast.style.opacity = String((1 - t) * 0.4);
+  const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp - sg.W * Math.sin(r));
+  sg.strip.style.left = Math.max(0, edge) + 'px';
+  sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
+}
+function pgStage(dir, leafNode, underNode){
+  const host = $('#pgView').getBoundingClientRect(), W = innerWidth, persp = Math.round(Math.max(W * 2.4, 900));
+  const stage = pgDiv('fl-stage'), book = pgDiv('fl-book'), under = pgDiv('fl-under'), leaf = pgDiv('fl-leaf'), cast = pgDiv('fl-cast'), strip = pgDiv('fl-strip'), shade = pgDiv('fl-shade');
+  stage.style.top = host.top + 'px'; stage.style.bottom = (innerHeight - host.bottom) + 'px';
+  book.style.left = '0'; book.style.width = W + 'px'; book.style.perspective = persp + 'px';
+  under.append(underNode, cast, strip); leaf.append(leafNode, shade);
+  book.append(under, leaf); stage.append(book); document.body.appendChild(stage);
+  const sg = { stage, leaf, cast, strip, shade, W, persp, dir }; pgApply(sg, 0); return sg;
+}
+async function pgBegin(dir){                                       // dựng sân khấu lật; trả về { sg, commit } hoặc null nếu hết sách
+  document.body.classList.remove('pgchrome');
+  const W = pgW(); pgCount();
+  const inCh = dir > 0 ? pg.page < pg.pages - 1 : pg.page > 0, cur = pgClone(pg.page);
+  if (inCh){
+    const tp = pg.page + dir, nx = pgClone(tp);
+    return { sg:pgStage(dir, dir > 0 ? cur : nx, dir > 0 ? nx : cur), commit: async () => pgGo(tp) };
+  }
+  if ((dir > 0 ? $('#nextChap') : $('#prevChap')).disabled) return null;
+  const html = await pgNbrHTML(dir); if (!html) return null;
+  const nx = pgDiv('pgv'); nx.innerHTML = `<article class="reader${S.view !== 'verse' ? ' print' : ''}">${html}</article>`;
+  nx.style.visibility = 'hidden'; document.body.appendChild(nx);     // đo số trang của chương kế khi chưa lật
+  const a2 = nx.firstElementChild, pages = pgPagesOf(a2, W);
+  nx.style.visibility = ''; nx.remove(); pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
+  return { sg:pgStage(dir, dir > 0 ? cur : nx, dir > 0 ? nx : cur), commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
+}
+function pgTween(sg, from, to, ms, ease){
+  return new Promise(res => {
+    const t0 = performance.now();
+    const step = now => { const k = Math.min(1, (now - t0) / ms); pgApply(sg, from + (to - from) * ease(k)); k < 1 ? requestAnimationFrame(step) : res(); };
+    requestAnimationFrame(step);
+  });
+}
+async function pgFinish(sg, from, go, commit, ms, ease){
+  try {
+    const to = go ? 1 : 0;
+    await pgTween(sg, from, to, ms || (110 + 320 * Math.abs(to - from)), ease || pgEase);
+    if (go){ await commit(); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
+  } finally { sg.stage.remove(); }
+}
+async function pgFlip(dir){                                        // chạm mép / phím / cuộn chuột
+  if (pg.busy || !pgOn()) return;
+  pg.busy = true;
+  try {
+    const r = await pgBegin(dir); if (!r) return;
+    if (pgReduce.matches){ r.sg.stage.remove(); await r.commit(); return; }
+    await pgFinish(r.sg, 0, true, r.commit, 430, pgEaseIO);
+  } finally { pg.busy = false; }
+}
+(function(){
+  const view = $('#pgView'); let t0 = 0, st = null;
+  view.addEventListener('touchstart', e => {
+    t0 = Date.now();
+    if (!pgOn() || pg.busy || e.touches.length !== 1){ st = null; return; }
+    const t = e.touches[0]; st = { x:t.clientX, y:t.clientY, lock:false, dir:0, sg:null, commit:null, prog:0, pts:[{ x:t.clientX, t:e.timeStamp }] };
+  }, { passive:true });
+  view.addEventListener('touchmove', e => {                        // tờ giấy đi theo ngón tay
+    if (!st) return;
+    if (e.touches.length !== 1){ if (st.sg) st.sg.stage.remove(); if (st.lock) pg.busy = false; st = null; return; }
+    const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
+    if (!st.lock){
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if (Math.abs(dy) > Math.abs(dx) * 0.8){ st = null; return; }
+      st.lock = true; st.dir = dx < 0 ? 1 : -1; pg.busy = true;
+      const s = st;
+      pgBegin(s.dir).then(r => {
+        if (!r){ if (st === s) s.none = true; pg.busy = false; return; }
+        if (st !== s){ r.sg.stage.remove(); pg.busy = false; return; }
+        s.sg = r.sg; s.commit = r.commit; pgApply(s.sg, s.prog);
+      }, () => { pg.busy = false; });
+    }
+    if (e.cancelable) e.preventDefault();
+    st.prog = Math.max(0, Math.min(1, dx * (st.dir > 0 ? -1 : 1) / (innerWidth * 0.85)));
+    st.pts.push({ x:t.clientX, t:e.timeStamp }); if (st.pts.length > 6) st.pts.shift();
+    if (st.sg) pgApply(st.sg, st.prog);
+  }, { passive:false });
+  const end = cancelled => {
+    const s = st; st = null; if (!s || !s.lock) return;
+    if (!s.sg){ if (s.none) pg.busy = false; return; }           // sg chưa dựng xong: nhánh then() sẽ tự dọn
+    const last = s.pts[s.pts.length - 1]; let first = s.pts[0];
+    for (const p of s.pts) if (last.t - p.t <= 90){ first = p; break; }
+    const v = last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0, vf = v * (s.dir > 0 ? -1 : 1);
+    const go = !cancelled && (s.prog > 0.3 ? vf > -0.3 : (vf > 0.45 && s.prog > 0.04));
+    pgFinish(s.sg, s.prog, go, s.commit).finally(() => { pg.busy = false; });
+  };
+  view.addEventListener('touchend', () => end(false));
+  view.addEventListener('touchcancel', () => end(true));
+  view.addEventListener('click', e => {                            // chạm mép trái/phải = lật; chạm dải trên cùng = hiện/ẩn thanh công cụ
+    if (!pgOn()) return;
+    if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgCount(); pgGo(pg.page); }, 40); return; }
+    if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
+    const cl = document.body.classList, x = e.clientX / innerWidth, eat = () => { e.stopPropagation(); e.preventDefault(); };
+    if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
+    if (e.clientY < 64){ cl.add('pgchrome'); return eat(); }
+    if (x < 0.3){ eat(); pgFlip(-1); } else if (x > 0.7){ eat(); pgFlip(1); }
+  }, true);
+  let wheelAt = 0;                                                  // laptop: lăn chuột / vuốt hai ngón
+  view.addEventListener('wheel', e => {
+    if (!pgOn()) return;
+    e.preventDefault();
+    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX, now = Date.now();
+    if (Math.abs(d) < 8 || now - wheelAt < 500) return;
+    wheelAt = now; pgFlip(d > 0 ? 1 : -1);
+  }, { passive:false });
+  view.addEventListener('mousemove', e => { if (pgOn()) view.style.cursor = e.clientX < innerWidth * 0.3 ? 'w-resize' : e.clientX > innerWidth * 0.7 ? 'e-resize' : ''; });
+  $('#pgFoot').addEventListener('click', () => document.body.classList.toggle('pgchrome'));
+  addEventListener('resize', () => { if (!pg.busy) pgRefresh(); });
+  addEventListener('keydown', e => {
+    if (!pgOn() || e.altKey || e.ctrlKey || e.metaKey) return;
+    const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); pgFlip(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); pgFlip(-1); }
+  });
+})();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
