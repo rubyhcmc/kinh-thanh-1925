@@ -438,6 +438,8 @@ html[data-paper] .reader.print{text-align:justify}
 .hjs small{display:block;margin-top:8px;font:13px/1.5 var(--serif);font-style:italic;color:var(--muted)}
 .hjbar{height:4px;border-radius:4px;background:var(--line);margin:12px auto 0;max-width:260px;overflow:hidden}
 .hjbar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.hjtimes{margin-top:12px;font:14px/1.5 var(--serif);color:var(--muted)}
+.hjtimes b{font:700 18px var(--serif);color:var(--accent);margin:0 2px}
 .hjdone{margin:16px auto 0;max-width:300px;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);font:14px/1.55 var(--serif);color:var(--fg)}
 .hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
 
@@ -817,7 +819,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-aa';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-ab';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1438,12 +1440,19 @@ function openLessons(){
     let verses = 0; for (const id of ids) verses += await verseCount(id);
     if (tok !== hjTok || !list.isConnected) return;
     const readDays = new Set(Object.keys(RD).filter(k => RD[k].length)), streak = streakOf(readDays);
-    const info = new Map(bibleMeta.map(m => [m.name, m.chapterCount || 0])), uniq = new Set();
-    Object.values(RD).forEach(a => a.forEach(id => { const i = id.lastIndexOf('|'), n = info.get(id.slice(0, i)), c = +id.slice(i + 1); if (n && c >= 1 && c <= n) uniq.add(id); }));
-    const total = [...info.values()].reduce((x, y) => x + y, 0), done = Math.min(uniq.size, total);
+    const info = new Map(bibleMeta.map(m => [m.name, m.chapterCount || 0])), total = [...info.values()].reduce((x, y) => x + y, 0);
+    // Đếm số lần đọc trọn bộ: duyệt lịch sử theo ngày; mỗi khi đã đọc đủ mọi chương thì +1 lần và bắt đầu lượt mới
+    let cur = new Set(), times = 0, lastDone = '';
+    Object.keys(RD).sort().forEach(k => (RD[k] || []).forEach(id => {
+      const i = id.lastIndexOf('|'), n = info.get(id.slice(0, i)), c = +id.slice(i + 1);
+      if (!(n && c >= 1 && c <= n)) return;
+      cur.add(id);
+      if (total > 0 && cur.size >= total){ times++; lastDone = k; cur = new Set(); }
+    }));
+    const done = cur.size;
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
-    const quote = HJQ[Math.floor(Date.now() / 864e5) % HJQ.length];
-    const doneAll = total > 0 && done >= total;
+    const quote = 'Hôm nay Bạn đã đọc Lời CHÚA chưa?';
+    const doneAll = times > 0 && lastDone === today;
     list.innerHTML = `<div class="hj">
       <p class="hjq">${esc(quote)}</p>
       <section class="hjs"><h4>Hôm nay</h4>
@@ -1455,7 +1464,8 @@ function openLessons(){
       <section class="hjs"><h4>Cột mốc</h4>
         <div class="hjbig"><span><b>${pctTxt}</b>%</span></div>
         <div class="hjbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${Math.max(pct > 0 ? 1.5 : 0, Math.min(100, pct))}%"></i></div>
-        <small>${total ? `Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
+        <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
+        <div class="hjtimes">Đã hoàn thành toàn bộ Kinh Thánh: <b>${times}</b> lần</div>
         ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>
     </div>`;
   };
