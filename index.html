@@ -39,7 +39,7 @@ button{cursor:pointer}
 
 /* Thanh tiêu đề tối giản – như đầu trang sách */
 body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:30}
-.top{position:sticky;top:0;z-index:20;height:var(--hh);padding:env(safe-area-inset-top) 4px 0 10px;gap:4px;
+.top{position:fixed;top:0;left:0;right:0;z-index:35;height:var(--hh);padding:env(safe-area-inset-top) 4px 0 10px;gap:4px;
   display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--line);
   transition:transform .25s ease}
 .top h1{font-size:12px;margin:0;font-family:var(--serif);font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
@@ -55,7 +55,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area
 @keyframes spin{to{transform:rotate(360deg)}}
 .syncb.dirty,.syncb.offline{color:var(--accent)}
 .syncb.err,.syncb.conflict{color:var(--danger)}
-body.hdr-hide .top{transform:translateY(-100%)}
+/* thanh trên luôn cố định, không tự ẩn khi cuộn */
+body{padding-top:var(--hh)}
+body.pg:not(.searching){padding-top:0}
 body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
@@ -380,6 +382,9 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .lsbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 20px 8px}
 .lslabel{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .lsbody textarea{flex:1;min-height:120px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;line-height:1.6;resize:none}
+.lsread{flex:1;min-height:120px;overflow:auto;overscroll-behavior:contain;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.lsrtxt{font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.7;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
+.lsrmeta{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font:12px var(--sans);color:var(--muted)}
 .lsbody textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .lsbtns{flex:none;display:flex;gap:8px;padding:10px 20px 14px}
 .lsbtns .btn{flex:1;white-space:nowrap}
@@ -448,6 +453,14 @@ html[data-paper] .reader.print{text-align:justify}
 .hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
 .hjplanbtn{display:block;width:100%;max-width:300px;margin:14px auto 0;padding:13px 16px;font-size:16px;font-weight:700;letter-spacing:.01em;border-radius:12px;box-shadow:0 3px 10px rgba(138,90,31,.28)}
 .hjplanbtn:active{transform:scale(.98)}
+.plcustom{cursor:default}
+.plcustom:active{background:var(--bg)}
+.plcustom .seg{margin:12px 0 10px}
+.plcustom .seg button{flex:1;padding:9px 6px;font-size:13.5px}
+.plcustom input{height:46px;padding:0 14px;border-radius:10px;background:var(--card);font-size:17px}
+.plcustom input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.plcpv{min-height:1.5em;margin-top:8px;font:13px/1.5 var(--sans);color:var(--muted)}
+.plcpv.bad{color:var(--danger)}
 .hjs .plcomm{border-top:0;margin-top:16px;padding-top:0}
 
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
@@ -780,8 +793,9 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     <div class="lsgrip"></div>
     <div class="lstop"><div class="lsref" id="lsRef"></div><p class="lsverse" id="lsVerse"></p></div>
     <div class="lsbody">
-      <label class="lslabel" for="lsText">Bài học cá nhân</label>
+      <label class="lslabel" for="lsText" id="lsLbl">Bài học cá nhân</label>
       <textarea id="lsText" placeholder="Điều Chúa dạy bạn qua đoạn này…" autocomplete="off"></textarea>
+      <div class="lsread" id="lsRead" hidden></div>
       <div class="lslinks" id="lsLinks" hidden></div>
       <p class="lsnote">📍 Ghi chú được lưu trong máy, xem lại ở nút <b>✎ Bài học cá nhân</b> trên đầu trang.</p>
     </div>
@@ -790,6 +804,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="lsShare">Chia sẻ</button>
       <button class="btn" id="lsClose">Đóng</button>
       <button class="btn primary" id="lsSave">Lưu ghi chú</button>
+      <button class="btn primary" id="lsEdit" hidden>✎ Sửa</button>
     </div>
   </div>
 </div>
@@ -870,7 +885,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1505,8 +1520,8 @@ function openLessons(){
     const done = cur.size;
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
     let planBox;
-    { const pl = PLAN && PLANS.find(x => x.id === PLAN.id);
-      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Đọc trọn bộ Kinh Thánh theo lộ trình 1 năm, 2 năm, 6 tháng hoặc 90 ngày.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
+    { const pl = PLAN && planDef(PLAN);
+      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Đọc trọn bộ Kinh Thánh theo lộ trình 1 năm, 2 năm, 6 tháng hoặc tự thiết kế riêng.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
       else {
         const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
@@ -1552,6 +1567,17 @@ function openLessons(){
 const lsEl = $('#lsSheet'), lsTa = $('#lsText');
 let lsCur = null;
 function lsClose(){ const back = lsCur && lsCur.back; lsEl.classList.remove('open'); if (back) setTimeout(openLessons, 240); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
+/* Hai chế độ: 'view' = xem bài học hoàn chỉnh · 'edit' = soạn thảo */
+function lsMode(m){
+  const v = m === 'view'; lsCur.mode = m;
+  lsTa.hidden = v; $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
+  $('#lsLbl').textContent = v ? 'Bài học của bạn' : 'Bài học cá nhân';
+  if (v){
+    const o = lsCur.old;
+    $('#lsRead').innerHTML = `<div class="lsrtxt">${esc(lsTa.value.trim())}</div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
+    $('#lsRead').scrollTop = 0; try { lsTa.blur(); } catch(e){}
+  }
+}
 function lsShareText(){
   const c = lsCur; return `${c.book} ${c.ch}:${c.key}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
 }
@@ -1568,8 +1594,9 @@ window.addEventListener('openLesson', e => {
   lsTa.value = old ? old.text : '';
   $('#lsDel').hidden = !old;
   lsRender();
+  lsMode(old ? 'view' : 'edit');                                // bài học cũ: mở chế độ xem · bài học mới: mở chế độ soạn
   lsEl.hidden = false; void lsEl.offsetWidth; lsEl.classList.add('open');
-  setTimeout(() => lsTa.focus(), 280);
+  if (!old) setTimeout(() => lsTa.focus(), 280);
 });
 lsEl.addEventListener('click', e => { if (e.target === lsEl) lsClose(); });
 $('#lsClose').onclick = lsClose;
@@ -1581,7 +1608,11 @@ function lsPersist(){                                         // lưu ghi chú �
 }
 $('#lsSave').onclick = () => {
   if (!lsPersist()){ toast('Hãy viết nội dung ghi chú'); lsTa.focus(); return; }
-  toast('✍️ Đã lưu vào Bài học cá nhân (nút ✎ trên đầu trang)'); lsClose();
+  toast('✍️ Đã lưu vào Bài học cá nhân'); lsMode('view'); lsRender();      // lưu xong chuyển ngay sang xem nội dung hoàn chỉnh
+};
+$('#lsEdit').onclick = () => {
+  lsMode('edit'); lsTa.focus();
+  try { const n = lsTa.value.length; lsTa.setSelectionRange(n, n); } catch(e){}
 };
 let lsRT; lsTa.addEventListener('input', () => { clearTimeout(lsRT); lsRT = setTimeout(lsRender, 250); });
 $('#lsLinks').addEventListener('click', async e => {         // chạm chip: tự lưu rồi mở câu / ghi chú liên quan
@@ -3961,7 +3992,7 @@ async function dtImport(file){
     [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   if (i === 1){ RD = {}; LS = []; BM = []; }
-  if (j.plan && PLANS.some(x => x.id === j.plan.id) && /^\d{4}-\d{2}-\d{2}$/.test(j.plan.start || '') && (i === 1 || !PLAN)){ PLAN = { id:j.plan.id, start:j.plan.start }; savePlan(); }
+  if (planOK(j.plan) && (i === 1 || !PLAN)){ PLAN = planNorm(j.plan); savePlan(); }
   days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
   const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -4092,15 +4123,20 @@ async function verseImage(nums){
 $('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (ns.length) verseImage(ns); };
 
 
-/* ============ KẾ HOẠCH ĐỌC (4 lộ trình trọn bộ Kinh Thánh) + BỘ ĐẾM ANH EM ============ */
+/* ============ KẾ HOẠCH ĐỌC (3 lộ trình chuẩn + 1 lộ trình tự thiết kế) + BỘ ĐẾM ANH EM ============ */
 const PLANS = [
   { id:'y1', name:'1 năm',   days:365, sub:'365 ngày', per:'Khoảng 3 - 4 chương/ngày' },
   { id:'y2', name:'2 năm',   days:730, sub:'730 ngày', per:'Khoảng 2 chương/ngày' },
-  { id:'m6', name:'6 tháng', days:180, sub:'180 ngày', per:'Khoảng 6 - 7 chương/ngày' },
-  { id:'d90', name:'90 ngày', days:90, sub:'Lộ trình ngắn hạn', per:'Chia đều hợp lý' }
+  { id:'m6', name:'6 tháng', days:180, sub:'180 ngày', per:'Khoảng 6 - 7 chương/ngày' }
 ];
+const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
+const planOK = q => !!q && isDate(q.start) && (PLANS.some(x => x.id === q.id) || (q.id === 'custom' && Number.isInteger(q.days) && q.days >= 1 && q.days <= 5000));
+const planNorm = q => q.id === 'custom' ? { id:'custom', start:q.start, days:q.days } : { id:q.id, start:q.start };
+const planDef = q => q.id === 'custom' ? { id:'custom', name:'Tự thiết kế', days:q.days } : PLANS.find(x => x.id === q.id);   // thông tin kế hoạch đang dùng
+let PCUST = null; try { PCUST = JSON.parse(localStorage.getItem('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
 let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
-if (!PLAN || !PLANS.some(x => x.id === PLAN.id) || !/^\d{4}-\d{2}-\d{2}$/.test(PLAN.start || '')) PLAN = null;
+if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };   // kế hoạch 90 ngày cũ → chuyển thành kế hoạch tự thiết kế 90 ngày
+if (!planOK(PLAN)) PLAN = null;
 const savePlan = () => { try { PLAN ? localStorage.setItem('kt.plan', JSON.stringify(PLAN)) : localStorage.removeItem('kt.plan'); } catch(e){} planSum(); };
 const plSeq = () => { const a = []; bibleMeta.forEach(m => { for (let c = 1; c <= (m.chapterCount || 0); c++) a.push({ book:m.name, ch:c }); }); return a; };
 const plPer = (days, T) => {                                         // nhãn "chương/ngày"
@@ -4109,7 +4145,7 @@ const plPer = (days, T) => {                                         // nhãn "c
 };
 const plDay = start => { const [y, m, d] = start.split('-').map(Number), t = new Date(); return Math.floor((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(y, m - 1, d)) / 864e5) + 1; };
 function plToday(){                                                  // các chương cần đọc hôm nay
-  const pl = PLANS.find(x => x.id === PLAN.id), seq = plSeq(), T = seq.length, d = plDay(PLAN.start);
+  const pl = planDef(PLAN), seq = plSeq(), T = seq.length, d = plDay(PLAN.start);
   if (d < 1) return { d, pl, T, items:[], none:true };
   if (d > pl.days) return { d, pl, T, items:[], over:true };
   return { d, pl, T, items:seq.slice(Math.floor((d - 1) * T / pl.days), Math.floor(d * T / pl.days)) };
@@ -4120,8 +4156,8 @@ function plRanges(items){                                            // [{book,c
 }
 function planSum(){
   const a = $('#planSum'), b = $('#planSub'); if (!a) return;
-  if (!PLAN){ a.textContent = 'Chưa chọn kế hoạch'; b.textContent = '1 năm · 2 năm · 6 tháng · 90 ngày'; return; }
-  const pl = PLANS.find(x => x.id === PLAN.id), d = plDay(PLAN.start);
+  if (!PLAN){ a.textContent = 'Chưa chọn kế hoạch'; b.textContent = '1 năm · 2 năm · 6 tháng · Tự thiết kế'; return; }
+  const pl = planDef(PLAN), d = plDay(PLAN.start);
   a.textContent = 'Kế hoạch ' + pl.name; b.textContent = d > pl.days ? 'Đã hoàn thành 🎉' : d < 1 ? 'Chưa đến ngày bắt đầu' : `Ngày ${d} / ${pl.days}`;
 }
 /* Bộ đếm anh em: CountAPI (bản thay thế còn hoạt động trước, bản gốc api.countapi.xyz làm dự phòng); mỗi thiết bị chỉ cộng 1 lần (kt.joined) */
@@ -4158,11 +4194,31 @@ function openPlan(opts){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 72;
   const closePlan = () => { o.remove(); if (opts.onClose) opts.onClose(); };
   const T = plSeq().length;
+  const cust = { mode:(PCUST && PCUST.mode === 'chap') ? 'chap' : 'days', val:String((PCUST && PCUST.val) || '') };
+  const custDays = () => {                                           // trả về số ngày hợp lệ hoặc 0
+    const n = parseInt(cust.val, 10), max = T || 1189; if (!(n >= 1) || n > max) return 0;
+    return cust.mode === 'days' ? n : Math.ceil(max / n);
+  };
+  const custPv = () => {
+    const el = o.querySelector('#plCp'); if (!el) return;
+    const max = T || 1189, n = parseInt(cust.val, 10);
+    if (!cust.val){ el.textContent = ''; el.className = 'plcpv'; return; }
+    if (!(n >= 1) || n > max){ el.textContent = `Hãy nhập số từ 1 đến ${max}.`; el.className = 'plcpv bad'; return; }
+    const d = custDays();
+    el.className = 'plcpv';
+    el.textContent = cust.mode === 'days' ? `≈ ${(max / d).toFixed(1).replace(/\.0$/, '')} chương mỗi ngày · hoàn thành sau ${d} ngày`
+      : `Hoàn thành sau ${d} ngày (khoảng ${d >= 60 ? Math.round(d / 30) + ' tháng' : d + ' ngày'})`;
+  };
   const draw = () => {
     let body;
     if (!PLAN){
       body = `<p class="bmhint" style="margin:0 0 12px">Chọn một lộ trình đọc trọn bộ Kinh Thánh. Ngày đầu tiên bắt đầu từ hôm nay.</p>` +
-        PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${p.per}</span></button>`).join('');
+        PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${p.per}</span></button>`).join('') +
+        `<div class="plcard plcustom"><b>Tự thiết kế riêng</b><span>Tự gõ số ngày hoặc số chương mỗi ngày theo ý bạn.</span>
+          <div class="seg" id="plCm"><button data-cm="days" class="${cust.mode === 'days' ? 'on' : ''}">Số ngày</button><button data-cm="chap" class="${cust.mode === 'chap' ? 'on' : ''}">Số chương mỗi ngày</button></div>
+          <input type="text" id="plCv" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="5" placeholder="${cust.mode === 'days' ? `Số ngày (1–${T || 1189})` : `Số chương mỗi ngày (1–${T || 1189})`}" value="${esc(cust.val)}" aria-label="Số liệu kế hoạch tự thiết kế">
+          <div class="plcpv" id="plCp"></div>
+          <button class="btn primary" data-custom="1" style="width:100%;margin-top:10px">Bắt đầu kế hoạch của tôi</button></div>`;
     } else {
       const t = plToday(), done = t.items.filter(x => (RD[dayKey()] || []).includes(x.book + '|' + x.ch)).length;
       body = `<div class="plnow"><div class="pld">Kế hoạch ${t.pl.name}</div>
@@ -4176,15 +4232,26 @@ function openPlan(opts){
     }
     o.innerHTML = `<div class="sheet"><h3>📖 Kế hoạch đọc</h3>${body}<div class="plcomm" id="plComm"></div>
       <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
-    ctRender(o.querySelector('#plComm'));
+    ctRender(o.querySelector('#plComm')); custPv();
   };
   draw();
+  const startCustom = () => {
+    if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
+    const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${T}`); }
+    PCUST = { mode:cust.mode, val:cust.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
+    PLAN = { id:'custom', start:dayKey(), days:d }; savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
+    ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
+  };
+  o.addEventListener('input', e => { if (e.target.id !== 'plCv') return; e.target.value = cust.val = e.target.value.replace(/\D/g, '').slice(0, 5); custPv(); });
+  o.addEventListener('keydown', e => { if (e.target.id === 'plCv' && e.key === 'Enter'){ e.preventDefault(); startCustom(); } });
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return closePlan();
-    const pk = e.target.closest('[data-pick]'), ac = e.target.closest('[data-act]');
+    const pk = e.target.closest('[data-pick]'), ac = e.target.closest('[data-act]'), cm = e.target.closest('[data-cm]'), cs = e.target.closest('[data-custom]');
+    if (cm){ cust.mode = cm.dataset.cm; draw(); return; }
+    if (cs) return startCustom();
     if (pk){
       if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
-      PLAN = { id:pk.dataset.pick, start:dayKey() }; savePlan(); draw(); toast('Đã bắt đầu kế hoạch ' + PLANS.find(x => x.id === PLAN.id).name);
+      PLAN = { id:pk.dataset.pick, start:dayKey() }; savePlan(); draw(); toast('Đã bắt đầu kế hoạch ' + planDef(PLAN).name);
       ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
       return;
     }
