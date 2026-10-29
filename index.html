@@ -88,6 +88,8 @@ body.searching .top .sfield{display:flex}
 .nf input:focus{border-color:var(--accent);outline:0}
 .nf input:focus::placeholder{color:var(--muted);opacity:.55}
 .nf input:disabled{opacity:.5}
+.rng{display:none!important}
+.nf.bad input{color:var(--danger);border-color:var(--danger)}
 .rng{position:absolute;top:calc(100% + 6px);left:0;z-index:35;display:flex;align-items:center;gap:8px;white-space:nowrap;padding:5px 6px 5px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
 #nfVerse .rng{left:auto;right:0}
 .rng.bad{color:var(--danger)}
@@ -779,7 +781,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -963,7 +965,27 @@ function syncNav(){
   c.placeholder = on ? S.chapter : '';
   if (document.activeElement !== c) c.value = on ? S.chapter : '';
   if (document.activeElement !== v) v.value = '';
+  syncVerse();
 }
+/* Ô "Câu" hiển thị số câu đang đọc (câu đầu tiên trên màn hình) */
+function curVerseNo(){
+  if (!curBook) return '';
+  const vs = $$('#bibleText .v'); if (!vs.length) return '';
+  if (document.body.classList.contains('pg') && !document.body.classList.contains('searching')){
+    const b = $('#pgView').getBoundingClientRect();
+    const v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
+    return v.dataset.n;
+  }
+  const top = ($('.top') ? $('.top').getBoundingClientRect().bottom : 0) + 4;
+  const v = vs.find(x => x.getBoundingClientRect().bottom > top) || vs[vs.length - 1];
+  return v ? v.dataset.n : '';
+}
+let svT = 0;
+function syncVerse(){
+  const v = $('#niVerse'); if (!v || document.activeElement === v) return;
+  cancelAnimationFrame(svT); svT = requestAnimationFrame(() => { if (document.activeElement === v) return; v.placeholder = curBook ? (curVerseNo() || 'Câu') : 'Câu'; });
+}
+addEventListener('scroll', syncVerse, { passive:true });
 function setupNav(kind){
   const isC = kind === 'chap', LB = isC ? 'CHƯƠNG' : 'CÂU';
   const inp = $(isC ? '#niChap' : '#niVerse'), pill = $(isC ? '#rngChap' : '#rngVerse');
@@ -975,14 +997,15 @@ function setupNav(kind){
                      : (curBook.chapters[S.chapter - 1] || []).map(v => v.n);
     return { nums:new Set(nums), max:nums.length ? Math.max(...nums) : 0 };
   };
-  const say = (m, bad) => { txt.textContent = m; pill.classList.toggle('bad', !!bad); pill.hidden = false; };
-  const range = c => say(`1-${c.max} ${LB}`);
+  const nf = inp.closest('.nf');                            // không còn bong bóng gợi ý: chỉ đổi màu ô khi nhập sai, dải số nằm trong placeholder
+  const say = (m, bad) => { pill.hidden = true; nf.classList.toggle('bad', !!bad); };
+  const range = c => { say('', false); inp.placeholder = `1–${c.max}`; };
   const bad = (c, n) => say(isC ? `Chỉ có 1-${c.max} ${LB}` : (n > c.max || n < 1 ? `Chỉ có 1-${c.max} ${LB}` : `Không có câu ${n} (1-${c.max} ${LB})`), true);
   const canExtend = (c, n) => { const s = String(n); for (const m of c.nums) if (m > n && String(m).startsWith(s)) return true; return false; };
   const jump = n => {
     if (!(isC && n === S.chapter)){ sel.value = n; sel.onchange({ target:sel }); }
     if (!isC) inp.value = '';
-    pill.hidden = true; inp.blur();
+    pill.hidden = true; nf.classList.remove('bad'); inp.blur();
   };
   const commit = () => {                       // true nếu hợp lệ và đã nhảy
     const c = cfg(); if (!c) return false;
@@ -1011,7 +1034,7 @@ function setupNav(kind){
     if (busy) return; busy = true;
     const c = cfg(), v = inp.value;
     if (c && v && !commit()) toast(isC ? `Chỉ có 1-${c.max} chương` : `Không có câu ${parseInt(v, 10)} (1-${c.max})`);
-    pill.hidden = true; inp.value = ''; syncNav(); busy = false;
+    pill.hidden = true; nf.classList.remove('bad'); inp.value = ''; syncNav(); busy = false;
   });
   pill.addEventListener('mousedown', e => e.preventDefault());   // giữ bàn phím khi bấm nút Xong
   pill.querySelector('button').addEventListener('click', () => { if (!commit()){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } });
@@ -3321,7 +3344,7 @@ function pgGo(p){
   if (!pgOn()) return;
   if (!pg.pages || pg.dirty){ pgCount(); pg.dirty = false; }
   pg.page = Math.max(0, Math.min(p, pg.pages - 1));
-  pgSetX($('#bibleText'), pg.page, pgW()); pgFoot();
+  pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); syncVerse();
 }
 const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
 function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
