@@ -411,7 +411,10 @@ body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(
 body.pg.pgchrome:not(.searching) .top{transform:none}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
 body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
-body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;will-change:transform;-webkit-user-select:none;user-select:none}
+body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none;contain:layout paint}
+.pgcur{font-weight:800;font-size:15px;color:var(--fg);letter-spacing:0}
+.pgtot{font-weight:400;opacity:.7}
+.pglab{margin-right:.45em}
 body.pg .pgv>.reader .chhead{break-inside:avoid}
 /* Chế độ Giấy: lề rộng, dòng thưa */
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
@@ -776,7 +779,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3311,7 +3314,7 @@ const pgPagesOf = (art, W) => {                                    // số trang
 const pgSetX = (art, page, W) => { art.style.transform = 'translate3d(' + (-page * W) + 'px,0,0)'; };
 function pgCount(){ pg.pages = pgPagesOf($('#bibleText'), pgW()); }
 function pgFoot(){
-  $('#pgPos').textContent = `Trang ${pg.page + 1} / ${pg.pages}`;
+  $('#pgPos').innerHTML = `<span class="pglab">Trang</span><b class="pgcur">${pg.page + 1}</b><span class="pgtot"> / ${pg.pages}</span>`;
   $('#pgBook').textContent = curBook ? `${curBook.name} · ${S.chapter}` : '';
 }
 function pgGo(p){
@@ -3323,17 +3326,19 @@ const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBou
 function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
 function pgFirstVisible(){
   const b = $('#pgView').getBoundingClientRect();
-  const v = $$('#bibleText .v').find(x => x.getBoundingClientRect().right > b.left + 12);
+  const vs = $$('#bibleText .v');
+  const v = vs.find(x => x.getBoundingClientRect().left >= b.left - 2) || vs[vs.length - 1];   // câu đầu tiên bắt đầu từ trang này trở đi
   return v ? v.dataset.n : null;
 }
 function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
   const art = $('#bibleText'); if (!art) return;
   if (!pgOn()){ art.style.transform = ''; return; }
-  const n = keepVerse === undefined ? pgFirstVisible() : keepVerse;
+  const W = pgW(), widthSame = pg.lastW === W; pg.lastW = W;
   pgCount();
-  const el = n ? $('#v' + n) : null;
-  if (pg.toEnd){ pg.toEnd = false; pgGo(pg.pages - 1); }
-  else if (el) pgGo(pgPageOf(el)); else pgGo(pg.page);
+  if (pg.toEnd){ pg.toEnd = false; return pgGo(pg.pages - 1); }
+  if (keepVerse === undefined && widthSame) return pgGo(pg.page);   // chỉ đổi chiều cao (thanh địa chỉ iPhone co giãn) → giữ nguyên trang, không nhảy
+  const n = keepVerse === undefined ? pgFirstVisible() : keepVerse, el = n ? $('#v' + n) : null;
+  if (el) pgGo(pgPageOf(el)); else pgGo(pg.page);
 }
 { const _rcPg = renderChapter;
   renderChapter = function(){
@@ -3479,7 +3484,7 @@ async function pgFlip(dir){                                        // chạm mé
   }, { passive:false });
   view.addEventListener('mousemove', e => { if (pgOn()) view.style.cursor = e.clientX < innerWidth * 0.3 ? 'w-resize' : e.clientX > innerWidth * 0.7 ? 'e-resize' : ''; });
   $('#pgFoot').addEventListener('click', () => document.body.classList.toggle('pgchrome'));
-  addEventListener('resize', () => { if (!pg.busy) pgRefresh(); });
+  let rsT; addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (!pg.busy && !st) pgRefresh(); }, 180); });
   addEventListener('keydown', e => {
     if (!pgOn() || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
