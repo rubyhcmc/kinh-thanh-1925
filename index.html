@@ -400,17 +400,9 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .lslinks button{border:1px solid var(--accent);border-radius:99px;background:var(--accent-soft);color:var(--accent);padding:5px 11px;font:600 12.5px var(--sans);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lslinks button.rel{border-color:var(--line);color:var(--fg);background:var(--bg);font-weight:500}
 
-/* Chế độ Giấy dạng máy đọc sách: chia trang ngang, ẩn thanh đầu trang, chạm mép để lật */
-body.pg:not(.searching){overflow:hidden}
-body.pg:not(.searching) main{perspective:none;overflow:visible;min-height:0}
-body.pg:not(.searching) #chapNav{display:none!important}
-body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(-100%)}
-body.pg.pgchrome:not(.searching) .top{transform:none}
-body.pg:not(.searching) #bibleText{--pgm:max(28px, calc((100vw - 680px) / 2));position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));margin:0;padding:20px var(--pgm) 0;box-sizing:border-box;overflow:hidden;
-  column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;background:var(--bg)}
-body.pg:not(.searching) #bibleText .chhead{break-inside:avoid}
-#pgFoot{display:none;position:fixed;z-index:6;left:0;right:0;bottom:0;height:calc(36px + env(safe-area-inset-bottom));padding:0 18px env(safe-area-inset-bottom);align-items:center;justify-content:space-between;font:12px var(--sans);letter-spacing:.04em;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
-body.pg:not(.searching) #pgFoot{display:flex}
+/* Chế độ Giấy: lề rộng, dòng thưa như sách giấy (vẫn cuộn + lật chương như cũ) */
+html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
+html[data-paper] .reader.print{text-align:justify}
 </style>
 </head>
 <body>
@@ -450,7 +442,6 @@ body.pg:not(.searching) #pgFoot{display:flex}
       <div class="pager" id="bsPager"></div>
     </div>
     <article class="reader" id="bibleText"></article>
-    <div id="pgFoot" role="status"><span id="pgPos"></span><span id="pgBook"></span></div>
     <div class="chapnav" id="chapNav" hidden>
       <button class="btn" id="prevChap">‹ Trước</button>
       <button class="btn" id="nextChap">Sau ›</button>
@@ -771,7 +762,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -813,8 +804,6 @@ const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S
 function applyTheme(){
   const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
   document.documentElement.toggleAttribute('data-paper', !!S.paper);
-  document.body.classList.toggle('pg', !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
-  try { pgRefresh(); } catch(e){}
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   $('meta[name=theme-color]').content = dark ? '#1c1b19' : '#fffdf8';
@@ -944,7 +933,7 @@ $('#selBook').onchange = e => openBook(e.target.value, 1);
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
 $('#selVerse').onchange = e => {
   const el = $('#v' + e.target.value); if (!el) return;
-  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start', behavior:'smooth' });
+  el.scrollIntoView({ block:'start', behavior:'smooth' });
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   e.target.value = '';
 };
@@ -1022,7 +1011,7 @@ $('#nextChap').onclick = () => stepChapter(1);
   let busy = false, swallow = false, st = null, nbr = { book:null, key:'', v:{}, p:{} };
 
   const canGo = d => !!curBook && !$('#chapNav').hidden && !(d > 0 ? $('#nextChap') : $('#prevChap')).disabled;
-  const free = () => curBook && !busy && !document.body.classList.contains('searching') && !document.body.classList.contains('pg') &&
+  const free = () => curBook && !busy && !document.body.classList.contains('searching') &&
     $('#editor').hidden && $('#admin').hidden && $('#settings').hidden && $('#login').hidden;
 
   /* --- Dựng sẵn HTML của chương kế / chương trước --- */
@@ -1221,7 +1210,7 @@ function addBookmark(n){
 }
 function scrollToVerse(n){
   const el = $('#v' + n); if (!el) return;
-  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' });
+  el.scrollIntoView({ block:'start' });
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 async function goBookmark(b){
@@ -1643,7 +1632,7 @@ $('#bsItems').addEventListener('click', async e => {
   setSearch(false);
   await openBook(r.b, r.c);
   const el = $('#v' + r.n);
-  if (el){ if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  if (el){ el.scrollIntoView({ block:'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 });
 
 /* =========================================================
@@ -3292,97 +3281,6 @@ async function dropDemoBook(){
     if (isDemoBook(d)){ await dbDel('books', 'Sách Mẫu'); await dbDel('bookMeta', 'Sách Mẫu'); if (S.book === 'Sách Mẫu'){ S.book = null; S.chapter = 1; saveS(); } SY.dirty = true; saveSY(); }
   } catch(e){}
 }
-
-/* ============ CHẾ ĐỘ GIẤY: LẬT TRANG NHƯ MÁY ĐỌC SÁCH ============ */
-const pg = { page:0, pages:1, toEnd:false, key:'' };
-const pgOn = () => document.body.classList.contains('pg') && !document.body.classList.contains('searching');
-const pgStep = () => $('#bibleText').clientWidth || innerWidth;
-function pgCount(){ pg.pages = Math.max(1, Math.round($('#bibleText').scrollWidth / pgStep())); }
-function pgFoot(){
-  $('#pgPos').textContent = `Trang ${pg.page + 1} / ${pg.pages}`;
-  $('#pgBook').textContent = curBook ? `${curBook.name} · ${S.chapter}` : '';
-}
-const pgReduce = matchMedia('(prefers-reduced-motion: reduce)');
-function pgGo(p, smooth){
-  if (!pgOn()) return;
-  pgCount(); pg.page = Math.max(0, Math.min(p, pg.pages - 1));
-  const el = $('#bibleText'), x = pg.page * pgStep();
-  if (smooth && !pgReduce.matches && el.scrollTo) el.scrollTo({ left:x, behavior:'smooth' });   // lật trang trượt mượt
-  else if (el.scrollTo) el.scrollTo({ left:x, behavior:'instant' }); else el.scrollLeft = x;
-  pgFoot();
-}
-const pgPageOf = el => { const c = $('#bibleText'), r = el.getBoundingClientRect(), b = c.getBoundingClientRect(); return Math.floor((r.left - b.left + c.scrollLeft + 2) / pgStep()); };
-function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
-function pgFirstVisible(){
-  const c = $('#bibleText'), b = c.getBoundingClientRect();
-  const v = $$('#bibleText .v').find(x => x.getBoundingClientRect().right > b.left + 12);
-  return v ? v.dataset.n : null;
-}
-function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
-  if (!pgOn()){ const e = $('#bibleText'); if (e) e.scrollLeft = 0; return; }
-  const n = keepVerse === undefined ? pgFirstVisible() : keepVerse;
-  pgCount();
-  const el = n ? $('#v' + n) : null;
-  if (pg.toEnd){ pg.toEnd = false; pgGo(pg.pages - 1); }
-  else if (el) pgGo(pgPageOf(el)); else pgGo(pg.page);
-}
-{ const _rcPg = renderChapter;
-  renderChapter = function(){
-    const key = S.book + '|' + S.chapter, same = pg.key === key, keep = same && pgOn() ? pgFirstVisible() : null;
-    pg.key = key; if (!same && !pg.toEnd) pg.page = 0;
-    _rcPg.apply(this, arguments);
-    if (!pgOn()) return;
-    pgRefresh(keep);
-    requestAnimationFrame(() => pgRefresh(keep));
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pgRefresh(keep));
-    setTimeout(() => pgRefresh(keep), 450);
-  }; }
-async function pgFlip(d){
-  document.body.classList.remove('pgchrome');
-  if (d > 0){
-    if (pg.page < pg.pages - 1) return pgGo(pg.page + 1, true);
-    if (!$('#nextChap').disabled){ pg.page = 0; await stepChapter(1); }
-  } else {
-    if (pg.page > 0) return pgGo(pg.page - 1, true);
-    if (!$('#prevChap').disabled){ pg.toEnd = true; await stepChapter(-1); }
-  }
-}
-(function(){
-  const el = $('#bibleText'); let t0 = 0, sx = 0, sy = 0;
-  ['touchstart', 'mousedown'].forEach(k => el.addEventListener(k, e => { t0 = Date.now(); const t = e.touches ? e.touches[0] : e; sx = t.clientX; sy = t.clientY; }, { passive:true }));
-  el.addEventListener('touchend', e => {                           // vuốt ngang = lật trang
-    if (!pgOn() || Date.now() - t0 > 600 || String(getSelection()).length) return;
-    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-    if (Math.abs(dx) > 50 && Math.abs(dy) < 70 && Math.abs(dx) > Math.abs(dy) * 1.5){ e.preventDefault(); pgFlip(dx < 0 ? 1 : -1); }
-  }, { passive:false });
-  el.addEventListener('click', e => {                              // chạm mép trái/phải = lật; chạm dải trên cùng = hiện/ẩn thanh công cụ
-    if (!pgOn()) return;
-    if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgCount(); pgGo(pg.page); }, 40); return; }
-    if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
-    const cl = document.body.classList, x = e.clientX / innerWidth;
-    const eat = () => { e.stopPropagation(); e.preventDefault(); };
-    if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
-    if (e.clientY < 64){ cl.add('pgchrome'); return eat(); }
-    if (x < 0.3){ eat(); pgFlip(-1); } else if (x > 0.7){ eat(); pgFlip(1); }
-  }, true);
-  let wheelAt = 0;                                                  // laptop: lăn chuột / vuốt hai ngón = lật trang
-  el.addEventListener('wheel', e => {
-    if (!pgOn()) return;
-    e.preventDefault();
-    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX, now = Date.now();
-    if (Math.abs(d) < 8 || now - wheelAt < 420) return;
-    wheelAt = now; pgFlip(d > 0 ? 1 : -1);
-  }, { passive:false });
-  el.addEventListener('mousemove', e => { if (pgOn()) el.style.cursor = e.clientX < innerWidth * 0.3 ? 'w-resize' : e.clientX > innerWidth * 0.7 ? 'e-resize' : ''; });
-  $('#pgFoot').addEventListener('click', () => document.body.classList.toggle('pgchrome'));
-  addEventListener('resize', () => pgRefresh());
-  addEventListener('keydown', e => {
-    if (!pgOn() || e.altKey || e.ctrlKey || e.metaKey) return;
-    const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
-    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); pgFlip(1); }
-    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); pgFlip(-1); }
-  });
-})();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
