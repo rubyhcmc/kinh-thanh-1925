@@ -817,7 +817,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-aa';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1086,7 +1086,9 @@ $('#nextChap').onclick = () => stepChapter(1);
   const main = $('main');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MAXA = 100;                       // góc lật tối đa (độ); >90 là mặt sau, bị ẩn
-  let busy = false, swallow = false, st = null, nbr = { book:null, key:'', v:{}, p:{} };
+  let busy = false, swallow = false, st = null, nbr = { book:null, key:'', h:{}, s:{} }, dirtyT = 0;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const keyNow = () => curBook ? [curBook.name, S.chapter, S.view, S.fs, S.font, main.clientWidth].join('|') : '';
 
   const canGo = d => !!curBook && !$('#chapNav').hidden && !(d > 0 ? $('#nextChap') : $('#prevChap')).disabled;
   const free = () => curBook && !busy && !document.body.classList.contains('searching') && !document.body.classList.contains('pg') &&
@@ -1104,14 +1106,31 @@ $('#nextChap').onclick = () => stepChapter(1);
     }
     return '<article class="reader' + (S.view !== 'verse' ? ' print' : '') + '">' + paperHTML(name, ch, verses, S.view, 'x') + '</article>';
   }
+  /* Dựng sẵn "sân khấu lật trang" (bản sao chương hiện tại + chương kế) lúc rảnh rỗi, ẩn đi.
+     Khi ngón tay vuốt chỉ việc hiện ra → không phải nhân bản / dựng DOM giữa lúc đang vuốt nên mượt như chế độ Trang giấy. */
+  function dropStages(n){ Object.values(n.s || {}).forEach(g => g && g.stage.remove()); n.s = {}; }
+  async function fill(n){
+    if (n.filling) return; n.filling = true;
+    try {
+      for (const d of [1, -1]){
+        if (nbr !== n) return;
+        if (!(d in n.h)){ let h = null; try { h = await loadNbr(d); } catch(e){} if (nbr !== n) return; n.h[d] = h; }
+        if (!n.h[d] || n.s[d]) continue;
+        while (st || !free()){ await sleep(200); if (nbr !== n) return; }      // đang chạm / đang mở hộp thoại → chờ
+        if (n.key !== keyNow()) return;
+        n.s[d] = buildStage(d, n.h[d]);
+        await sleep(40);
+      }
+    } finally { n.filling = false; }
+  }
   function prefetch(){
     if (!curBook) return;
-    const key = curBook.name + '|' + S.chapter + '|' + S.view;
+    const key = keyNow();
     if (nbr.book === curBook && nbr.key === key) return;
-    const n = nbr = { book:curBook, key, v:{}, p:{} };
-    [1, -1].forEach(d => { n.p[d] = loadNbr(d).then(h => (n.v[d] = h), () => (n.v[d] = null)); });
+    dropStages(nbr);
+    fill(nbr = { book:curBook, key, h:{}, s:{} });
   }
-  async function getNbr(d){ prefetch(); const n = nbr; return (d in n.v) ? n.v[d] : n.p[d]; }
+  window.ktFlipDirty = () => { nbr.key = '\0'; clearTimeout(dirtyT); dirtyT = setTimeout(prefetch, 400); };   // nội dung trang đổi (dấu trang, chú thích…) → dựng lại bản sao
   const _rc = renderChapter;
   renderChapter = function(){ _rc.apply(this, arguments); setTimeout(prefetch, 250); };
 
@@ -1132,7 +1151,10 @@ $('#nextChap').onclick = () => stepChapter(1);
     under.append(dir > 0 ? nxBox : curBox, cast, strip);
     leaf.append(dir > 0 ? curBox : nxBox, shade);
     book.append(under, leaf); stage.append(book); document.body.appendChild(stage);
-    const sg = { stage, leaf, cast, strip, shade, W, persp, dir };
+    stage.style.visibility = 'hidden';
+    const sg = { stage, leaf, cast, strip, shade, curBox, W, persp, dir, cleanup(){
+      stage.remove(); setTimeout(() => { try { fill(nbr); } catch(e){} }, 300);        // dựng lại bản sao đã dùng để lần vuốt sau vẫn mượt
+    } };
     apply(sg, 0);
     return sg;
   }
@@ -1144,7 +1166,7 @@ $('#nextChap').onclick = () => stepChapter(1);
     sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
     sg.cast.style.opacity = String((1 - t) * 0.4);
     const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp - sg.W * Math.sin(r));   // vị trí mép phải của tờ giấy khi chiếu phối cảnh
-    sg.strip.style.left = Math.max(0, edge) + 'px';
+    sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
     sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
   }
   const easeOut = k => 1 - Math.pow(1 - k, 3);
@@ -1171,9 +1193,16 @@ $('#nextChap').onclick = () => stepChapter(1);
     } finally { sg.cleanup(); }
   }
   async function begin(dir){
-    const html = await getNbr(dir); if (!html) return null;
+    prefetch(); const n = nbr; let sg = n.s[dir];
+    if (sg) delete n.s[dir];
+    else {                                                                         // chưa kịp dựng sẵn → dựng ngay
+      const html = (dir in n.h) ? n.h[dir] : await loadNbr(dir); if (!html) return null;
+      sg = buildStage(dir, html);
+    }
     clearSelection();
-    return buildStage(dir, html);
+    sg.curBox.style.top = $('#tab-bible').getBoundingClientRect().top + 'px';      // khớp đúng vị trí cuộn lúc này
+    sg.stage.style.visibility = ''; apply(sg, 0);
+    return sg;
   }
 
   /* --- Nút Trước/Sau và phím ← → : lật có hoạt ảnh --- */
@@ -1268,6 +1297,7 @@ try { BM = JSON.parse(localStorage.getItem(BM_KEY) || '[]'); if (!Array.isArray(
 const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); } catch(e){} };
 
 function markBookmarks(){
+  if (window.ktFlipDirty) window.ktFlipDirty();
   $$('#bibleText .v.bm').forEach(e => e.classList.remove('bm'));
   if (!curBook) return;
   BM.forEach(b => {
@@ -1584,6 +1614,7 @@ function toggleFn(e){
   const open = box.hidden;                       // đang ẩn → bung ra
   box.hidden = !open;
   if (mk) mk.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (window.ktFlipDirty) window.ktFlipDirty();
 }
 ['#bibleText', '#edPreview'].forEach(id => {
   const r = $(id);
