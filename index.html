@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#f7f3ea">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kinh Thánh">
 <style>
 /* ============ GIAO DIỆN ============ */
@@ -817,7 +817,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -863,7 +863,7 @@ function applyTheme(){
   try { pgRefresh(); } catch(e){}
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name=theme-color]').content = dark ? '#1c1b19' : '#fffdf8';
+  $('meta[name=theme-color]').content = S.paper ? '#f4f3ee' : (dark ? '#1c1b19' : '#fffdf8');
   $$('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.theme));
 }
 function applyFs(){
@@ -3086,7 +3086,6 @@ function layoutBook(book){
   const nv = done.reduce((a, c) => a + c.length, 0);
   // Trang bìa
   L.newPage();
-  L.cross(PG.W / 2, 120, 46);
   L.setY(190);
   L.flow([{ s:'KINH THÁNH', k:'n' }], { size:9, lh:14, align:'center', color:'#8a5a1f', st:'b' });
   L.gap(8);
@@ -3311,7 +3310,23 @@ $('#exFile').onchange = async e => {
 };
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+/* Toàn màn hình khi đọc Trang giấy: Android/trình duyệt hỗ trợ Fullscreen API sẽ ẩn hẳn thanh trạng thái (sóng, giờ, pin);
+   iPhone không có API này nên dùng kiểu thanh trạng thái trong suốt (black-translucent) để trang tràn lên sát mép trên */
+function paperFullscreen(on){
+  try {
+    const de = document.documentElement, fs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (on && !fs && matchMedia('(pointer:coarse)').matches){
+      const r = de.requestFullscreen ? de.requestFullscreen({ navigationUI:'hide' }) : (de.webkitRequestFullscreen && de.webkitRequestFullscreen());
+      if (r && r.catch) r.catch(() => {});
+    } else if (!on && fs){
+      const r = document.exitFullscreen ? document.exitFullscreen() : (document.webkitExitFullscreen && document.webkitExitFullscreen());
+      if (r && r.catch) r.catch(() => {});
+    }
+  } catch(e){}
+}
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen(S.paper); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+// Mở app đang ở chế độ Trang giấy: chạm lần đầu để vào toàn màn hình (trình duyệt chỉ cho phép sau một cú chạm)
+document.addEventListener('click', () => { if (S.paper) paperFullscreen(true); }, { once:true, capture:true });
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
