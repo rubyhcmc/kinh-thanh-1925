@@ -324,6 +324,9 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .v.bm{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
 .v.bm .vn{text-decoration:underline;text-underline-offset:2px}
 .v.bm.sel{background:var(--hl)}
+.lsbadge{position:absolute;top:2px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--accent);color:#fff;font:700 10px/16px var(--sans);text-align:center;box-sizing:border-box}
+[data-theme=dark] .lsbadge{color:#1a1409}
+.lsnote{flex:none;margin:6px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4}
 .bmhint{font-size:12px;color:var(--muted);margin:-6px 0 10px}
 .bmitem{display:flex;align-items:stretch;gap:4px;border-bottom:1px solid var(--line)}
 .bmmain{flex:1;min-width:0;text-align:left;border:0;background:none;padding:10px 4px;font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--fg)}
@@ -385,6 +388,7 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
     <button class="iconbtn" id="btnMarks" aria-label="Vị trí đã đánh dấu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4.2L6 21z"/></svg></button>
+    <button class="iconbtn" id="btnLessons" aria-label="Bài học cá nhân" style="position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg><span class="lsbadge" id="lsBadge" hidden></span></button>
     <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
 </header>
@@ -639,6 +643,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     <div class="lsbody">
       <label class="lslabel" for="lsText">Bài học cá nhân</label>
       <textarea id="lsText" placeholder="Điều Chúa dạy bạn qua đoạn này…" autocomplete="off"></textarea>
+      <p class="lsnote">📍 Ghi chú được lưu trong máy, xem lại ở nút <b>✎ Bài học cá nhân</b> trên đầu trang.</p>
     </div>
     <div class="lsbtns">
       <button class="btn danger" id="lsDel" hidden>Xóa</button>
@@ -720,7 +725,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1201,13 +1206,34 @@ function openMarks(){
   document.body.appendChild(o);
 }
 $('#btnMarks').onclick = openMarks;
+$('#btnLessons').onclick = openLessons;
 
 /* Bài học cá nhân: cửa sổ viết ghi chú cho một câu (lưu trong máy: kt.lessons) */
 let LS = []; try { LS = JSON.parse(localStorage.getItem('kt.lessons') || '[]'); } catch(e){}
-const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } };
+const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
+function lsBadge(){ const b = $('#lsBadge'); if (!b) return; b.hidden = !LS.length; b.textContent = LS.length > 99 ? '99+' : LS.length; }
+lsBadge();
+function openLessons(){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+  const draw = () => {
+    o.innerHTML = `<div class="sheet"><h3>✍️ Bài học cá nhân</h3>
+      <p class="bmhint">Các ghi chú bạn đã lưu. Chạm vào một mục để xem / sửa; chạm giữ một câu khi đọc để viết thêm.</p>
+      ${LS.length ? LS.map((b, i) => `<div class="bmitem"><button class="bmmain" data-edit="${i}"><b>${esc(b.book)} ${b.ch}:${esc(compressRange(b.ns || [b.n]))}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-go="${i}" aria-label="Đến câu" title="Đến câu">📖</button></div>`).join('')
+        : '<div class="empty" style="padding:28px 10px"><b>Chưa có bài học nào</b>Chạm vào câu (hoặc nhiều câu) rồi nhấn giữ để viết.</div>'}
+      <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+  };
+  draw();
+  o.addEventListener('click', async e => {
+    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
+    const ed = e.target.closest('[data-edit]'), g = e.target.closest('[data-go]');
+    if (ed){ const b = LS[+ed.dataset.edit]; o.remove(); if (b) window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:b.book, ch:b.ch, ns:b.ns || [b.n], back:true } })); return; }
+    if (g){ const b = LS[+g.dataset.go]; o.remove(); if (b) await goBookmark({ book:b.book, ch:b.ch, n:b.n }); }
+  });
+  document.body.appendChild(o);
+}
 const lsEl = $('#lsSheet'), lsTa = $('#lsText');
 let lsCur = null;
-function lsClose(){ lsEl.classList.remove('open'); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
+function lsClose(){ const back = lsCur && lsCur.back; lsEl.classList.remove('open'); if (back) setTimeout(openLessons, 240); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
 function lsShareText(){
   const c = lsCur; return `${c.book} ${c.ch}:${c.key}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
 }
@@ -1218,7 +1244,7 @@ window.addEventListener('openLesson', e => {
   const data = (curBook && curBook.name === book && curBook.chapters[ch - 1]) || [];
   let quote = ns.map(k => { const v = data.find(x => x.n === k); if (v) return v.t.replace(/\s+/g, ' ').trim(); const el = $('#v' + k); return el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
   const old = LS.find(x => x.book === book && x.ch === ch && compressRange(x.ns || [x.n]) === key);
-  lsCur = { book, ch, n, ns, key, quote, old };
+  lsCur = { book, ch, n, ns, key, quote, old, back:!!d.back };
   $('#lsRef').textContent = `${book} ${ch}:${key}`;
   $('#lsVerse').textContent = quote;
   lsTa.value = old ? old.text : '';
@@ -1232,7 +1258,7 @@ $('#lsSave').onclick = () => {
   const t = lsTa.value.trim(); if (!t){ toast('Hãy viết nội dung ghi chú'); lsTa.focus(); return; }
   const { book, ch, n, ns, old } = lsCur;
   if (old){ old.text = t; old.at = Date.now(); } else { const o = { book, ch, n, ns, text:t, at:Date.now() }; LS.unshift(o); lsCur.old = o; $('#lsDel').hidden = false; }
-  saveLS(); toast('✍️ Đã lưu ghi chú'); lsClose();
+  saveLS(); toast('✍️ Đã lưu vào Bài học cá nhân (nút ✎ trên đầu trang)'); lsClose();
 };
 $('#lsDel').onclick = () => {
   if (!lsCur.old || !confirm('Xóa ghi chú này?')) return;
