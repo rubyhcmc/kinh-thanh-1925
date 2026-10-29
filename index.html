@@ -132,9 +132,9 @@ body.searching .top .sfield{display:flex}
 .poem .v{display:block}
 .pl{display:block;padding-left:1.3em;text-indent:-1.3em}
 .pl.q2{padding-left:2.6em}
-/* Số chương lớn đứng trong dòng thơ có thụt âm 1.3em: bù đúng 1.3em (= .3714em của chữ lớn 3.5em) để số chương nằm sát lề trái,
-   và mọi dòng bên cạnh nó (kể cả các dòng thơ sau) bắt đầu cách mép phải số chương một khoảng đều nhau, không đè lên nhau */
-.pl .dc{margin:.07em .4914em 0 -.3714em}
+/* Số chương lớn trong đoạn thơ: nằm sát lề trái; mép phải của nó chừa thêm 1.3em (= .3714em của chữ lớn 3.5em) để bù thụt âm của các dòng thơ bên cạnh,
+   nhờ vậy mọi dòng bắt đầu cách số chương một khoảng đều nhau và không đè lên nó */
+.poem .dc{margin:.07em .4914em 0 0}
 .vline{margin:0 0 .55em}
 .note{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.5;color:var(--muted);margin:.3em 0 .45em}
 .fnm{font-family:var(--sans);font-style:normal;font-weight:700;font-size:.72em;letter-spacing:.01em;line-height:0;color:#c2410c;margin:0 .1em 0 .12em;font-variant-numeric:lining-nums;white-space:nowrap}
@@ -817,7 +817,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2631,8 +2631,8 @@ function paperHTML(book, ch, verses, view, idp){
     const want = isPoem ? 'q' : 'p';
     if (!cur || cur !== want || v.p){ close(); cur = want; out += want === 'p' ? '<p class="para">' : '<div class="poem">'; }
     if (isPoem){
-      out += `<span ${attrs}>` + v.t.split('\n').map((ln, k) =>
-        `<span class="pl q${v.q[k] || 1}${k === 0 && dc ? ' pld' : ''}">${k === 0 ? dc + num : ''}${richText(ln, vm)}</span>`).join('') + '</span>';
+      out += `<span ${attrs}>${dc}` + v.t.split('\n').map((ln, k) =>
+        `<span class="pl q${v.q[k] || 1}">${k === 0 ? num : ''}${richText(ln, vm)}</span>`).join('') + '</span>';   // số chương lớn đứng NGOÀI các dòng thơ để nằm đúng lề trái
     } else out += `<span ${attrs}>${dc}${num}${richText(v.t, vm)}</span> `;
   });
   close();
