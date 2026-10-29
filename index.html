@@ -68,7 +68,7 @@ main{max-width:760px;margin:0 auto;perspective:1400px;touch-action:pan-y pinch-z
 /* Chọn sách / chương / câu */
 .navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px;
   padding:6px 12px 7px;background:var(--bg);border-bottom:1px solid var(--line);transition:transform .25s ease}
-.navrow select{height:34px;padding:0 22px 0 10px;border-radius:8px;font-size:16px;-webkit-appearance:none;appearance:none;
+.navrow select{min-height:34px;height:34px;padding:0 22px 0 10px;border-radius:8px;font-size:16px;-webkit-appearance:none;appearance:none;
   background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center}
 select,input[type=search],input[type=password],input[type=text],input[type=number],textarea{
   width:100%;padding:10px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
@@ -118,9 +118,9 @@ body.searching .top .sfield{display:flex}
 
 /* ===== Kiểu sách in ===== */
 .reader.print{text-align:justify;-webkit-hyphens:auto;hyphens:auto;line-height:1.75}
-.chhead{text-align:center;margin:.1em 0 1.1em}
-.chhead .bk{font-size:1.3em;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
-.chhead .ch{font-family:var(--sans);font-size:.55em;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:.2em}
+.chhead{text-align:center;margin:.1em 0 1.1em;min-height:4.6em;display:flex;flex-direction:column;justify-content:center}   /* chiều cao cố định: đổi sách không làm chữ bên dưới nhảy */
+.chhead .bk{font-size:1.3em;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.25;min-height:1.25em}
+.chhead .ch{font-family:var(--sans);font-size:.55em;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:.2em;min-height:1.3em}
 .sec{font-size:1.08em;font-weight:700;text-align:center;margin:1.5em 0 .55em;line-height:1.35}
 .sec .ref{display:block;font-weight:400;font-style:italic;font-size:.8em;color:var(--muted);margin-top:.15em}
 .hd{margin:1.5em 0 .6em;text-align:center}
@@ -466,6 +466,25 @@ html[data-paper] .reader.print{text-align:justify}
 .obdots i{width:8px;height:8px;border-radius:50%;background:var(--line);transition:width .2s}
 .obdots i.on{background:var(--accent);width:22px;border-radius:99px}
 .obbtns .btn{min-height:50px;font-size:17px;padding:0 22px}
+
+.plcard{display:block;width:100%;text-align:left;margin:0 0 10px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg)}
+.plcard:active{background:var(--accent-soft)}
+.plcard b{display:block;font:700 18px var(--serif)}
+.plcard span{display:block;margin-top:3px;font:13px/1.45 var(--sans);color:var(--muted)}
+.plnow{text-align:center;padding:4px 0 8px}
+.plnow .pld{font:12px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.plnow .pln{font:700 40px/1.15 var(--serif);margin:4px 0}
+.plnow .pln i{font:15px var(--serif);font-style:normal;color:var(--muted)}
+.plread{margin:12px 0;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.plread h5{margin:0 0 6px;font:600 11.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.plread p{margin:0;font:17px/1.6 var(--serif)}
+.plread small{display:block;margin-top:8px;font:13px var(--sans);color:var(--muted)}
+.plbtns{display:flex;gap:8px;margin:10px 0 4px}
+.plbtns .btn{flex:1}
+.plcomm{margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--line);text-align:center}
+.plcomm b{display:block;font:700 26px/1.2 var(--serif)}
+.plcomm span{display:block;font:13px var(--sans);color:var(--muted);margin-top:2px}
+.plcomm em{display:block;margin-top:8px;font:italic 14px/1.55 var(--serif);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -549,6 +568,12 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <div class="srow"><div class="stxt"><b>Hướng dẫn sử dụng</b><span>Xem lại các thao tác cơ bản</span></div>
         <button class="sbtn" id="obShow">Xem lại</button></div>
+    </div>
+
+    <div class="slabel">Kế hoạch đọc</div>
+    <div class="sgroup">
+      <div class="srow"><div class="stxt"><b id="planSum">Chưa chọn kế hoạch</b><span id="planSub">1 năm · 2 năm · 6 tháng · 90 ngày</span></div>
+        <button class="sbtn" id="planOpen">Mở</button></div>
     </div>
 
     <div class="slabel">Dữ liệu của tôi</div>
@@ -842,7 +867,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-ac';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3294,6 +3319,24 @@ async function fileToText(f){
 
 /* --- Giao diện xuất --- */
 let exBusy = false;
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+/* Lưu ảnh vào Thư viện: iOS mở bảng chia sẻ hệ thống (có "Lưu hình ảnh" → vào Ảnh), Android tải thẳng về (hiện ngay trong Thư viện),
+   máy tính tải file. Không bao giờ mở tab mới; nếu thiết bị không hỗ trợ, phóng to ảnh để nhấn giữ → "Lưu vào Ảnh". */
+async function saveImage(file, overlay){
+  const canShareFile = navigator.canShare && navigator.canShare({ files:[file] });
+  if (IS_IOS && canShareFile){
+    try { await navigator.share({ files:[file] }); return; } catch(e){ if (e && e.name === 'AbortError') return; }
+  }
+  if (!IS_IOS){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove(); const u = a.href; setTimeout(() => URL.revokeObjectURL(u), 60000);
+    toast(matchMedia('(pointer:coarse)').matches ? '💾 Đã lưu ảnh – xem trong Thư viện / Ảnh' : '💾 Đã tải ảnh về máy'); return;
+  }
+  const img = overlay && overlay.querySelector('img');          // iOS cũ không có share file → nhấn giữ ảnh để lưu
+  if (img){ img.style.maxWidth = '100%'; img.style.webkitTouchCallout = 'default'; img.style.webkitUserSelect = 'auto'; }
+  const h = overlay && overlay.querySelector('#imgHint'); if (h) h.innerHTML = '<b>Nhấn giữ vào ảnh</b> rồi chọn “Lưu vào Ảnh”.';
+  toast('Nhấn giữ vào ảnh → Lưu vào Ảnh');
+}
 async function saveFiles(files){
   if (matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files })){
     try { await navigator.share({ files }); return; } catch(e){ if (e.name === 'AbortError') return; }
@@ -3802,7 +3845,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN };
 }
 function dtDownload(name){
   const blob = new Blob([JSON.stringify(dtPayload(), null, 2)], { type:'application/json' });
@@ -3838,6 +3881,7 @@ async function dtImport(file){
     [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   if (i === 1){ RD = {}; LS = []; BM = []; }
+  if (j.plan && PLANS.some(x => x.id === j.plan.id) && /^\d{4}-\d{2}-\d{2}$/.test(j.plan.start || '') && (i === 1 || !PLAN)){ PLAN = { id:j.plan.id, start:j.plan.start }; savePlan(); }
   days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
   const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -3923,8 +3967,7 @@ async function verseImage(nums){
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
   const CX = W / 2, MAXW = W - 2 * 150;                              // lề trái = lề phải = 150px, mọi khối đều căn giữa trục dọc
   // Đầu ảnh
-  x.fillStyle = '#8a5a1f'; x.font = `700 28px ${fam}`; x.fillText('KINH THÁNH', CX, 150);
-  x.fillStyle = '#c9a96a'; x.fillRect(CX - 40, 176, 80, 3);
+  x.fillStyle = '#c9a96a'; x.fillRect(CX - 40, 150, 80, 3);              // chỉ giữ gạch trang trí, bỏ chữ "KINH THÁNH" thừa
   // Cuối ảnh: đường kẻ + địa chỉ trích dẫn (không còn chữ "Kinh Thánh" lặp ở đáy)
   let rs = 44; x.font = `700 ${rs}px ${fam}`;
   const refTxt = '— ' + ref;
@@ -3933,33 +3976,32 @@ async function verseImage(nums){
   x.fillStyle = '#c9a96a'; x.fillRect(CX - 40, REF_Y - rs - 36, 80, 3);
   x.fillStyle = '#8a5a1f'; x.fillText(refTxt, CX, REF_Y);
   // Khối trích dẫn: dấu “ mở · nội dung · dấu ” đóng, cân giữa khoảng trống giữa đầu và cuối ảnh
-  const RT = 232, RB = REF_Y - rs - 36 - 46, QF = 120, GAP = 26;
+  const RT = 205, RB = REF_Y - rs - 36 - 46, QF = 120, GAP = 26;
   x.font = `700 ${QF}px ${fam}`;
-  const mo = x.measureText('“'), mc = x.measureText('”');
-  const qo = { a:mo.actualBoundingBoxAscent || QF * .7, d:mo.actualBoundingBoxDescent || 0 }, qc = { a:mc.actualBoundingBoxAscent || QF * .7, d:mc.actualBoundingBoxDescent || 0 };
-  const qoH = qo.a + qo.d, qcH = qc.a + qc.d;
-  const availT = RB - RT - qoH - qcH - 2 * GAP;
+  const mo = x.measureText('“');
+  const qo = { a:mo.actualBoundingBoxAscent || QF * .7, d:mo.actualBoundingBoxDescent || 0 };
+  const qoH = qo.a + qo.d;
+  const availT = RB - RT - qoH - GAP;
+  const body = text + '”';                                       // dấu ” đóng dính liền chữ cuối câu → không bao giờ rớt xuống dòng riêng
   const wrap = sz => {
     x.font = `400 ${sz}px ${fam}`;
     const lines = []; let cur = '';
-    text.split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cur && x.measureText(t2).width > MAXW){ lines.push(cur); cur = w; } else cur = t2; });
+    body.split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cur && x.measureText(t2).width > MAXW){ lines.push(cur); cur = w; } else cur = t2; });
     if (cur) lines.push(cur); return lines;
   };
   let sz = 60, lines = wrap(sz), lh = sz * 1.5;
   for (; sz >= 28; sz -= 2){ lines = wrap(sz); lh = sz * 1.5; if (lines.length * lh <= availT) break; }
   if (lines.length * lh > availT){                              // quá dài: cắt bớt và thêm …
     const n = Math.max(1, Math.floor(availT / lh)); lines = lines.slice(0, n);
-    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?]*$/, '') + '…';
+    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?”]*$/, '') + '…”';
   }
-  const textH = lines.length * lh, blockH = qoH + GAP + textH + GAP + qcH;
+  const textH = lines.length * lh, blockH = qoH + GAP + textH;
   let y0 = RT + Math.max(0, (RB - RT - blockH) / 2);
   x.fillStyle = '#c9a96a'; x.font = `700 ${QF}px ${fam}`;
   x.fillText('“', CX, y0 + qo.a);                               // dấu ngoặc kép mở
   const ty = y0 + qoH + GAP;
   x.fillStyle = '#2a2118'; x.font = `400 ${sz}px ${fam}`;
   lines.forEach((l, i) => x.fillText(l, CX, ty + i * lh + lh / 2 + sz * 0.34));
-  x.fillStyle = '#c9a96a'; x.font = `700 ${QF}px ${fam}`;
-  x.fillText('”', CX, ty + textH + GAP + qc.a);                 // dấu ngoặc kép đóng
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   if (!blob) return toast('Không tạo được ảnh');
   const file = new File([blob], (fold(ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cau-kinh-thanh') + '.png', { type:'image/png' });
@@ -3967,17 +4009,124 @@ async function verseImage(nums){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet" style="text-align:center"><h3>Chia sẻ thành ảnh</h3>
     <img src="${url}" alt="" style="width:100%;max-width:340px;border-radius:10px;border:1px solid var(--line);margin-bottom:12px">
-    <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="s">Chia sẻ / Lưu ảnh</button><button class="btn" data-k="x">Đóng</button></div></div>`;
+    <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="a">💾 Lưu vào thư viện ảnh</button><button class="btn" data-k="s">↗ Chia sẻ (Zalo, Facebook…)</button><button class="btn" data-k="x">Đóng</button></div>
+    <p class="bmhint" style="margin:10px 0 0" id="imgHint">${IS_IOS ? 'Trên iPhone: chọn “Lưu hình ảnh” trong bảng hiện ra.' : 'Ảnh được lưu vào mục Tải xuống và hiện trong Thư viện / Ảnh.'}</p></div>`;
   const close = () => { URL.revokeObjectURL(url); o.remove(); };
   o.addEventListener('click', async e => {
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) close(); return; }
     if (b.dataset.k === 'x') return close();
-    await saveFiles([file]);
+    if (b.dataset.k === 's'){ try { if (navigator.canShare && navigator.canShare({ files:[file] })) await navigator.share({ files:[file], title:ref }); else await saveImage(file, o); } catch(err){ if (err && err.name !== 'AbortError') await saveImage(file, o); } return; }
+    await saveImage(file, o);
   });
   document.body.appendChild(o);
 }
 $('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (ns.length) verseImage(ns); };
+
+
+/* ============ KẾ HOẠCH ĐỌC (4 lộ trình trọn bộ Kinh Thánh) + BỘ ĐẾM ANH EM ============ */
+const PLANS = [
+  { id:'y1', name:'1 năm',   days:365, sub:'365 ngày' },
+  { id:'y2', name:'2 năm',   days:730, sub:'730 ngày' },
+  { id:'m6', name:'6 tháng', days:180, sub:'180 ngày' },
+  { id:'d90', name:'90 ngày', days:90, sub:'Lộ trình ngắn hạn' }
+];
+let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
+if (!PLAN || !PLANS.some(x => x.id === PLAN.id) || !/^\d{4}-\d{2}-\d{2}$/.test(PLAN.start || '')) PLAN = null;
+const savePlan = () => { try { PLAN ? localStorage.setItem('kt.plan', JSON.stringify(PLAN)) : localStorage.removeItem('kt.plan'); } catch(e){} planSum(); };
+const plSeq = () => { const a = []; bibleMeta.forEach(m => { for (let c = 1; c <= (m.chapterCount || 0); c++) a.push({ book:m.name, ch:c }); }); return a; };
+const plPer = (days, T) => {                                         // nhãn "chương/ngày"
+  const per = (T || 1189) / days, f = Math.floor(per), c = Math.ceil(per);
+  return f === c ? `${f} chương/ngày` : per < 2 ? `khoảng ${Math.round(per)} chương/ngày` : `${f}–${c} chương/ngày`;
+};
+const plDay = start => { const [y, m, d] = start.split('-').map(Number), t = new Date(); return Math.floor((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(y, m - 1, d)) / 864e5) + 1; };
+function plToday(){                                                  // các chương cần đọc hôm nay
+  const pl = PLANS.find(x => x.id === PLAN.id), seq = plSeq(), T = seq.length, d = plDay(PLAN.start);
+  if (d < 1) return { d, pl, T, items:[], none:true };
+  if (d > pl.days) return { d, pl, T, items:[], over:true };
+  return { d, pl, T, items:seq.slice(Math.floor((d - 1) * T / pl.days), Math.floor(d * T / pl.days)) };
+}
+function plRanges(items){                                            // [{book,ch}] → "Sáng Thế Ký 1–3 · Xuất 1"
+  const out = []; items.forEach(x => { const l = out[out.length - 1]; if (l && l.book === x.book && l.b === x.ch - 1) { l.b = x.ch; } else out.push({ book:x.book, a:x.ch, b:x.ch }); });
+  return out.map(r => `${r.book} ${r.a === r.b ? r.a : r.a + '–' + r.b}`).join(' · ');
+}
+function planSum(){
+  const a = $('#planSum'), b = $('#planSub'); if (!a) return;
+  if (!PLAN){ a.textContent = 'Chưa chọn kế hoạch'; b.textContent = '1 năm · 2 năm · 6 tháng · 90 ngày'; return; }
+  const pl = PLANS.find(x => x.id === PLAN.id), d = plDay(PLAN.start);
+  a.textContent = 'Kế hoạch ' + pl.name; b.textContent = d > pl.days ? 'Đã hoàn thành 🎉' : d < 1 ? 'Chưa đến ngày bắt đầu' : `Ngày ${d} / ${pl.days}`;
+}
+/* Bộ đếm anh em: CountAPI (bản thay thế còn hoạt động trước, bản gốc api.countapi.xyz làm dự phòng); mỗi thiết bị chỉ cộng 1 lần (kt.joined) */
+const CT = { key:'kinhthanh-anh-em-doc-ke-hoach', ns:'kinhthanh-vn' };
+async function ctFetch(url){
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 6000);
+  try { const r = await fetch(url, { signal:c.signal, cache:'no-store' }); if (!r.ok) throw new Error('http'); const j = await r.json(); const v = Number(j.value ?? j.count); if (!isFinite(v)) throw new Error('nan'); return v; }
+  finally { clearTimeout(t); }
+}
+async function ctCount(hit){
+  const op = hit ? 'hit' : 'get';
+  for (const u of [`https://countapi.mileshilliard.com/api/v1/${op}/${CT.key}`, `https://api.countapi.xyz/${op}/${CT.ns}/${CT.key}`]){
+    try { return await ctFetch(u); } catch(e){}
+  }
+  return null;
+}
+const ctCache = () => { try { return +localStorage.getItem('kt.joinedCount') || 0; } catch(e){ return 0; } };
+async function ctJoin(){
+  let joined = false; try { joined = localStorage.getItem('kt.joined') === '1'; } catch(e){}
+  if (joined) return;                                                // kiểm tra localStorage: đã tính rồi thì không cộng nữa
+  const v = await ctCount(true);
+  if (v != null){ try { localStorage.setItem('kt.joined', '1'); localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} }
+}
+const CT_MSG = ['Cùng nhau đọc Lời Chúa mỗi ngày: bạn không đi một mình.', 'Mỗi trang đọc hôm nay là một bước chung của cả gia đình đức tin.', 'Anh em cùng chạy, cùng nâng đỡ nhau trên hành trình với Lời Chúa.', 'Một người đọc, nhiều người được khích lệ. Cảm ơn bạn đã ở đây.'];
+async function ctRender(box){
+  const msg = CT_MSG[Math.floor(Date.now() / 864e5) % CT_MSG.length];
+  const draw = n => { box.innerHTML = (n ? `<b>${n.toLocaleString('vi-VN')}</b><span>anh em đã chọn kế hoạch đọc</span>` : '<span>Hãy là một trong những người đầu tiên cùng đọc</span>') + `<em>${esc(msg)}</em>`; };
+  draw(ctCache());
+  const v = await ctCount(false);
+  if (v != null){ try { localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} if (box.isConnected) draw(v); }
+}
+function openPlan(){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+  const T = plSeq().length;
+  const draw = () => {
+    let body;
+    if (!PLAN){
+      body = `<p class="bmhint" style="margin:0 0 12px">Chọn một lộ trình đọc trọn bộ Kinh Thánh. Ngày đầu tiên bắt đầu từ hôm nay.</p>` +
+        PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${plPer(p.days, T)}</span></button>`).join('');
+    } else {
+      const t = plToday(), done = t.items.filter(x => (RD[dayKey()] || []).includes(x.book + '|' + x.ch)).length;
+      body = `<div class="plnow"><div class="pld">Kế hoạch ${t.pl.name}</div>
+          <div class="pln">${t.over ? '🎉' : t.none ? '—' : t.d}<i>${t.over || t.none ? '' : ' / ' + t.pl.days}</i></div>
+          <div class="hjbar"><i style="width:${t.over ? 100 : Math.max(0, Math.min(100, (t.d - 1) / t.pl.days * 100))}%"></i></div></div>
+        <div class="plread"><h5>${t.over ? 'Chúc mừng' : t.none ? 'Sắp bắt đầu' : 'Hôm nay đọc'}</h5>
+          <p>${t.over ? 'Bạn đã hoàn thành kế hoạch đọc. Tạ ơn Chúa!' : t.none ? 'Kế hoạch sẽ bắt đầu vào ngày đã chọn.' : t.items.length ? esc(plRanges(t.items)) : 'Hôm nay là ngày nghỉ: đọc lại điều bạn yêu thích.'}</p>
+          ${t.items.length ? `<small>${done === t.items.length ? '✔ Bạn đã đọc xong phần hôm nay' : `Đã đọc ${done} / ${t.items.length} chương hôm nay`}</small>` : ''}</div>
+        <div class="plbtns">${t.items.length ? '<button class="btn primary" data-act="go">Mở bài đọc hôm nay</button>' : ''}</div>
+        <div class="plbtns"><button class="btn" data-act="change">Đổi kế hoạch</button><button class="btn" data-act="stop">Dừng kế hoạch</button></div>`;
+    }
+    o.innerHTML = `<div class="sheet"><h3>📖 Kế hoạch đọc</h3>${body}<div class="plcomm" id="plComm"></div>
+      <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+    ctRender(o.querySelector('#plComm'));
+  };
+  draw();
+  o.addEventListener('click', async e => {
+    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
+    const pk = e.target.closest('[data-pick]'), ac = e.target.closest('[data-act]');
+    if (pk){
+      if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
+      PLAN = { id:pk.dataset.pick, start:dayKey() }; savePlan(); draw(); toast('Đã bắt đầu kế hoạch ' + PLANS.find(x => x.id === PLAN.id).name);
+      ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
+      return;
+    }
+    if (!ac) return;
+    if (ac.dataset.act === 'go'){ const t = plToday(), f = t.items[0]; if (!f) return; o.remove(); show('#settings', false); try { await goBookmark({ book:f.book, ch:f.ch, n:1 }); } catch(err){} }
+    else if (ac.dataset.act === 'change'){ if (await choose('Đổi kế hoạch?', 'Kế hoạch hiện tại sẽ được thay bằng kế hoạch mới, bắt đầu lại từ ngày 1.', [{ t:'Chọn kế hoạch khác', cls:'primary' }, { t:'Hủy' }]) === 0){ PLAN = null; savePlan(); draw(); } }
+    else if (ac.dataset.act === 'stop'){ if (await choose('Dừng kế hoạch?', 'Tiến độ ngày của kế hoạch sẽ bị xóa. Lịch sử đọc và ghi chú không bị ảnh hưởng.', [{ t:'Dừng kế hoạch', cls:'danger' }, { t:'Giữ lại' }]) === 0){ PLAN = null; savePlan(); draw(); } }
+  });
+  document.body.appendChild(o);
+}
+$('#planOpen').onclick = openPlan;
+planSum();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
