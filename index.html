@@ -461,7 +461,7 @@ html[data-paper] .reader.print{text-align:justify}
 .plcustom input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .plcpv{min-height:1.5em;margin-top:8px;font:13px/1.5 var(--sans);color:var(--muted)}
 .plcpv.bad{color:var(--danger)}
-.hjs .plcomm{border-top:0;margin-top:16px;padding-top:0}
+.hjs .plcomm{margin-top:16px}
 
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
 .sbtn:active{background:var(--accent-soft)}
@@ -497,10 +497,16 @@ html[data-paper] .reader.print{text-align:justify}
 .plread small{display:block;margin-top:8px;font:13px var(--sans);color:var(--muted)}
 .plbtns{display:flex;gap:8px;margin:10px 0 4px}
 .plbtns .btn{flex:1}
-.plcomm{margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--line);text-align:center}
-.plcomm b{display:block;font:700 26px/1.2 var(--serif)}
-.plcomm span{display:block;font:13px var(--sans);color:var(--muted);margin-top:2px}
-.plcomm em{display:block;margin-top:8px;font:italic 14px/1.55 var(--serif);color:var(--muted)}
+.plcomm{margin:18px 0 6px}
+.ctcard{position:relative;overflow:hidden;text-align:center;padding:18px 18px 16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--accent-soft),var(--bg))}
+.ctav{display:flex;justify-content:center;margin:0 0 10px;padding-left:10px}
+.ctav i{width:36px;height:36px;margin-left:-10px;border-radius:50%;border:2.5px solid var(--bg);display:flex;align-items:center;justify-content:center;color:#fff}
+.ctav .a1{background:#8a5a1f}.ctav .a2{background:#b07a3a}.ctav .a3{background:#c9a96a}.ctav .a4{background:#6f4a1a}
+.ctn b{display:block;font:700 34px/1.1 var(--serif);color:var(--accent);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.ctn span{display:block;margin-top:4px;font:600 13px/1.4 var(--sans);letter-spacing:.02em;color:var(--fg)}
+.ctn .ctone{font:600 15px/1.5 var(--serif);margin-top:0}
+.ctme{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font:600 12px var(--sans);color:var(--accent)}
+.ctmsg{margin:12px auto 0;max-width:290px;font:italic 14px/1.6 var(--serif);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -885,7 +891,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4181,13 +4187,28 @@ async function ctJoin(){
   const v = await ctCount(true);
   if (v != null){ try { localStorage.setItem('kt.joined', '1'); localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} }
 }
-const CT_MSG = ['Cùng nhau đọc Lời Chúa mỗi ngày: bạn không đi một mình.', 'Mỗi trang đọc hôm nay là một bước chung của cả gia đình đức tin.', 'Anh em cùng chạy, cùng nâng đỡ nhau trên hành trình với Lời Chúa.', 'Một người đọc, nhiều người được khích lệ. Cảm ơn bạn đã ở đây.'];
+const CT_MSG = ['Mỗi ngày một chút, chúng ta cùng nhau lớn lên trong Lời Chúa.', 'Bạn không đi một mình: bao người đang đọc cùng bạn hôm nay.', 'Một trang hôm nay là một bước chung của cả gia đình đức tin.', 'Cùng nâng đỡ nhau, cùng đọc Lời Chúa đến cùng hành trình.'];
+const CT_AV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5c0-4 3.4-6.4 7.5-6.4s7.5 2.4 7.5 6.4z"/></svg>';
 async function ctRender(box){
   const msg = CT_MSG[Math.floor(Date.now() / 864e5) % CT_MSG.length];
-  const draw = n => { box.innerHTML = (n ? `<b>${n.toLocaleString('vi-VN')}</b><span>anh em đã chọn kế hoạch đọc</span>` : '<span>Hãy là một trong những người đầu tiên cùng đọc</span>') + `<em>${esc(msg)}</em>`; };
-  draw(ctCache());
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const draw = (n, from) => {
+    let me = false; try { me = localStorage.getItem('kt.joined') === '1'; } catch(e){}
+    box.innerHTML = `<div class="ctcard"><div class="ctav" aria-hidden="true">${[1, 2, 3, 4].map(x => `<i class="a${x}">${CT_AV}</i>`).join('')}</div>`
+      + (n ? `<div class="ctn"><b>${n.toLocaleString('vi-VN')}</b><span>anh chị em cùng đọc Lời Chúa</span></div>`
+           : `<div class="ctn"><span class="ctone">Hãy là một trong những người đầu tiên<br>cùng đọc Lời Chúa mỗi ngày</span></div>`)
+      + (me ? '<div class="ctme">✓ Bạn đang đồng hành cùng họ</div>' : '')
+      + `<p class="ctmsg">${esc(msg)}</p></div>`;
+    const el = box.querySelector('.ctn b');
+    if (el && !reduce && from != null && from < n){                    // số tăng nhẹ lên giá trị mới
+      const t0 = performance.now();
+      const step = now => { const k = Math.min(1, (now - t0) / 800), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (n - from) * e).toLocaleString('vi-VN'); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
+  };
+  const cached = ctCache(); draw(cached);
   const v = await ctCount(false);
-  if (v != null){ try { localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} if (box.isConnected) draw(v); }
+  if (v != null){ try { localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
 }
 function openPlan(opts){
   opts = opts || {};
