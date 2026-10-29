@@ -421,6 +421,19 @@ body.pg .pgv>.reader .chhead{break-inside:avoid}
 /* Chế độ Giấy: lề rộng, dòng thưa */
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
 html[data-paper] .reader.print{text-align:justify}
+
+.hj{padding:2px 4px 6px}
+.hjq{margin:2px 0 18px;text-align:center;font:italic 15px/1.6 var(--serif);color:var(--muted)}
+.hjs{padding:16px 0 18px;border-top:1px solid var(--line);text-align:center}
+.hjs h4{margin:0 0 8px;font:600 11.5px var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.hjbig{display:flex;align-items:baseline;justify-content:center;gap:14px;font:15px var(--serif);color:var(--muted)}
+.hjbig b{font:700 38px/1.1 var(--serif);color:var(--fg);margin-right:3px}
+.hjbig i{width:1px;height:26px;background:var(--line);align-self:center}
+.hjs small{display:block;margin-top:8px;font:13px/1.5 var(--serif);font-style:italic;color:var(--muted)}
+.hjbar{height:4px;border-radius:4px;background:var(--line);margin:12px auto 0;max-width:260px;overflow:hidden}
+.hjbar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.hjdone{margin:16px auto 0;max-width:300px;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);font:14px/1.55 var(--serif);color:var(--fg)}
+.hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -781,7 +794,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1347,7 +1360,7 @@ function openLessons(){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
   let tab = 'notes', q = '';
   o.innerHTML = `<div class="sheet"><h3>✍️ Bài học cá nhân</h3>
-    <div class="lstabs"><button data-tab="notes" class="on">Ghi chú</button><button data-tab="stats">📊 Hành trình</button></div>
+    <div class="lstabs"><button data-tab="notes" class="on">Ghi chú</button><button data-tab="stats">Hành trình</button></div>
     <input class="lsq" id="lsQ" type="search" placeholder="Tìm trong ghi chú (không cần gõ dấu)…" autocomplete="off">
     <div id="lsList"></div>
     <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
@@ -1359,27 +1372,39 @@ function openLessons(){
       ? rows.map(({ b, i }) => `<div class="bmitem"><button class="bmmain" data-edit="${i}"><b>${esc(b.book)} ${b.ch}:${esc(lsKey(b))}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-go="${i}" aria-label="Đến câu" title="Đến câu">📖</button></div>`).join('')
       : `<div class="empty" style="padding:28px 10px"><b>${LS.length ? 'Không tìm thấy ghi chú nào' : 'Chưa có bài học nào'}</b>${LS.length ? 'Thử từ khóa khác.' : 'Chạm vào câu (hoặc nhiều câu) rồi nhấn giữ để viết.'}</div>`);
   };
-  const drawStats = () => {
-    const noteDays = new Set(LS.map(x => dayKey(x.at))), readDays = new Set(Object.keys(RD).filter(k => RD[k].length));
-    const now = new Date(), wk = [], DOW = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    for (let i = 6; i >= 0; i--){ const d = new Date(now); d.setDate(d.getDate() - i); const k = dayKey(d); wk.push({ k, dw:DOW[d.getDay()], r:(RD[k] || []).length, n:LS.filter(x => dayKey(x.at) === k).length }); }
-    const wkR = wk.reduce((a, d) => a + d.r, 0), wkN = wk.reduce((a, d) => a + d.n, 0);
-    const uniq = new Set(); Object.values(RD).forEach(a => a.forEach(x => uniq.add(x)));
-    const per = {}; LS.forEach(x => { per[x.book] = (per[x.book] || 0) + 1; });
-    const top = Object.entries(per).sort((a, b) => b[1] - a[1])[0];
-    const words = LS.reduce((a, x) => a + (x.text.trim().split(/\s+/).filter(Boolean).length), 0);
-    const mx = Math.max(1, ...wk.map(d => d.r));
-    const card = (v, t) => `<div class="stc"><b>${v}</b><span>${t}</span></div>`;
-    list.innerHTML = `<div class="sth">Hành trình đọc</div><div class="stgrid">
-        ${card(streakOf(readDays) + ' ngày', 'Chuỗi ngày đọc liên tiếp')}${card((RD[dayKey()] || []).length, 'Chương đọc hôm nay')}
-        ${card(wkR, 'Chương đọc 7 ngày qua')}${card(uniq.size, 'Chương đã đọc (khác nhau)')}</div>
-      <div class="sth">Tĩnh nguyện</div><div class="stgrid">
-        ${card(streakOf(noteDays) + ' ngày', 'Chuỗi ngày viết bài học')}${card(wkN, 'Bài học 7 ngày qua')}
-        ${card(LS.length, 'Tổng số bài học')}${card(words, 'Tổng số từ đã viết')}
-        ${card(noteDays.size, 'Số ngày đã tĩnh nguyện')}${card(top ? esc(top[0]) : '—', top ? `Sách ghi nhiều nhất (${top[1]})` : 'Sách ghi nhiều nhất')}</div>
-      <div class="sth">7 ngày gần đây (cột = số chương đọc · ✍ = có viết bài học)</div>
-      <div class="stbars">${wk.map(d => `<div class="stbar">${d.r}<i class="${d.r ? '' : 'z'}" style="height:${Math.round(d.r / mx * 62)}px"></i></div>`).join('')}</div>
-      <div class="stdays">${wk.map(d => `<div><em>${d.n ? '✍' : ''}</em>${d.dw}</div>`).join('')}</div>`;
+  let hjTok = 0;
+  const HJQ = ['Mỗi ngày một chút, Lời Chúa ở lại trong bạn.', 'Đọc chậm lại, để Lời thấm vào lòng.', 'Một trang hôm nay, một niềm vui lâu bền.', 'Bình an bắt đầu từ một câu Kinh Thánh.', 'Hãy để Lời Chúa là tiếng đầu tiên trong ngày.', 'Kiên trì từng ngày, bạn đang đi rất xa.'];
+  const drawStats = async () => {
+    const tok = ++hjTok;
+    const today = dayKey(), ids = RD[today] || [];
+    const books = new Map(), verseCount = async id => {              // số câu của một chương đã đọc
+      const i = id.lastIndexOf('|'), bk = id.slice(0, i), ch = +id.slice(i + 1);
+      if (!books.has(bk)) books.set(bk, await dbGet('books', bk));
+      const r = books.get(bk); return r && r.chapters[ch - 1] ? r.chapters[ch - 1].length : 0;
+    };
+    let verses = 0; for (const id of ids) verses += await verseCount(id);
+    if (tok !== hjTok || !list.isConnected) return;
+    const readDays = new Set(Object.keys(RD).filter(k => RD[k].length)), streak = streakOf(readDays);
+    const info = new Map(bibleMeta.map(m => [m.name, m.chapterCount || 0])), uniq = new Set();
+    Object.values(RD).forEach(a => a.forEach(id => { const i = id.lastIndexOf('|'), n = info.get(id.slice(0, i)), c = +id.slice(i + 1); if (n && c >= 1 && c <= n) uniq.add(id); }));
+    const total = [...info.values()].reduce((x, y) => x + y, 0), done = Math.min(uniq.size, total);
+    const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
+    const quote = HJQ[Math.floor(Date.now() / 864e5) % HJQ.length];
+    const doneAll = total > 0 && done >= total;
+    list.innerHTML = `<div class="hj">
+      <p class="hjq">${esc(quote)}</p>
+      <section class="hjs"><h4>Hôm nay</h4>
+        <div class="hjbig"><span><b>${ids.length}</b> chương</span><i></i><span><b>${verses}</b> câu</span></div>
+        <small>${ids.length ? 'Bạn đã dành thời gian bên Lời Chúa hôm nay.' : 'Mở một chương và ở lại vài giây để bắt đầu.'}</small></section>
+      <section class="hjs"><h4>Chuỗi ngày</h4>
+        <div class="hjbig"><span><b>${streak}</b> ngày liên tiếp</span></div>
+        <small>${streak ? (readDays.has(today) ? 'Tuyệt vời, hôm nay bạn đã giữ được chuỗi.' : 'Đọc hôm nay để tiếp nối chuỗi của bạn.') : 'Đọc hôm nay để bắt đầu một chuỗi mới.'}</small></section>
+      <section class="hjs"><h4>Cột mốc</h4>
+        <div class="hjbig"><span><b>${pctTxt}</b>%</span></div>
+        <div class="hjbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${Math.max(pct > 0 ? 1.5 : 0, Math.min(100, pct))}%"></i></div>
+        <small>${total ? `Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
+        ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>
+    </div>`;
   };
   const draw = () => { inp.hidden = tab !== 'notes'; tab === 'notes' ? drawNotes() : drawStats(); o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); };
   draw();
