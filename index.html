@@ -868,7 +868,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1510,7 +1510,7 @@ function openLessons(){
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
           : t.none ? `<div class="hjbig"><span>Kế hoạch ${esc(pl.name)} sắp bắt đầu</span></div>`
           : `<div class="hjbig"><span><b>${t.d}</b> / ${pl.days} ngày</span></div>`)
-          + `<small>${t.over || t.none ? '' : (t.items.length ? 'Hôm nay đọc: ' + esc(plRanges(t.items)) + (dn === t.items.length ? ' ✔' : ` (${dn}/${t.items.length} chương)`) : 'Hôm nay là ngày nghỉ.')}</small>`
+          + `<small>${t.over || t.none ? '' : (!t.items.length ? '' : 'Hôm nay đọc: ' + esc(plRanges(t.items)) + (dn === t.items.length ? ' ✔' : ` (${dn}/${t.items.length} chương)`))}</small>`
           + `<button class="sbtn" data-plan="1">Mở kế hoạch</button>`;
       } }
     const quote = 'Hôm nay Bạn đã đọc Lời CHÚA chưa?';
@@ -4090,10 +4090,10 @@ $('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (
 
 /* ============ KẾ HOẠCH ĐỌC (4 lộ trình trọn bộ Kinh Thánh) + BỘ ĐẾM ANH EM ============ */
 const PLANS = [
-  { id:'y1', name:'1 năm',   days:365, sub:'365 ngày' },
-  { id:'y2', name:'2 năm',   days:730, sub:'730 ngày' },
-  { id:'m6', name:'6 tháng', days:180, sub:'180 ngày' },
-  { id:'d90', name:'90 ngày', days:90, sub:'Lộ trình ngắn hạn' }
+  { id:'y1', name:'1 năm',   days:365, sub:'365 ngày', per:'Khoảng 3 - 4 chương/ngày' },
+  { id:'y2', name:'2 năm',   days:730, sub:'730 ngày', per:'Khoảng 2 chương/ngày' },
+  { id:'m6', name:'6 tháng', days:180, sub:'180 ngày', per:'Khoảng 6 - 7 chương/ngày' },
+  { id:'d90', name:'90 ngày', days:90, sub:'Lộ trình ngắn hạn', per:'Chia đều hợp lý' }
 ];
 let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
 if (!PLAN || !PLANS.some(x => x.id === PLAN.id) || !/^\d{4}-\d{2}-\d{2}$/.test(PLAN.start || '')) PLAN = null;
@@ -4158,14 +4158,14 @@ function openPlan(opts){
     let body;
     if (!PLAN){
       body = `<p class="bmhint" style="margin:0 0 12px">Chọn một lộ trình đọc trọn bộ Kinh Thánh. Ngày đầu tiên bắt đầu từ hôm nay.</p>` +
-        PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${plPer(p.days, T)}</span></button>`).join('');
+        PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${p.per}</span></button>`).join('');
     } else {
       const t = plToday(), done = t.items.filter(x => (RD[dayKey()] || []).includes(x.book + '|' + x.ch)).length;
       body = `<div class="plnow"><div class="pld">Kế hoạch ${t.pl.name}</div>
           <div class="pln">${t.over ? '🎉' : t.none ? '—' : t.d}<i>${t.over || t.none ? '' : ' / ' + t.pl.days}</i></div>
           <div class="hjbar"><i style="width:${t.over ? 100 : Math.max(0, Math.min(100, (t.d - 1) / t.pl.days * 100))}%"></i></div></div>
         <div class="plread"><h5>${t.over ? 'Chúc mừng' : t.none ? 'Sắp bắt đầu' : 'Hôm nay đọc'}</h5>
-          <p>${t.over ? 'Bạn đã hoàn thành kế hoạch đọc. Tạ ơn Chúa!' : t.none ? 'Kế hoạch sẽ bắt đầu vào ngày đã chọn.' : t.items.length ? esc(plRanges(t.items)) : 'Hôm nay là ngày nghỉ: đọc lại điều bạn yêu thích.'}</p>
+          <p>${t.over ? 'Bạn đã hoàn thành kế hoạch đọc. Tạ ơn Chúa!' : t.none ? 'Kế hoạch sẽ bắt đầu vào ngày đã chọn.' : t.items.length ? esc(plRanges(t.items)) : ''}</p>
           ${t.items.length ? `<small>${done === t.items.length ? '✔ Bạn đã đọc xong phần hôm nay' : `Đã đọc ${done} / ${t.items.length} chương hôm nay`}</small>` : ''}</div>
         <div class="plbtns">${t.items.length ? '<button class="btn primary" data-act="go">Mở bài đọc hôm nay</button>' : ''}</div>
         <div class="plbtns"><button class="btn" data-act="change">Đổi kế hoạch</button><button class="btn" data-act="stop">Dừng kế hoạch</button></div>`;
