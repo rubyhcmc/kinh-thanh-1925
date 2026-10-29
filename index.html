@@ -411,7 +411,7 @@ body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(
 body.pg.pgchrome:not(.searching) .top{transform:none}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
 body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
-body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none;contain:layout paint}
+body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none}
 .pgcur{font-weight:800;font-size:15px;color:var(--fg);letter-spacing:0}
 .pgtot{font-weight:400;opacity:.7}
 .pglab{margin-right:.45em}
@@ -779,7 +779,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1109,7 +1109,7 @@ $('#nextChap').onclick = () => stepChapter(1);
         await stepChapter(dir);                                                   // trang thật đã nằm đúng chỗ bên dưới
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
-    } finally { sg.stage.remove(); }
+    } finally { sg.cleanup(); }
   }
   async function begin(dir){
     const html = await getNbr(dir); if (!html) return null;
@@ -1150,7 +1150,7 @@ $('#nextChap').onclick = () => stepChapter(1);
         const s = st;
         begin(s.dir).then(sg => {
           if (!sg) return;
-          if (st !== s){ sg.stage.remove(); return; }                              // đã thả tay trước khi dựng xong
+          if (st !== s){ sg.cleanup(); return; }                              // đã thả tay trước khi dựng xong
           s.sg = sg; apply(sg, s.prog);
         });
       }
@@ -3319,7 +3319,8 @@ function pgFoot(){
 }
 function pgGo(p){
   if (!pgOn()) return;
-  pgCount(); pg.page = Math.max(0, Math.min(p, pg.pages - 1));
+  if (!pg.pages || pg.dirty){ pgCount(); pg.dirty = false; }
+  pg.page = Math.max(0, Math.min(p, pg.pages - 1));
   pgSetX($('#bibleText'), pg.page, pgW()); pgFoot();
 }
 const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
@@ -3353,7 +3354,7 @@ function pgRefresh(keepVerse){                                     // dựng l�
 /* --- Lật trang: tờ giấy quay quanh gáy sách (cạnh trái), lộ trang kế bên dưới, có bóng đổ --- */
 const pgDiv = c => { const d = document.createElement('div'); d.className = c; return d; };
 const pgEase = k => 1 - Math.pow(1 - k, 3), pgEaseIO = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-function pgClone(page){                                            // ảnh chụp DOM của trang hiện tại ở số trang `page`
+function pgClone(page){                                            // bản sao của MỘT trang lân cận (chỉ dựng 1 bản mỗi lần lật cho nhẹ)
   const n = $('#pgView').cloneNode(true), W = pgW();
   n.removeAttribute('id'); n.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
   n.querySelectorAll('.sel,.flash').forEach(e => e.classList.remove('sel', 'flash'));
@@ -3372,37 +3373,46 @@ async function pgNbrHTML(d){
 }
 function pgApply(sg, prog){
   const t = sg.dir > 0 ? prog : 1 - prog, a = -100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
-  sg.leaf.style.transform = 'rotateY(' + a + 'deg)';
+  sg.leaf.style.transform = 'perspective(' + sg.persp + 'px) rotateY(' + a + 'deg)';
   sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
   sg.cast.style.opacity = String((1 - t) * 0.4);
   const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp - sg.W * Math.sin(r));
   sg.strip.style.left = Math.max(0, edge) + 'px';
   sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
 }
-function pgStage(dir, leafNode, underNode){
-  const host = $('#pgView').getBoundingClientRect(), W = innerWidth, persp = Math.round(Math.max(W * 2.4, 900));
-  const stage = pgDiv('fl-stage'), book = pgDiv('fl-book'), under = pgDiv('fl-under'), leaf = pgDiv('fl-leaf'), cast = pgDiv('fl-cast'), strip = pgDiv('fl-strip'), shade = pgDiv('fl-shade');
-  stage.style.top = host.top + 'px'; stage.style.bottom = (innerHeight - host.bottom) + 'px';
-  book.style.left = '0'; book.style.width = W + 'px'; book.style.perspective = persp + 'px';
-  under.append(underNode, cast, strip); leaf.append(leafNode, shade);
-  book.append(under, leaf); stage.append(book); document.body.appendChild(stage);
-  const sg = { stage, leaf, cast, strip, shade, W, persp, dir }; pgApply(sg, 0); return sg;
+/* Tờ giấy đang lật là CHÍNH khung đọc thật (hoặc 1 bản sao của trang lân cận); lớp bên dưới là phần còn lại → chỉ phải dựng tối đa 1 bản sao */
+function pgStage(dir, nbNode){
+  const real = $('#pgView'), host = real.getBoundingClientRect(), W = innerWidth, persp = Math.round(Math.max(W * 2.4, 900));
+  const pos = n => { n.style.cssText += `;position:fixed;left:0;width:${W}px;top:${host.top}px;height:${host.height}px;pointer-events:none`; return n; };
+  const cast = pos(pgDiv('fl-cast')), strip = pos(pgDiv('fl-strip')), shade = pgDiv('fl-shade');
+  strip.style.width = '46px'; cast.style.zIndex = strip.style.zIndex = '6';
+  const leaf = dir > 0 ? real : nbNode, under = dir > 0 ? nbNode : real;
+  if (under !== real){ under.style.zIndex = '4'; document.body.appendChild(under); }
+  leaf.style.transformOrigin = '0% 50%'; leaf.style.backfaceVisibility = leaf.style.webkitBackfaceVisibility = 'hidden';
+  leaf.style.zIndex = '7'; leaf.style.willChange = 'transform';
+  if (leaf === nbNode) document.body.appendChild(leaf);
+  leaf.appendChild(shade); shade.style.position = 'absolute'; shade.style.inset = '0';
+  document.body.append(cast, strip);
+  const sg = { leaf, cast, strip, shade, W, persp, dir, cleanup(){
+    real.style.transform = real.style.transformOrigin = real.style.backfaceVisibility = real.style.webkitBackfaceVisibility = real.style.zIndex = real.style.willChange = '';
+    shade.remove(); cast.remove(); strip.remove(); if (nbNode.parentNode) nbNode.remove();
+  } };
+  pgApply(sg, 0); return sg;
 }
-async function pgBegin(dir){                                       // dựng sân khấu lật; trả về { sg, commit } hoặc null nếu hết sách
+async function pgBegin(dir){                                       // trả về { sg, commit } hoặc null nếu hết sách
   document.body.classList.remove('pgchrome');
-  const W = pgW(); pgCount();
-  const inCh = dir > 0 ? pg.page < pg.pages - 1 : pg.page > 0, cur = pgClone(pg.page);
-  if (inCh){
-    const tp = pg.page + dir, nx = pgClone(tp);
-    return { sg:pgStage(dir, dir > 0 ? cur : nx, dir > 0 ? nx : cur), commit: async () => pgGo(tp) };
+  const W = pgW();
+  if (dir > 0 ? pg.page < pg.pages - 1 : pg.page > 0){
+    const tp = pg.page + dir;
+    return { sg:pgStage(dir, pgClone(tp)), commit: async () => pgGo(tp) };
   }
   if ((dir > 0 ? $('#nextChap') : $('#prevChap')).disabled) return null;
   const html = await pgNbrHTML(dir); if (!html) return null;
   const nx = pgDiv('pgv'); nx.innerHTML = `<article class="reader${S.view !== 'verse' ? ' print' : ''}">${html}</article>`;
   nx.style.visibility = 'hidden'; document.body.appendChild(nx);     // đo số trang của chương kế khi chưa lật
   const a2 = nx.firstElementChild, pages = pgPagesOf(a2, W);
-  nx.style.visibility = ''; nx.remove(); pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
-  return { sg:pgStage(dir, dir > 0 ? cur : nx, dir > 0 ? nx : cur), commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
+  nx.style.visibility = ''; pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
+  return { sg:pgStage(dir, nx), commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
 }
 function pgTween(sg, from, to, ms, ease){
   return new Promise(res => {
@@ -3416,14 +3426,14 @@ async function pgFinish(sg, from, go, commit, ms, ease){
     const to = go ? 1 : 0;
     await pgTween(sg, from, to, ms || (110 + 320 * Math.abs(to - from)), ease || pgEase);
     if (go){ await commit(); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
-  } finally { sg.stage.remove(); }
+  } finally { sg.cleanup(); }
 }
 async function pgFlip(dir){                                        // chạm mép / phím / cuộn chuột
   if (pg.busy || !pgOn()) return;
   pg.busy = true;
   try {
     const r = await pgBegin(dir); if (!r) return;
-    if (pgReduce.matches){ r.sg.stage.remove(); await r.commit(); return; }
+    if (pgReduce.matches){ r.sg.cleanup(); await r.commit(); return; }
     await pgFinish(r.sg, 0, true, r.commit, 430, pgEaseIO);
   } finally { pg.busy = false; }
 }
@@ -3436,7 +3446,7 @@ async function pgFlip(dir){                                        // chạm mé
   }, { passive:true });
   view.addEventListener('touchmove', e => {                        // tờ giấy đi theo ngón tay
     if (!st) return;
-    if (e.touches.length !== 1){ if (st.sg) st.sg.stage.remove(); if (st.lock) pg.busy = false; st = null; return; }
+    if (e.touches.length !== 1){ if (st.sg) st.sg.cleanup(); if (st.lock) pg.busy = false; st = null; return; }
     const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
     if (!st.lock){
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
@@ -3445,7 +3455,7 @@ async function pgFlip(dir){                                        // chạm mé
       const s = st;
       pgBegin(s.dir).then(r => {
         if (!r){ if (st === s) s.none = true; pg.busy = false; return; }
-        if (st !== s){ r.sg.stage.remove(); pg.busy = false; return; }
+        if (st !== s){ r.sg.cleanup(); pg.busy = false; return; }
         s.sg = r.sg; s.commit = r.commit; pgApply(s.sg, s.prog);
       }, () => { pg.busy = false; });
     }
