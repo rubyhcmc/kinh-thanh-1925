@@ -811,7 +811,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3373,8 +3373,18 @@ const pgOn = () => document.body.classList.contains('pg') && !document.body.clas
 const pgW = () => $('#pgView').clientWidth || innerWidth;
 const pgReduce = matchMedia('(prefers-reduced-motion: reduce)');
 const pgPagesOf = (art, W) => {                                    // số trang của một khối chữ đã dàn cột
-  const r = document.createRange(); r.selectNodeContents(art);
-  return Math.max(1, Math.ceil((r.getBoundingClientRect().right - art.getBoundingClientRect().left - 2) / W));
+  // Đo theo CỘT BẮT ĐẦU của phần chữ cuối cùng (không dùng khung bao Range: trên Safari/iPhone khung này
+  // phình rộng sang phải → báo thừa nhiều trang trống, vd "Trang 5/10" trong khi chữ hết ở trang 4)
+  const a = art.getBoundingClientRect().left; let maxLeft = -1;
+  art.querySelectorAll('.chhead,.hd,.v,.pl,.vline,.fn,.fns,.sub,.empty').forEach(el => {
+    if (el.closest('[hidden]')) return;
+    for (const rc of el.getClientRects()){
+      if (rc.width < 0.5 && rc.height < 0.5) continue;
+      if (rc.left - a > maxLeft) maxLeft = rc.left - a;
+    }
+  });
+  if (maxLeft < 0) return 1;
+  return Math.max(1, Math.floor((maxLeft + 1) / W) + 1);
 };
 const pgSetX = (art, page, W) => { art.style.transform = 'translate3d(' + (-page * W) + 'px,0,0)'; };
 function pgCount(){ pg.pages = pgPagesOf($('#bibleText'), pgW()); }
