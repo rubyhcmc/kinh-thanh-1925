@@ -22,7 +22,7 @@
   --bg:#121212; --card:#1c1b19; --fg:#e8e2d6; --muted:#9a9080;
   --accent:#e0b160; --accent-soft:#2c2619; --line:#2e2b26; --hl:#4a3d1a; --danger:#ff8a80;
 }
-/* Chế độ Giấy / Mực điện tử: đen trắng tương phản cao, không màu, không hiệu ứng */
+/* Chế độ Trang giấy: đen trắng tương phản cao, không màu, không hiệu ứng */
 html[data-paper]{--bg:#f4f3ee; --card:#fbfaf6; --fg:#000; --muted:#3d3d3a; --accent:#000; --accent-soft:#e6e5df; --line:#b9b8b1; --hl:#d6d5ce; --danger:#000}
 html[data-paper] *{transition:none!important;animation:none!important;box-shadow:none!important;text-shadow:none!important}
 html[data-paper] .fnm{color:#000;text-decoration:underline;text-underline-offset:.18em}
@@ -462,7 +462,7 @@ html[data-paper] .reader.print{text-align:justify}
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
     <button class="iconbtn" id="btnMarks" aria-label="Vị trí đã đánh dấu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4.2L6 21z"/></svg></button>
     <button class="iconbtn" id="btnLessons" aria-label="Bài học cá nhân" style="position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg><span class="lsbadge" id="lsBadge" hidden></span></button>
-    <button class="iconbtn" id="btnPaper" aria-label="Chế độ giấy / mực điện tử" aria-pressed="false" title="Giấy / Mực điện tử"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 19h3"/></svg></button>
+    <button class="iconbtn" id="btnPaper" aria-label="Chế độ Trang giấy" aria-pressed="false" title="Chế độ Trang giấy"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 19h3"/></svg></button>
     <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
 </header>
@@ -811,7 +811,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3284,7 +3284,7 @@ $('#exFile').onchange = async e => {
 };
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); toast(S.paper ? '📄 Chế độ giấy / mực điện tử: BẬT' : 'Đã tắt chế độ giấy'); };
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
@@ -3396,7 +3396,7 @@ function pgGo(p){
   if (!pgOn()) return;
   if (!pg.pages || pg.dirty){ pgCount(); pg.dirty = false; }
   pg.page = Math.max(0, Math.min(p, pg.pages - 1));
-  pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); syncVerse();
+  pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); syncVerse(); pgPrep();
 }
 const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
 function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
@@ -3408,7 +3408,7 @@ function pgFirstVisible(){
 }
 function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
   const art = $('#bibleText'); if (!art) return;
-  if (!pgOn()){ art.style.transform = ''; return; }
+  if (!pgOn()){ art.style.transform = ''; pgPrepClear(); return; }
   const W = pgW(), widthSame = pg.lastW === W; pg.lastW = W;
   pgCount();
   if (pg.toEnd){ pg.toEnd = false; return pgGo(pg.pages - 1); }
@@ -3474,20 +3474,44 @@ function pgStage(dir, nbNode){
   } };
   pgApply(sg, 0); return sg;
 }
-async function pgBegin(dir){                                       // trả về { sg, commit } hoặc null nếu hết sách
-  document.body.classList.remove('pgchrome');
+/* Dựng sẵn trang kế (trước & sau) lúc rảnh rỗi → vuốt là có tờ giấy ngay, không phải chờ dựng/đo khi ngón tay đã di chuyển */
+const pgKey = () => [S.book, S.chapter, pg.page, pg.pages, S.view, S.fs, S.font, innerWidth, innerHeight, S.paper ? 1 : 0].join('|');
+pg.prep = { key:'', nodes:{} };
+function pgPrepClear(){ clearTimeout(pg.prepT); Object.values(pg.prep.nodes).forEach(n => n && n.remove()); pg.prep = { key:'', nodes:{} }; }
+function pgPrep(){ clearTimeout(pg.prepT); pg.prepT = setTimeout(pgPrepNow, 120); }
+async function pgPrepNow(){
+  if (!pgOn() || !curBook) return;
+  if (pg.busy){ pgPrep(); return; }
+  const key = pgKey(); if (pg.prep.key === key) return;
+  pgPrepClear(); const P = pg.prep = { key, nodes:{} };
+  for (const d of [1, -1]){
+    let m = null; try { m = await pgMake(d); } catch(e){}
+    if (pg.prep !== P || pg.busy || !pgOn()){ if (m) m.node.remove(); if (pg.prep === P) pgPrep(); return; }
+    if (m){ m.node.style.visibility = 'hidden'; m.node.style.pointerEvents = 'none'; P.nodes[d] = m.node; P['c' + d] = m.commit; }
+    await new Promise(r => setTimeout(r, 0));
+  }
+}
+async function pgMake(dir){                                        // trả về { node, commit } hoặc null nếu hết sách
   const W = pgW();
   if (dir > 0 ? pg.page < pg.pages - 1 : pg.page > 0){
-    const tp = pg.page + dir;
-    return { sg:pgStage(dir, pgClone(tp)), commit: async () => pgGo(tp) };
+    const tp = pg.page + dir, node = pgClone(tp); document.body.appendChild(node);
+    return { node, commit: async () => pgGo(tp) };
   }
   if ((dir > 0 ? $('#nextChap') : $('#prevChap')).disabled) return null;
   const html = await pgNbrHTML(dir); if (!html) return null;
   const nx = pgDiv('pgv'); nx.innerHTML = `<article class="reader${S.view !== 'verse' ? ' print' : ''}">${html}</article>`;
   nx.style.visibility = 'hidden'; document.body.appendChild(nx);     // đo số trang của chương kế khi chưa lật
   const a2 = nx.firstElementChild, pages = pgPagesOf(a2, W);
-  nx.style.visibility = ''; pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
-  return { sg:pgStage(dir, nx), commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
+  pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
+  return { node:nx, commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
+}
+async function pgBegin(dir){                                       // trả về { sg, commit } hoặc null nếu hết sách
+  document.body.classList.remove('pgchrome');
+  const P = pg.prep; let node = null, commit = null;
+  if (P.key === pgKey() && P.nodes[dir]){ node = P.nodes[dir]; commit = P['c' + dir]; delete P.nodes[dir]; }
+  else { const m = await pgMake(dir); if (!m) return null; node = m.node; commit = m.commit; }
+  node.style.visibility = ''; node.style.pointerEvents = '';
+  return { sg:pgStage(dir, node), commit };
 }
 function pgTween(sg, from, to, ms, ease){
   return new Promise(res => {
@@ -3499,8 +3523,8 @@ function pgTween(sg, from, to, ms, ease){
 async function pgFinish(sg, from, go, commit, ms, ease){
   try {
     const to = go ? 1 : 0;
-    await pgTween(sg, from, to, ms || (110 + 320 * Math.abs(to - from)), ease || pgEase);
-    if (go){ await commit(); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
+    await pgTween(sg, from, to, ms || (90 + 250 * Math.abs(to - from)), ease || pgEase);
+    if (go){ await commit(); await new Promise(r => requestAnimationFrame(r)); }
   } finally { sg.cleanup(); }
 }
 async function pgFlip(dir){                                        // chạm mép / phím / cuộn chuột
@@ -3509,7 +3533,7 @@ async function pgFlip(dir){                                        // chạm mé
   try {
     const r = await pgBegin(dir); if (!r) return;
     if (pgReduce.matches){ r.sg.cleanup(); await r.commit(); return; }
-    await pgFinish(r.sg, 0, true, r.commit, 430, pgEaseIO);
+    await pgFinish(r.sg, 0, true, r.commit, 340, pgEaseIO);
   } finally { pg.busy = false; }
 }
 (function(){
@@ -3518,14 +3542,15 @@ async function pgFlip(dir){                                        // chạm mé
     t0 = Date.now();
     if (!pgOn() || pg.busy || e.touches.length !== 1){ st = null; return; }
     const t = e.touches[0]; st = { x:t.clientX, y:t.clientY, lock:false, dir:0, sg:null, commit:null, prog:0, pts:[{ x:t.clientX, t:e.timeStamp }] };
+    if (pg.prep.key !== pgKey()){ clearTimeout(pg.prepT); pgPrepNow(); }     // chưa kịp dựng sẵn → dựng ngay khi vừa chạm
   }, { passive:true });
   view.addEventListener('touchmove', e => {                        // tờ giấy đi theo ngón tay
     if (!st) return;
     if (e.touches.length !== 1){ if (st.sg) st.sg.cleanup(); if (st.lock) pg.busy = false; st = null; return; }
     const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
     if (!st.lock){
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      if (Math.abs(dy) > Math.abs(dx) * 0.8){ st = null; return; }
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      if (Math.abs(dy) > Math.abs(dx) * 1.1){ st = null; return; }
       st.lock = true; st.dir = dx < 0 ? 1 : -1; pg.busy = true;
       const s = st;
       pgBegin(s.dir).then(r => {
@@ -3535,7 +3560,7 @@ async function pgFlip(dir){                                        // chạm mé
       }, () => { pg.busy = false; });
     }
     if (e.cancelable) e.preventDefault();
-    st.prog = Math.max(0, Math.min(1, dx * (st.dir > 0 ? -1 : 1) / (innerWidth * 0.85)));
+    st.prog = Math.max(0, Math.min(1, dx * (st.dir > 0 ? -1 : 1) / (innerWidth * 0.7)));
     st.pts.push({ x:t.clientX, t:e.timeStamp }); if (st.pts.length > 6) st.pts.shift();
     if (st.sg) pgApply(st.sg, st.prog);
   }, { passive:false });
@@ -3543,16 +3568,16 @@ async function pgFlip(dir){                                        // chạm mé
     const s = st; st = null; if (!s || !s.lock) return;
     if (!s.sg){ if (s.none) pg.busy = false; return; }           // sg chưa dựng xong: nhánh then() sẽ tự dọn
     const last = s.pts[s.pts.length - 1]; let first = s.pts[0];
-    for (const p of s.pts) if (last.t - p.t <= 90){ first = p; break; }
+    for (const p of s.pts) if (last.t - p.t <= 120){ first = p; break; }
     const v = last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0, vf = v * (s.dir > 0 ? -1 : 1);
-    const go = !cancelled && (s.prog > 0.3 ? vf > -0.3 : (vf > 0.45 && s.prog > 0.04));
+    const go = !cancelled && (s.prog > 0.22 ? vf > -0.25 : (vf > 0.3 && s.prog > 0.015));
     pgFinish(s.sg, s.prog, go, s.commit).finally(() => { pg.busy = false; });
   };
   view.addEventListener('touchend', () => end(false));
   view.addEventListener('touchcancel', () => end(true));
   view.addEventListener('click', e => {                            // chạm mép trái/phải = lật; chạm dải trên cùng = hiện/ẩn thanh công cụ
     if (!pgOn()) return;
-    if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgCount(); pgGo(pg.page); }, 40); return; }
+    if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgPrepClear(); pgCount(); pgGo(pg.page); }, 40); return; }
     if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
     const cl = document.body.classList, x = e.clientX / innerWidth, eat = () => { e.stopPropagation(); e.preventDefault(); };
     if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
