@@ -421,6 +421,9 @@ body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;
 .pglab{margin-right:.45em}
 body.pg .pgv>.reader .chhead{break-inside:avoid}
 /* Chế độ Giấy: lề rộng, dòng thưa */
+body.pg .pgv>.reader{orphans:2;widows:2;overflow:visible}
+body.pg .pgv>.reader .hd,body.pg .pgv>.reader .chhead{break-after:avoid;-webkit-column-break-after:avoid}
+body.pg .pgv>.reader .pl,body.pg .pgv>.reader .fn,body.pg .pgv>.reader .fnx{break-inside:avoid;-webkit-column-break-inside:avoid}
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
 html[data-paper] .reader.print{text-align:justify}
 
@@ -813,7 +816,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3409,8 +3412,40 @@ const pgPagesOf = (art, W) => {                                    // số trang
   if (maxLeft < 0) return 1;
   return Math.max(1, Math.floor((maxLeft + 1) / W) + 1);
 };
+/* Dàn trang chuyên nghiệp: chiều cao khung chữ = một số NGUYÊN dòng (không dòng nào bị cắt hoặc sát mép dưới), có lề trên/dưới cân đối;
+   nếu trang cuối chỉ còn vài dòng lẻ thì siết nhẹ giãn dòng (tối đa ~7%) để kéo chúng về trang trước, tránh trang chỉ có một chữ. */
+function pgFitArt(art){
+  const view = art.parentElement; if (!view) return;
+  const H = view.clientHeight, W = view.clientWidth; if (!H || !W) return;
+  const st = art.style; st.lineHeight = st.height = st.paddingTop = st.paddingBottom = '';
+  const cs = getComputedStyle(art), fs = parseFloat(cs.fontSize) || 18;
+  let lh = parseFloat(cs.lineHeight); if (!(lh > 0)) lh = fs * 1.8;
+  const TOP = 18, BOT = 26, avail = H - TOP - BOT;
+  const n = Math.max(1, Math.floor(avail / lh));
+  const put = (l, k) => { const pad = TOP + Math.max(0, avail - k * l) / 2; st.lineHeight = l + 'px'; st.paddingTop = pad + 'px'; st.paddingBottom = '0px'; st.height = (pad + k * l) + 'px'; return pad; };
+  let pad = put(lh, n), P = pgPagesOf(art, W);
+  if (P < 2) return;
+  const els = art.querySelectorAll('.chhead,.hd,.v,.pl,.vline,.fn,.fns,.sub');
+  const lastLines = l => {                                         // số dòng đang dùng ở trang cuối
+    const aR = art.getBoundingClientRect(), base = aR.top + pad; let bot = 0;
+    els.forEach(el => { for (const rc of el.getClientRects()){
+      if ((rc.height < .5 && rc.width < .5) || rc.left - aR.left < (P - 1) * W - 2) continue;
+      if (rc.bottom > bot) bot = rc.bottom; } });
+    return bot ? Math.max(1, Math.ceil((bot - base) / l - 0.05)) : n;
+  };
+  const used = lastLines(lh);
+  if (used > Math.max(3, Math.round(n * 0.14))) return;
+  const total = (P - 1) * n + used;
+  for (let k = 0; k < 3; k++){
+    const n2 = Math.ceil(total / (P - 1)) + k, l2 = avail / n2;
+    if (l2 / lh < 0.93) break;
+    pad = put(l2, n2);
+    if (pgPagesOf(art, W) < P) return;                              // đã gom được
+  }
+  pad = put(lh, n);                                                 // không gom được → giữ như cũ
+};
 const pgSetX = (art, page, W) => { art.style.transform = 'translate3d(' + (-page * W) + 'px,0,0)'; };
-function pgCount(){ pg.pages = pgPagesOf($('#bibleText'), pgW()); }
+function pgCount(){ const a = $('#bibleText'); pgFitArt(a); pg.pages = pgPagesOf(a, pgW()); }
 function pgFoot(){
   $('#pgPos').innerHTML = `<span class="pglab">Trang</span><b class="pgcur">${pg.page + 1}</b><span class="pgtot"> / ${pg.pages}</span>`;
   $('#pgBook').textContent = curBook ? `${curBook.name} · ${S.chapter}` : '';
@@ -3524,7 +3559,7 @@ async function pgMake(dir){                                        // trả về
   const html = await pgNbrHTML(dir); if (!html) return null;
   const nx = pgDiv('pgv'); nx.innerHTML = `<article class="reader${S.view !== 'verse' ? ' print' : ''}">${html}</article>`;
   nx.style.visibility = 'hidden'; document.body.appendChild(nx);     // đo số trang của chương kế khi chưa lật
-  const a2 = nx.firstElementChild, pages = pgPagesOf(a2, W);
+  const a2 = nx.firstElementChild; pgFitArt(a2); const pages = pgPagesOf(a2, W);
   pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
   return { node:nx, commit: async () => { pg.toEnd = dir < 0; await stepChapter(dir); } };
 }
