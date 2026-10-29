@@ -446,7 +446,9 @@ html[data-paper] .reader.print{text-align:justify}
 .hjtimes b{font:700 18px var(--serif);color:var(--accent);margin:0 2px}
 .hjdone{margin:16px auto 0;max-width:300px;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);font:14px/1.55 var(--serif);color:var(--fg)}
 .hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
-.hjs .sbtn{margin-top:12px}
+.hjplanbtn{display:block;width:100%;max-width:300px;margin:14px auto 0;padding:13px 16px;font-size:16px;font-weight:700;letter-spacing:.01em;border-radius:12px;box-shadow:0 3px 10px rgba(138,90,31,.28)}
+.hjplanbtn:active{transform:scale(.98)}
+.hjs .plcomm{border-top:0;margin-top:16px;padding-top:0}
 
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
 .sbtn:active{background:var(--accent-soft)}
@@ -868,7 +870,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1504,14 +1506,14 @@ function openLessons(){
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
     let planBox;
     { const pl = PLAN && PLANS.find(x => x.id === PLAN.id);
-      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Đọc trọn bộ Kinh Thánh theo lộ trình 1 năm, 2 năm, 6 tháng hoặc 90 ngày.</small><button class="sbtn" data-plan="1">Chọn kế hoạch</button>`;
+      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Đọc trọn bộ Kinh Thánh theo lộ trình 1 năm, 2 năm, 6 tháng hoặc 90 ngày.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
       else {
         const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
           : t.none ? `<div class="hjbig"><span>Kế hoạch ${esc(pl.name)} sắp bắt đầu</span></div>`
           : `<div class="hjbig"><span><b>${t.d}</b> / ${pl.days} ngày</span></div>`)
           + `<small>${t.over || t.none ? '' : (!t.items.length ? '' : 'Hôm nay đọc: ' + esc(plRanges(t.items)) + (dn === t.items.length ? ' ✔' : ` (${dn}/${t.items.length} chương)`))}</small>`
-          + `<button class="sbtn" data-plan="1">Mở kế hoạch</button>`;
+          + `<button class="btn primary hjplanbtn" data-plan="1">Mở kế hoạch</button>`;
       } }
     const quote = 'Hôm nay Bạn đã đọc Lời CHÚA chưa?';
     const doneAll = times > 0 && lastDone === today;
@@ -1529,8 +1531,10 @@ function openLessons(){
         <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
         <div class="hjtimes">Đã hoàn thành toàn bộ Kinh Thánh: <b>${times}</b> lần</div>
         ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>
-      <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}</section>
+      <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}<div class="plcomm" id="hjComm"></div></section>
     </div>`;
+    const cb = list.querySelector('#hjComm');
+    if (cb){ ctRender(cb); if (PLAN) ctJoin().then(() => { if (cb.isConnected) ctRender(cb); }); }
   };
   const draw = () => { inp.hidden = tab !== 'notes'; tab === 'notes' ? drawNotes() : drawStats(); o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); };
   draw();
@@ -4212,6 +4216,7 @@ planSum();
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
+  if (PLAN) ctJoin();                   // đã chọn kế hoạch từ trước mà chưa được tính vào bộ đếm → tính 1 lần
   if (ghOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên GitHub
 })();
 </script>
