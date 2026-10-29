@@ -434,6 +434,13 @@ html[data-paper] .reader.print{text-align:justify}
 .hjbar i{display:block;height:100%;background:var(--accent);border-radius:4px}
 .hjdone{margin:16px auto 0;max-width:300px;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);font:14px/1.55 var(--serif);color:var(--fg)}
 .hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
+
+.sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
+.sbtn:active{background:var(--accent-soft)}
+.sbtn.warn{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+.bkin{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px}
+.bkchk{display:flex;align-items:center;gap:8px;font:13px var(--sans);color:var(--muted);margin:0 0 4px}
+.bkext{font:12px var(--sans);color:var(--muted);margin:0 0 10px}
 </style>
 </head>
 <body>
@@ -511,6 +518,16 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Không tự tắt khi đang đọc</span></div>
         <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
+    </div>
+
+    <div class="slabel">Dữ liệu của tôi</div>
+    <div class="sgroup">
+      <div class="srow"><div class="stxt"><b>Sao lưu</b><span>Tải về file JSON: lịch sử đọc, ghi chú, dấu trang</span></div>
+        <button class="sbtn" id="dtExport">Xuất file</button></div>
+      <div class="srow"><div class="stxt"><b>Khôi phục</b><span>Nhập file JSON khi đổi thiết bị</span></div>
+        <button class="sbtn" id="dtImport">Nhập file</button><input type="file" id="dtFile" accept=".json,application/json" hidden></div>
+      <div class="srow"><div class="stxt"><b>Làm mới hành trình</b><span>Xóa lịch sử đọc, giữ nguyên ghi chú</span></div>
+        <button class="sbtn warn" id="dtReset">Làm mới</button></div>
     </div>
 
     <div class="slabel">Giới thiệu</div>
@@ -794,7 +811,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  * ========================================================= */
 const ADMIN_PASSWORD = '123456';       // mật khẩu ban đầu
 const RECOVERY_CODE  = 'khoiphuc-kt'; // mã khôi phục khi quên mật khẩu đã đổi (gõ vào ô mật khẩu). Hãy đổi; để '' là tắt
-const APP_VERSION = '2026.10.29-p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.29-q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3550,6 +3567,71 @@ async function pgFlip(dir){                                        // chạm mé
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); pgFlip(-1); }
   });
 })();
+
+
+/* ============ QUẢN LÝ DỮ LIỆU CÁ NHÂN: sao lưu · khôi phục · làm mới hành trình ============ */
+const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
+const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
+function dtPayload(){
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM };
+}
+function dtDownload(name){
+  const blob = new Blob([JSON.stringify(dtPayload(), null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+function dtExport(){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 80;
+  o.innerHTML = `<div class="sheet"><h3>Sao lưu dữ liệu</h3>
+    <p class="bmhint" style="margin:0 0 10px">${Object.keys(RD).length} ngày đọc · ${LS.length} ghi chú · ${BM.length} dấu trang</p>
+    <label class="bkchk"><span>Tên file</span></label>
+    <input class="bkin" id="bkName" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+    <label class="bkchk"><input type="checkbox" id="bkDate" checked> Kèm ngày tháng trong tên file</label>
+    <div class="bkext">File sẽ được lưu với đuôi .json</div>
+    <div class="btns"><button class="btn" data-close="1">Hủy</button><button class="btn primary" data-go="1" style="margin-left:auto">Tải về</button></div></div>`;
+  const nm = o.querySelector('#bkName'), cb = o.querySelector('#bkDate'); let last = dtDefName(true); nm.value = last;
+  cb.onchange = () => { if (nm.value.replace(/\.json$/i, '') === last){ last = dtDefName(cb.checked); nm.value = last; } else toast('Tên file đang được bạn tự đặt'); };
+  o.addEventListener('click', e => {
+    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
+    if (e.target.closest('[data-go]')){ const f = dtClean(nm.value); dtDownload(f); o.remove(); toast('💾 Đã tạo file ' + f); }
+  });
+  nm.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); o.querySelector('[data-go]').click(); } });
+  document.body.appendChild(o); setTimeout(() => { nm.focus(); nm.select(); }, 60);
+}
+const dtKeyL = x => `${x.book}|${x.ch}|${compressRange(x.ns || [x.n])}`;
+async function dtImport(file){
+  let j; try { j = JSON.parse(await file.text()); } catch(e){ return toast('File không đọc được (không phải JSON hợp lệ)'); }
+  if (!j || j.app !== 'kinhthanh' || j.kind !== 'user-data') return toast('Đây không phải file sao lưu của app này');
+  const reads = j.reads && typeof j.reads === 'object' && !Array.isArray(j.reads) ? j.reads : {}, lessons = Array.isArray(j.lessons) ? j.lessons : [], marks = Array.isArray(j.marks) ? j.marks : [];
+  const days = Object.keys(reads).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(reads[k]));
+  const L = lessons.filter(x => x && x.book && x.ch >= 1 && typeof x.text === 'string'), M = marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1);
+  const i = await choose('Khôi phục dữ liệu', `File có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
+    [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
+  if (i !== 0 && i !== 1) return;
+  if (i === 1){ RD = {}; LS = []; BM = []; }
+  days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
+  const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
+  LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
+  const mm = new Map(BM.map(x => [`${x.book}|${x.ch}|${x.n}`, x])); M.forEach(x => { const k = `${x.book}|${x.ch}|${x.n}`; if (!mm.has(k)) mm.set(k, x); });
+  BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
+  try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
+  saveLS(); saveBM(); markBookmarks();
+  toast('✔ Đã khôi phục dữ liệu');
+}
+async function dtReset(){
+  const n = Object.keys(RD).length;
+  const a = await choose('Làm mới Hành trình đọc?', `Lịch sử đọc (${n} ngày), chuỗi ngày và tiến độ sẽ được đặt lại về 0.\nGhi chú và dấu trang KHÔNG bị ảnh hưởng.`, [{ t:'Tiếp tục', cls:'danger' }, { t:'Hủy' }]);
+  if (a !== 0) return;
+  const b = await choose('Xác nhận lần cuối', 'Thao tác này không thể hoàn tác. Bạn nên sao lưu trước khi xóa.\n\nXóa toàn bộ lịch sử đọc ngay bây giờ?', [{ t:'Xóa lịch sử đọc', cls:'danger' }, { t:'Sao lưu trước' }, { t:'Hủy, giữ lại' }]);
+  if (b === 1) return dtExport();
+  if (b !== 0) return;
+  RD = {}; try { localStorage.removeItem('kt.reads'); } catch(e){}
+  toast('Đã làm mới hành trình đọc');
+}
+$('#dtExport').onclick = dtExport;
+$('#dtImport').onclick = () => $('#dtFile').click();
+$('#dtFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) dtImport(f); };
+$('#dtReset').onclick = dtReset;
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
