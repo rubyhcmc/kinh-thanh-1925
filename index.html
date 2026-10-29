@@ -446,6 +446,7 @@ html[data-paper] .reader.print{text-align:justify}
 .hjtimes b{font:700 18px var(--serif);color:var(--accent);margin:0 2px}
 .hjdone{margin:16px auto 0;max-width:300px;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);font:14px/1.55 var(--serif);color:var(--fg)}
 .hjdone b{display:block;margin-bottom:4px;font-size:16px;color:var(--accent)}
+.hjs .sbtn{margin-top:12px}
 
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
 .sbtn:active{background:var(--accent-soft)}
@@ -568,12 +569,6 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <div class="srow"><div class="stxt"><b>Hướng dẫn sử dụng</b><span>Xem lại các thao tác cơ bản</span></div>
         <button class="sbtn" id="obShow">Xem lại</button></div>
-    </div>
-
-    <div class="slabel">Kế hoạch đọc</div>
-    <div class="sgroup">
-      <div class="srow"><div class="stxt"><b id="planSum">Chưa chọn kế hoạch</b><span id="planSub">1 năm · 2 năm · 6 tháng · 90 ngày</span></div>
-        <button class="sbtn" id="planOpen">Mở</button></div>
     </div>
 
     <div class="slabel">Dữ liệu của tôi</div>
@@ -873,7 +868,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1507,6 +1502,17 @@ function openLessons(){
     }));
     const done = cur.size;
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
+    let planBox;
+    { const pl = PLAN && PLANS.find(x => x.id === PLAN.id);
+      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Đọc trọn bộ Kinh Thánh theo lộ trình 1 năm, 2 năm, 6 tháng hoặc 90 ngày.</small><button class="sbtn" data-plan="1">Chọn kế hoạch</button>`;
+      else {
+        const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
+        planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
+          : t.none ? `<div class="hjbig"><span>Kế hoạch ${esc(pl.name)} sắp bắt đầu</span></div>`
+          : `<div class="hjbig"><span><b>${t.d}</b> / ${pl.days} ngày</span></div>`)
+          + `<small>${t.over || t.none ? '' : (t.items.length ? 'Hôm nay đọc: ' + esc(plRanges(t.items)) + (dn === t.items.length ? ' ✔' : ` (${dn}/${t.items.length} chương)`) : 'Hôm nay là ngày nghỉ.')}</small>`
+          + `<button class="sbtn" data-plan="1">Mở kế hoạch</button>`;
+      } }
     const quote = 'Hôm nay Bạn đã đọc Lời CHÚA chưa?';
     const doneAll = times > 0 && lastDone === today;
     list.innerHTML = `<div class="hj">
@@ -1523,6 +1529,7 @@ function openLessons(){
         <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
         <div class="hjtimes">Đã hoàn thành toàn bộ Kinh Thánh: <b>${times}</b> lần</div>
         ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>
+      <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}</section>
     </div>`;
   };
   const draw = () => { inp.hidden = tab !== 'notes'; tab === 'notes' ? drawNotes() : drawStats(); o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); };
@@ -1531,6 +1538,7 @@ function openLessons(){
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const tb = e.target.closest('[data-tab]'); if (tb){ tab = tb.dataset.tab; draw(); return; }
+    if (e.target.closest('[data-plan]')){ openPlan({ onClose:() => { if (o.isConnected && tab === 'stats') draw(); }, onGo:() => o.remove() }); return; }
     const ed = e.target.closest('[data-edit]'), g = e.target.closest('[data-go]');
     if (ed){ const b = LS[+ed.dataset.edit]; o.remove(); if (b) window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:b.book, ch:b.ch, ns:b.ns || [b.n], back:true } })); return; }
     if (g){ const b = LS[+g.dataset.go]; o.remove(); if (b) await goBookmark({ book:b.book, ch:b.ch, n:b.n }); }
@@ -4023,7 +4031,8 @@ async function verseImage(nums){
   const vs = (curBook.chapters[S.chapter - 1] || []).filter(v => nums.includes(v.n));
   if (!vs.length) return;
   const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, ' ')).join(' ').replace(/\s+/g, ' ').trim();
-  const ref = `${curBook.name} ${S.chapter}:${compressRange(nums)}`;
+  const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());   // Sáng Thế Ký, Xuất Ê-díp-tô Ký
+  const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
   const fam = (FONTS[S.font] && FONTS[S.font].s) || PDF_SERIF;
   try { await Promise.all([document.fonts.load('400 40px ' + fam), document.fonts.load('700 40px ' + fam)]); } catch(e){}
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -4034,40 +4043,27 @@ async function verseImage(nums){
   x.strokeStyle = '#e1cfa6'; x.lineWidth = 1.5; x.strokeRect(64, 64, W - 128, H - 128);
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
   const CX = W / 2, MAXW = W - 2 * 150;                              // lề trái = lề phải = 150px, mọi khối đều căn giữa trục dọc
-  // Đầu ảnh
-  x.fillStyle = '#c9a96a'; x.fillRect(CX - 40, 150, 80, 3);              // chỉ giữ gạch trang trí, bỏ chữ "KINH THÁNH" thừa
-  // Cuối ảnh: đường kẻ + địa chỉ trích dẫn (không còn chữ "Kinh Thánh" lặp ở đáy)
-  let rs = 44; x.font = `700 ${rs}px ${fam}`;
-  const refTxt = '— ' + ref;
-  while (rs > 26 && x.measureText(refTxt).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
-  const REF_Y = H - 135;
-  x.fillStyle = '#c9a96a'; x.fillRect(CX - 40, REF_Y - rs - 36, 80, 3);
-  x.fillStyle = '#8a5a1f'; x.fillText(refTxt, CX, REF_Y);
-  // Khối trích dẫn: dấu “ mở · nội dung · dấu ” đóng, cân giữa khoảng trống giữa đầu và cuối ảnh
-  const RT = 205, RB = REF_Y - rs - 36 - 46, QF = 120, GAP = 26;
-  x.font = `700 ${QF}px ${fam}`;
-  const mo = x.measureText('“');
-  const qo = { a:mo.actualBoundingBoxAscent || QF * .7, d:mo.actualBoundingBoxDescent || 0 };
-  const qoH = qo.a + qo.d;
-  const availT = RB - RT - qoH - GAP;
-  const body = text + '”';                                       // dấu ” đóng dính liền chữ cuối câu → không bao giờ rớt xuống dòng riêng
+  // Địa chỉ trích dẫn ở cuối ảnh: viết hoa chữ cái đầu mỗi từ, không gạch đầu dòng, không đường kẻ
+  let rs = 46; x.font = `700 ${rs}px ${fam}`;
+  while (rs > 26 && x.measureText(ref).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
+  const REF_Y = H - 150;
+  x.fillStyle = '#8a5a1f'; x.fillText(ref, CX, REF_Y);
+  // Lời trích: dấu “ dính liền chữ đầu, dấu ” dính liền chữ cuối (không bao giờ đứng lẻ một dòng), cả khối cân giữa
+  const RT = 150, RB = REF_Y - rs - 60, availT = RB - RT;
+  const body = '\u201C' + text + '\u201D';
   const wrap = sz => {
     x.font = `400 ${sz}px ${fam}`;
     const lines = []; let cur = '';
     body.split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cur && x.measureText(t2).width > MAXW){ lines.push(cur); cur = w; } else cur = t2; });
     if (cur) lines.push(cur); return lines;
   };
-  let sz = 60, lines = wrap(sz), lh = sz * 1.5;
+  let sz = 62, lines = wrap(sz), lh = sz * 1.5;
   for (; sz >= 28; sz -= 2){ lines = wrap(sz); lh = sz * 1.5; if (lines.length * lh <= availT) break; }
   if (lines.length * lh > availT){                              // quá dài: cắt bớt và thêm …
     const n = Math.max(1, Math.floor(availT / lh)); lines = lines.slice(0, n);
-    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?”]*$/, '') + '…”';
+    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?\u201D]*$/, '') + '\u2026\u201D';
   }
-  const textH = lines.length * lh, blockH = qoH + GAP + textH;
-  let y0 = RT + Math.max(0, (RB - RT - blockH) / 2);
-  x.fillStyle = '#c9a96a'; x.font = `700 ${QF}px ${fam}`;
-  x.fillText('“', CX, y0 + qo.a);                               // dấu ngoặc kép mở
-  const ty = y0 + qoH + GAP;
+  const ty = RT + Math.max(0, (availT - lines.length * lh) / 2);
   x.fillStyle = '#2a2118'; x.font = `400 ${sz}px ${fam}`;
   lines.forEach((l, i) => x.fillText(l, CX, ty + i * lh + lh / 2 + sz * 0.34));
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
@@ -4153,8 +4149,10 @@ async function ctRender(box){
   const v = await ctCount(false);
   if (v != null){ try { localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} if (box.isConnected) draw(v); }
 }
-function openPlan(){
-  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+function openPlan(opts){
+  opts = opts || {};
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 72;
+  const closePlan = () => { o.remove(); if (opts.onClose) opts.onClose(); };
   const T = plSeq().length;
   const draw = () => {
     let body;
@@ -4178,7 +4176,7 @@ function openPlan(){
   };
   draw();
   o.addEventListener('click', async e => {
-    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
+    if (e.target === o || e.target.closest('[data-close]')) return closePlan();
     const pk = e.target.closest('[data-pick]'), ac = e.target.closest('[data-act]');
     if (pk){
       if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
@@ -4187,13 +4185,12 @@ function openPlan(){
       return;
     }
     if (!ac) return;
-    if (ac.dataset.act === 'go'){ const t = plToday(), f = t.items[0]; if (!f) return; o.remove(); show('#settings', false); try { await goBookmark({ book:f.book, ch:f.ch, n:1 }); } catch(err){} }
+    if (ac.dataset.act === 'go'){ const t = plToday(), f = t.items[0]; if (!f) return; o.remove(); if (opts.onGo) opts.onGo(); show('#settings', false); try { await goBookmark({ book:f.book, ch:f.ch, n:1 }); } catch(err){} }
     else if (ac.dataset.act === 'change'){ if (await choose('Đổi kế hoạch?', 'Kế hoạch hiện tại sẽ được thay bằng kế hoạch mới, bắt đầu lại từ ngày 1.', [{ t:'Chọn kế hoạch khác', cls:'primary' }, { t:'Hủy' }]) === 0){ PLAN = null; savePlan(); draw(); } }
     else if (ac.dataset.act === 'stop'){ if (await choose('Dừng kế hoạch?', 'Tiến độ ngày của kế hoạch sẽ bị xóa. Lịch sử đọc và ghi chú không bị ảnh hưởng.', [{ t:'Dừng kế hoạch', cls:'danger' }, { t:'Giữ lại' }]) === 0){ PLAN = null; savePlan(); draw(); } }
   });
   document.body.appendChild(o);
 }
-$('#planOpen').onclick = openPlan;
 planSum();
 
 /* ============ KHỞI ĐỘNG ============ */
