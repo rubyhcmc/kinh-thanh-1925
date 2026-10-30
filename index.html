@@ -377,11 +377,12 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .lsgrip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:9px auto 0;flex:none}
 .lstop{flex:none;padding:14px 20px 14px;background:var(--accent-soft);border-bottom:1px solid var(--line);max-height:38%;overflow:auto;overscroll-behavior:contain}
 .lsref{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.lsref::before{content:'';width:18px;height:1px;background:var(--accent)}
 .lsverse{margin:0;font-family:var(--serif,Georgia,serif);font-style:italic;font-size:17px;line-height:1.65;color:var(--fg);text-align:justify;text-justify:inter-word;hyphens:auto}
 .lsverse::before{content:'“';color:var(--accent);font-size:1.4em;line-height:0;margin-right:.08em}
 .lsverse::after{content:'”';color:var(--accent);font-size:1.4em;line-height:0;margin-left:.05em}
 .lsbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 20px 8px}
+.lshead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.lshead .lslabel{margin:0}
 .lslabel{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .lsbody textarea{flex:1;min-height:120px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;line-height:1.6;resize:none}
 .lsread{flex:1;min-height:120px;overflow:auto;overscroll-behavior:contain;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
@@ -770,11 +771,13 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
 
     <div class="card">
       <h4>Đổi mật khẩu quản lý</h4>
+      <p class="hint">Nhập mật khẩu hiện tại, gõ mật khẩu mới hai lần rồi bấm "Đổi mật khẩu": app tự mã hóa và lưu ngay, dùng được từ lần đăng nhập sau, không cần sửa mã nguồn hay tính mã băm. Mật khẩu được lưu riêng trên từng thiết bị.</p>
       <div class="grid2">
         <input type="password" id="pwOld" placeholder="Mật khẩu hiện tại" autocomplete="current-password">
-        <input type="password" id="pwNew" placeholder="Mật khẩu mới (từ 4 ký tự)" autocomplete="new-password">
+        <input type="password" id="pwNew" placeholder="Mật khẩu mới (từ 6 ký tự)" autocomplete="new-password">
       </div>
       <input type="password" id="pwNew2" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password">
+      <label class="chk"><input type="checkbox" id="pwShow"> Hiện mật khẩu đang gõ</label>
       <div class="log" id="pwLog"></div>
       <div class="btns">
         <button class="btn primary" id="pwChange">Đổi mật khẩu</button>
@@ -801,7 +804,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     <div class="lsgrip"></div>
     <div class="lstop"><div class="lsref" id="lsRef"></div><p class="lsverse" id="lsVerse"></p></div>
     <div class="lsbody">
-      <label class="lslabel" for="lsText" id="lsLbl">Bài học cá nhân</label>
+      <div class="lshead"><label class="lslabel" for="lsText" id="lsLbl">Bài học cá nhân</label><button type="button" class="sbtn" id="lsWord">📄 Xuất Word</button></div>
       <textarea id="lsText" placeholder="Điều Chúa dạy bạn qua đoạn này…" autocomplete="off"></textarea>
       <div class="lsread" id="lsRead" hidden></div>
       <div class="lslinks" id="lsLinks" hidden></div>
@@ -893,7 +896,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1495,7 +1498,7 @@ function openLessons(){
     <div class="lstabs"><button data-tab="notes" class="on">Ghi chú</button><button data-tab="stats">Hành trình</button></div>
     <input class="lsq" id="lsQ" type="search" placeholder="Tìm trong ghi chú (không cần gõ dấu)…" autocomplete="off">
     <div id="lsList"></div>
-    <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+    <div class="btns"><button class="btn" data-word="1">📄 Xuất Word</button><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
   const list = o.querySelector('#lsList'), inp = o.querySelector('#lsQ');
   const drawNotes = () => {
     const toks = fold(q).split(/\s+/).filter(Boolean);
@@ -1566,6 +1569,12 @@ function openLessons(){
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const tb = e.target.closest('[data-tab]'); if (tb){ tab = tb.dataset.tab; draw(); return; }
+    if (e.target.closest('[data-word]')){
+      const toks = fold(q).split(/\s+/).filter(Boolean);
+      const rows = LS.filter(b => { const hay = fold(`${b.book} ${b.ch}:${lsKey(b)} ${b.text}`).replace(/-/g, ' '); return toks.every(t => hay.includes(t)); });
+      if (!rows.length) return toast('Chưa có ghi chú để xuất');
+      exportNotesWord(rows); return;
+    }
     if (e.target.closest('[data-plan]')){ openPlan({ onClose:() => { if (o.isConnected && tab === 'stats') draw(); }, onGo:() => o.remove() }); return; }
     const ed = e.target.closest('[data-edit]'), g = e.target.closest('[data-go]');
     if (ed){ const b = LS[+ed.dataset.edit]; o.remove(); if (b) window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:b.book, ch:b.ch, ns:b.ns || [b.n], back:true } })); return; }
@@ -1632,6 +1641,82 @@ $('#lsLinks').addEventListener('click', async e => {         // chạm chip: t�
 $('#lsDel').onclick = () => {
   if (!lsCur.old || !confirm('Xóa ghi chú này?')) return;
   LS = LS.filter(x => x !== lsCur.old); saveLS(); toast('Đã xóa ghi chú'); lsClose();
+};
+
+/* Xuất ghi chú ra file Word (.docx) – tự dựng file .docx trong trình duyệt, không cần thư viện */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipStore(files){                                             // files: [{name, data:Uint8Array}] → Uint8Array (zip không nén)
+  const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
+  files.forEach(f => {
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true);
+    lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
+    loc.push(new Uint8Array(lh.buffer), nm, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true);
+    ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+    cen.push(new Uint8Array(ch.buffer), nm);
+    off += 30 + nm.length + sz;
+  });
+  const cenSize = cen.reduce((a, u) => a + u.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
+  const all = [...loc, ...cen, new Uint8Array(end.buffer)], out = new Uint8Array(all.reduce((a, u) => a + u.length, 0));
+  let p = 0; all.forEach(u => { out.set(u, p); p += u.length; });
+  return out;
+}
+const wx = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function wPara(text, o){
+  o = o || {};
+  const rpr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}<w:sz w:val="${o.sz || 26}"/><w:szCs w:val="${o.sz || 26}"/></w:rPr>`;
+  const runs = String(text).split('\n').map((ln, k) => `<w:r>${rpr}${k ? '<w:br/>' : ''}<w:t xml:space="preserve">${wx(ln)}</w:t></w:r>`).join('');
+  const ppr = `<w:pPr>${o.border ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="C9A96A"/></w:pBdr>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 320}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'left'}"/></w:pPr>`;
+  return `<w:p>${ppr}${runs}</w:p>`;
+}
+function docxFile(items, title, fname){                               // items: [{ref, quote, text, at}]
+  const when = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  let body = '';
+  if (items.length > 1) body += wPara(title, { b:true, sz:36, align:'center', after:80 }) + wPara(`${items.length} ghi chú · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:360 });
+  items.forEach((it, i) => {
+    body += wPara(it.ref, { b:true, sz:30, color:'8A5A1F', after:100, before:i ? 200 : 0 });
+    if (it.quote) body += wPara('“' + it.quote + '”', { i:true, sz:24, color:'555555', left:360, after:160 });
+    body += wPara(it.text, { sz:26, after:100, line:340 });
+    body += wPara(it.at ? 'Cập nhật ' + when(it.at) : '', { i:true, sz:20, color:'7A6E60', after:240, border:i < items.length - 1 });
+  });
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const enc = new TextEncoder();
+  const zip = zipStore([
+    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
+    { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
+    { name:'word/document.xml', data:enc.encode(doc) }
+  ]);
+  return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+async function exportNotesWord(rows){
+  try {
+    const order = new Map(bibleMeta.map((m, i) => [m.name, i])), cache = new Map(), items = [];
+    const list = [...rows].sort((a, b) => (order.has(a.book) ? order.get(a.book) : 999) - (order.has(b.book) ? order.get(b.book) : 999) || a.ch - b.ch || (a.ns || [a.n])[0] - (b.ns || [b.n])[0]);
+    for (const x of list){
+      const ns = x.ns || [x.n];
+      if (!cache.has(x.book)) cache.set(x.book, await dbGet('books', x.book));
+      const rec = cache.get(x.book), vs = (rec && rec.chapters[x.ch - 1]) || [];
+      const quote = ns.map(k => { const v = vs.find(y => y.n === k); return v ? String(v.t).replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
+      items.push({ ref:`${x.book} ${x.ch}:${lsKey(x)}`, quote, text:x.text, at:x.at });
+    }
+    const name = items.length === 1 ? 'bai-hoc-' + (fold(items[0].ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu') : 'bai-hoc-ca-nhan-' + dayKey();
+    await saveFiles([docxFile(items, 'Bài học cá nhân', name + '.docx')]);
+    toast('📄 Đã tạo file Word');
+  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
+}
+$('#lsWord').onclick = () => {
+  const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
+  const c = lsCur, name = 'bai-hoc-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu');
+  saveFiles([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(() => toast('📄 Đã tạo file Word'), e => toast('Không xuất được file Word: ' + (e.message || e)));
 };
 $('#lsShare').onclick = async () => {
   if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
@@ -2503,12 +2588,15 @@ $('#pwChange').onclick = async () => {
   const ar = await authTry(o);
   if (ar.locked) return pwSay(`Đã khóa do nhập sai nhiều lần. Thử lại sau ${Math.ceil(ar.left / 60000)} phút.`);
   if (!ar.ok) return pwSay(`Mật khẩu hiện tại không đúng. Còn ${ar.remain} lần thử.`);
-  if (n.length < 4) return pwSay('Mật khẩu mới cần ít nhất 4 ký tự.');
+  if (n.length < 6) return pwSay('Mật khẩu mới cần ít nhất 6 ký tự.');
   if (n !== n2) return pwSay('Hai lần nhập mật khẩu mới chưa khớp.');
+  if (n === o) return pwSay('Mật khẩu mới phải khác mật khẩu hiện tại.');
   try { localStorage.setItem(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
   $('#pwOld').value = $('#pwNew').value = $('#pwNew2').value = '';
-  pwSay('✔ Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.', true);
+  $('#pwShow').checked = false; ['#pwOld', '#pwNew', '#pwNew2'].forEach(i => $(i).type = 'password');
+  pwSay('✔ Đã đổi mật khẩu và áp dụng ngay. Lần đăng nhập sau hãy dùng mật khẩu mới.', true); toast('✔ Đã đổi mật khẩu quản lý');
 };
+$('#pwShow').onchange = e => ['#pwOld', '#pwNew', '#pwNew2'].forEach(i => $(i).type = e.target.checked ? 'text' : 'password');
 $('#hashMake').onclick = async () => {                       // sinh chuỗi băm để dán vào ADMIN_PASSWORD_HASH / RECOVERY_CODE_HASH trong mã nguồn
   const t = prompt('Nhập mật khẩu hoặc mã khôi phục muốn tạo mã băm:'); if (!t) return;
   const h = await hashPw(t);
