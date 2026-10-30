@@ -117,12 +117,12 @@ body.searching .top .sfield{display:flex}
 @keyframes vnflash{0%,65%{background:var(--accent);color:var(--card);box-shadow:0 0 0 2px var(--accent)}100%{background:transparent;color:var(--accent);box-shadow:0 0 0 2px transparent}}
 html[data-paper] .v.flash{background:var(--hl)!important;outline:2px solid #000;outline-offset:2px}
 html[data-paper] .v.flash .vn{background:#000;color:#f4f3ee;box-shadow:0 0 0 2px #000}
-.chapnav{display:flex;gap:10px;padding:0 14px 20px}
+.chapnav{display:block;height:34px;padding:0;pointer-events:none}
 .btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;font-weight:600}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 [data-theme=dark] .btn.primary{color:#1a1409}
 .btn.danger{color:var(--danger)}
-.chapnav .btn{flex:1}
+.chapnav .btn{display:none!important}   /* đã gỡ nút Trước/Sau: chuyển chương bằng cách vuốt ngang hoặc phím ← →; khối này chỉ còn là khoảng trống cuối chương */
 .btn:disabled{opacity:.4}
 
 /* ===== Kiểu sách in ===== */
@@ -901,7 +901,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.31-L';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-M';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
