@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-F';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-G';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -936,7 +936,7 @@ function choose(title, msg, opts){
 }
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
-const PAPER_PAGED = false;   // false: chế độ Trang giấy cuộn dọc + lật chương như trang chủ (chỉ đổi giao diện đen trắng). true: chia trang ngang như bản cũ
+const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
 const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
@@ -3991,11 +3991,12 @@ async function pgNbrHTML(d){
   return paperHTML(name, ch, verses, S.view, 'x');
 }
 function pgApply(sg, prog){
-  const t = sg.dir > 0 ? prog : 1 - prog, a = 100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
-  sg.leaf.style.transform = 'perspective(' + sg.persp + 'px) rotateY(' + a + 'deg)';
+  const t = sg.dir > 0 ? prog : 1 - prog, a = 100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180, c = Math.cos(r);
+  sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + Math.max(c, 0.001) + ')';   // co ngang quanh gáy sách, không phối cảnh: mép trên/dưới đứng yên
+  sg.leaf.style.visibility = a >= 90 ? 'hidden' : '';
   sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
   sg.cast.style.opacity = String((1 - t) * 0.4);
-  const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp + sg.W * Math.sin(r));
+  const edge = sg.W * c;
   sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
   sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
 }
@@ -4013,7 +4014,7 @@ function pgStage(dir, nbNode, shadow){
   leaf.appendChild(shade); shade.style.position = 'absolute'; shade.style.inset = '0';
   document.body.append(cast, strip);
   const sg = { leaf, cast, strip, shade, W, persp, dir, cleanup(){
-    real.style.transform = real.style.transformOrigin = real.style.backfaceVisibility = real.style.webkitBackfaceVisibility = real.style.zIndex = real.style.willChange = '';
+    real.style.transform = real.style.transformOrigin = real.style.backfaceVisibility = real.style.webkitBackfaceVisibility = real.style.zIndex = real.style.willChange = real.style.visibility = '';
     shade.remove(); cast.remove(); strip.remove();
     if (shadow){                                                  // bản sao dùng chung cho cả chương: chỉ ẩn đi, không dựng lại
       ['zIndex', 'transform', 'transformOrigin', 'willChange', 'backfaceVisibility', 'webkitBackfaceVisibility'].forEach(k => { nbNode.style[k] = ''; });
