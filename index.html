@@ -1392,6 +1392,40 @@ let BM = [];
 try { BM = JSON.parse(localStorage.getItem(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
 const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); } catch(e){} };
 
+/* =========================================================
+ *  ĐỌC TIẾP NỐI (kt.resume): chỗ đọc dở của lịch đọc.
+ *  - Người dùng tự đặt: chạm giữ một câu → “📌 Đọc tiếp từ đây”, hoặc nút trong 🔖.
+ *  - Mở app luôn về đúng chỗ này, dù trước đó đã tìm kiếm / đọc chỗ khác.
+ *  - Tìm kiếm, nhảy sách/chương khác KHÔNG làm đổi chỗ đọc tiếp nối.
+ *  - Chỉ khi đọc liền sang chương kế tiếp (ở lại ≥ 8 giây) thì chỗ này tự dời theo.
+ * ========================================================= */
+const RS_KEY = 'kt.resume';
+let RESUME = null;
+try { RESUME = JSON.parse(localStorage.getItem(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
+if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null;
+const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stringify(RESUME)) : localStorage.removeItem(RS_KEY); } catch(e){} };
+function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); }
+function resumeNext(book, ch){                                   // chương kế tiếp theo thứ tự sách (qua cả sách sau)
+  const i = bibleMeta.findIndex(m => m.name === book); if (i < 0) return null;
+  if (ch < (bibleMeta[i].chapterCount || 0)) return { book, ch:ch + 1 };
+  const nb = bibleMeta[i + 1]; return nb ? { book:nb.name, ch:1 } : null;
+}
+function resumeAdvance(book, ch){                                // đọc liền chương kế tiếp → chỗ đọc tiếp nối dời theo
+  if (!RESUME) return;
+  const nx = resumeNext(RESUME.book, RESUME.ch);
+  if (nx && nx.book === book && nx.ch === ch){ RESUME = { book, ch, n:0, at:Date.now() }; saveResume(); }
+}
+async function restoreResume(){                                  // gọi một lần khi mở app
+  if (RESUME && bibleMeta.some(m => m.name === RESUME.book)){
+    const r = RESUME;
+    await openBook(r.book, r.ch);
+    if (r.n > 1) setTimeout(() => scrollToVerse(r.n), 80);
+    setTimeout(() => toast(`📌 Nối tiếp: ${r.book} ${S.chapter}${r.n > 1 ? ':' + r.n : ''}`), 400);
+    return;
+  }
+  await restoreBookmark();
+}
+
 function markBookmarks(){
   if (window.ktFlipDirty) window.ktFlipDirty();
   $$('#bibleText .v.bm').forEach(e => e.classList.remove('bm'));
@@ -1433,15 +1467,21 @@ function openMarks(){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
   const draw = () => {
     o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
-      <p class="bmhint">Chạm giữ một câu trong khi đọc để đánh dấu. Mở lại app sẽ tự về vị trí gần nhất.</p>
-      ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}${i === 0 ? '<span class="bmlast">Đang đọc dở</span>' : ''}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
+      ${RESUME ? `<div class="bmitem" style="background:var(--accent-soft);border:0;border-radius:12px;margin:0 0 12px;padding:2px 6px"><button class="bmmain" data-resume="1"><b>📌 Đọc tiếp nối</b><span class="bmt">${esc(RESUME.book)} ${RESUME.ch}${RESUME.n > 1 ? ':' + RESUME.n : ''}</span><small>Mở app luôn nối tiếp từ đây · chạm để đi tới</small></button><button class="iconbtn" data-rsdel="1" aria-label="Tắt đọc tiếp nối" title="Tắt đọc tiếp nối"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ''}
+      <p class="bmhint">${RESUME ? 'Chạm giữ một câu để đánh dấu. Mở app luôn về chỗ đọc tiếp nối ở trên, dù bạn có tìm kiếm chỗ khác.' : 'Chạm giữ một câu trong khi đọc để đánh dấu. Chọn “📌 Đọc tiếp từ đây” để lần sau mở app luôn nối tiếp đúng chỗ đó.'}</p>
+      ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}${i === 0 && !RESUME ? '<span class="bmlast">Đang đọc dở</span>' : ''}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
         : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
+      ${curBook ? '<button class="btn" data-rsset="1" style="width:100%;margin-top:12px">📌 Đọc tiếp từ chương đang xem</button>' : ''}
       <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
   };
   draw();
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const g = e.target.closest('[data-go]'), d = e.target.closest('[data-del]');
+    const rg = e.target.closest('[data-resume]'), rd = e.target.closest('[data-rsdel]'), rs = e.target.closest('[data-rsset]');
+    if (rd){ RESUME = null; saveResume(); draw(); toast('Đã tắt đọc tiếp nối'); return; }
+    if (rs){ if (curBook){ setResume(curBook.name, S.chapter, 0); draw(); toast(`📌 Lần sau mở app sẽ nối tiếp từ ${curBook.name} ${S.chapter}`); } return; }
+    if (rg){ const r = RESUME; o.remove(); if (r) await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); return; }
     if (d){ BM.splice(+d.dataset.del, 1); saveBM(); markBookmarks(); draw(); return; }
     if (e.target.closest('[data-clear]')){ if (confirm('Xóa toàn bộ vị trí đã đánh dấu?')){ BM = []; saveBM(); markBookmarks(); draw(); } return; }
     if (g){ const b = BM[+g.dataset.go]; o.remove(); if (b) await goBookmark(b); }
@@ -1468,6 +1508,7 @@ let rdTimer;
       if (!curBook || S.book !== b || S.chapter !== c || document.hidden) return;
       const k = dayKey(), id = b + '|' + c, a = RD[k] || (RD[k] = []);
       if (!a.includes(id)){ a.push(id); try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){} }
+      try { resumeAdvance(b, c); } catch(e){}
     }, 8000);
   }; }
 const streakOf = set => { let n = 0, d = new Date(); if (!set.has(dayKey(d))) d.setDate(d.getDate() - 1); while (set.has(dayKey(d))){ n++; d.setDate(d.getDate() - 1); } return n; };
@@ -1727,6 +1768,7 @@ function showVerseMenu(n, x, y){
   const m = document.createElement('div'); m.className = 'vmenu';
   m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
     <button data-a="mark">🔖 Đã đọc đến đây</button>
+    <button data-a="resume">📌 Đọc tiếp từ đây</button>
     <button data-a="copy">📋 Sao chép câu này</button>
     <button data-a="img">🖼️ Chia sẻ thành ảnh</button>
     <button data-a="multi">☑️ Chọn nhiều câu</button>
@@ -1746,6 +1788,7 @@ function showVerseMenu(n, x, y){
     if (!b) return;
     const a = b.dataset.a;
     if (a === 'mark') addBookmark(n);
+    else if (a === 'resume'){ setResume(curBook.name, S.chapter, n); try { navigator.vibrate && navigator.vibrate(25); } catch(e){} toast(`📌 Lần sau mở app sẽ nối tiếp từ ${curBook.name} ${S.chapter}:${n}`); }
     else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
     else if (a === 'img') verseImage([n]);
     else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns:[n] } }));
@@ -3226,6 +3269,7 @@ async function edRenameBook(){
     await dbPut('bookMeta', [Object.assign({}, meta, { name:nn })]); await dbDel('bookMeta', old);
     if (S.book === old){ S.book = nn; saveS(); }
     BM.forEach(b => { if (b.book === old) b.book = nn; }); saveBM();
+    if (RESUME && RESUME.book === old){ RESUME.book = nn; saveResume(); }
     try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${old}|`)).forEach(k => { localStorage.setItem(k.replace(`kt.draft.${old}|`, `kt.draft.${nn}|`), localStorage.getItem(k)); localStorage.removeItem(k); }); } catch(e){}
     ed.Book.value = nn;
     await initBible(); await refreshStats(); markDirty(); edBookList(); await edLoad();
@@ -4106,7 +4150,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, resume:RESUME };
 }
 function dtDownload(name){
   const blob = new Blob([JSON.stringify(dtPayload(), null, 2)], { type:'application/json' });
@@ -4143,6 +4187,7 @@ async function dtImport(file){
   if (i !== 0 && i !== 1) return;
   if (i === 1){ RD = {}; LS = []; BM = []; }
   if (planOK(j.plan) && (i === 1 || !PLAN)){ PLAN = planNorm(j.plan); savePlan(); }
+  if (j.resume && j.resume.book && j.resume.ch >= 1 && (i === 1 || !RESUME)){ RESUME = { book:String(j.resume.book), ch:+j.resume.ch, n:+j.resume.n || 0, at:+j.resume.at || Date.now() }; saveResume(); }
   days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
   const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -4448,7 +4493,7 @@ planSum();
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreBookmark(); }
+  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreResume(); }
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
