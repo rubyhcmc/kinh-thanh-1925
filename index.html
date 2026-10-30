@@ -25,6 +25,7 @@
 /* Chế độ Trang giấy: đen trắng tương phản cao, không màu, không hiệu ứng */
 html[data-paper]{--bg:#f4f3ee; --card:#fbfaf6; --fg:#000; --muted:#3d3d3a; --accent:#000; --accent-soft:#e6e5df; --line:#b9b8b1; --hl:#d6d5ce; --danger:#000}
 html[data-paper] *{transition:none!important;animation:none!important;box-shadow:none!important;text-shadow:none!important}
+html.fw .reader{visibility:hidden}
 html[data-paper] .fnm{color:#000;text-decoration:underline;text-underline-offset:.18em}
 html[data-paper] .reader{-webkit-font-smoothing:antialiased;font-weight:500}
 html[data-paper] .iconbtn.on{background:#000;color:#f4f3ee;border-radius:8px}
@@ -900,7 +901,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-G';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-H';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -965,15 +966,22 @@ const FONTS = {
   'Roboto':       { q:'Roboto:ital,wght@0,400;0,500;0,700;1,400',       s:'"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' },
   'Open Sans':    { q:'Open+Sans:ital,wght@0,400;0,600;0,700;1,400',    s:'"Open Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' }
 };
-function loadFont(name){
-  const f = FONTS[name]; if (!f || document.getElementById('gf-' + name)) return;
+const fontP = {};
+function loadFont(name){                                  // trả về Promise: xong khi stylesheet VÀ file font đã tải
+  const f = FONTS[name]; if (!f) return Promise.resolve();
+  if (fontP[name]) return fontP[name];
   const l = document.createElement('link'); l.id = 'gf-' + name; l.rel = 'stylesheet';
   l.href = 'https://fonts.googleapis.com/css2?family=' + f.q + '&display=swap';
+  fontP[name] = new Promise(res => { l.onload = res; l.onerror = res; })
+    .then(() => Promise.all([document.fonts.load('400 20px "' + name + '"'), document.fonts.load('700 20px "' + name + '"')])).catch(() => {});
   document.head.appendChild(l);
+  return fontP[name];
 }
 function applyFont(){
   if (!FONTS[S.font]) S.font = 'Lora';
-  loadFont(S.font);
+  /* Chữ chỉ hiện khi font đã sẵn sàng (tối đa 1,5 giây): không còn cảnh số chương to / chữ nháy đổi kiểu khi mở lại app */
+  const de = document.documentElement; de.classList.add('fw');
+  Promise.race([loadFont(S.font), new Promise(r => setTimeout(r, 1500))]).then(() => { de.classList.remove('fw'); try { pgRefresh(); } catch(e){} });
   const st = document.documentElement.style;
   st.setProperty('--serif', FONTS[S.font].s); st.setProperty('--sans', FONTS[S.font].s);
   $('#fontSel').value = S.font;
