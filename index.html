@@ -1522,7 +1522,7 @@ function openLessons(){
       : `<div class="empty" style="padding:28px 10px"><b>${LS.length ? 'Không tìm thấy ghi chú nào' : 'Chưa có bài học nào'}</b>${LS.length ? 'Thử từ khóa khác.' : 'Chạm vào câu (hoặc nhiều câu) rồi nhấn giữ để viết.'}</div>`);
   };
   let hjTok = 0;
-  const HJQ = ['Mỗi ngày một chút, Lời Chúa ở lại trong bạn.', 'Đọc chậm lại, để Lời thấm vào lòng.', 'Một trang hôm nay, một niềm vui lâu bền.', 'Bình an bắt đầu từ một câu Kinh Thánh.', 'Hãy để Lời Chúa là tiếng đầu tiên trong ngày.', 'Kiên trì từng ngày, bạn đang đi rất xa.'];
+  const HJQ = ['Mỗi ngày một chút, Lời CHÚA ở lại trong bạn.', 'Đọc chậm lại, để Lời thấm vào lòng.', 'Một trang hôm nay, một niềm vui lâu bền.', 'Bình an bắt đầu từ một câu Kinh Thánh.', 'Hãy để Lời CHÚA là tiếng đầu tiên trong ngày.', 'Kiên trì từng ngày, bạn đang đi rất xa.'];
   const drawStats = async () => {
     const tok = ++hjTok;
     const today = dayKey(), ids = RD[today] || [];
@@ -1562,7 +1562,7 @@ function openLessons(){
       <p class="hjq">${esc(quote)}</p>
       ${PLAN ? `<section class="hjs"><h4>Hôm nay</h4>
         <div class="hjbig"><span><b>${ids.length}</b> chương</span><i></i><span><b>${verses}</b> câu</span></div>
-        <small>${ids.length ? 'Bạn đã dành thời gian bên Lời Chúa hôm nay.' : 'Mở một chương và ở lại vài giây để bắt đầu.'}</small></section>
+        <small>${ids.length ? 'Bạn đã dành thời gian bên Lời CHÚA hôm nay.' : 'Mở một chương và ở lại vài giây để bắt đầu.'}</small></section>
       <section class="hjs"><h4>Chuỗi ngày</h4>
         <div class="hjbig"><span><b>${streak}</b> ngày liên tiếp</span></div>
         <small>${streak ? (readDays.has(today) ? 'Tuyệt vời, hôm nay bạn đã giữ được chuỗi.' : 'Đọc hôm nay để tiếp nối chuỗi của bạn.') : 'Đọc hôm nay để bắt đầu một chuỗi mới.'}</small></section>
@@ -4338,7 +4338,7 @@ async function ctRender(box){
   const draw = (n, from) => {
     box.innerHTML = `<div class="ctcard"><div class="ctn"><div class="ctlab">Lượt truy cập</div><b>${n ? n.toLocaleString('vi-VN') : '—'}</b></div>`
       + `<hr class="ctrule"><p class="cthi">Rất vui vì bạn ở đây!</p>`
-      + `<p class="ctmsg">Mỗi ngày một chút, chúng ta cùng nhau lớn lên trong Lời Chúa.</p></div>`;
+      + `<p class="ctmsg">Mỗi ngày một chút, chúng ta cùng nhau lớn lên trong Lời CHÚA.</p></div>`;
     const el = box.querySelector('.ctn b');
     if (el && n && !reduce && from != null && from < n){                // số tăng nhẹ lên giá trị mới
       const t0 = performance.now();
