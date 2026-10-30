@@ -901,7 +901,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.31-K';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-L';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1422,7 +1422,7 @@ const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); }
  *  - Người dùng tự đặt: chạm giữ một câu → “📌 Đọc tiếp từ đây”, hoặc nút trong 🔖.
  *  - Mở app luôn về đúng chỗ này, dù trước đó đã tìm kiếm / đọc chỗ khác.
  *  - Tìm kiếm, nhảy sách/chương khác KHÔNG làm đổi chỗ đọc tiếp nối.
- *  - Chỉ khi đọc liền sang chương kế tiếp (ở lại ≥ 8 giây) thì chỗ này tự dời theo.
+ *  - Chỉ khi đọc XONG chương đang là chỗ nối tiếp (đủ thời gian tập trung + tới cuối chương) thì chỗ này tự dời sang chương kế.
  * ========================================================= */
 const RS_KEY = 'kt.resume';
 let RESUME = null;
@@ -1432,7 +1432,7 @@ const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stri
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
-   - Đọc ở lại một chương ≥ 8 giây mà chưa có chỗ đọc tiếp nối → tự tạo.
+   - Đọc XONG một chương (xem bộ đếm “ĐẾM CHƯƠNG ĐÃ ĐỌC”) mà chưa có chỗ đọc tiếp nối → tự tạo ở chương kế tiếp.
    - Đang ở đúng chương nối tiếp: câu đang đọc được cập nhật theo khi cuộn / lật trang (sau ~1,5 giây dừng tay, và khi thoát app).
    - Tìm kiếm, nhảy sang sách/chương khác chỉ để xem: KHÔNG làm đổi chỗ đọc tiếp nối. */
 const RS_OFF = 'kt.resumeOff';
@@ -1451,10 +1451,6 @@ function rsTrackNow(){
   RESUME.n = n; RESUME.at = Date.now(); saveResume();
 }
 const rsTrack = () => { clearTimeout(rsT); rsT = setTimeout(rsTrackNow, 1500); };
-function rsAuto(book, ch){
-  if (!PLAN || RESUME || rsIsOff()) return;
-  setResume(book, ch, parseInt(curVerseNo(), 10) || 0);
-}
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') rsTrackNow(); });
 addEventListener('pagehide', rsTrackNow);
 function resumeNext(book, ch){                                   // chương kế tiếp theo thứ tự sách (qua cả sách sau)
@@ -1462,10 +1458,11 @@ function resumeNext(book, ch){                                   // chương k�
   if (ch < (bibleMeta[i].chapterCount || 0)) return { book, ch:ch + 1 };
   const nb = bibleMeta[i + 1]; return nb ? { book:nb.name, ch:1 } : null;
 }
-function resumeAdvance(book, ch){                                // đọc liền chương kế tiếp → chỗ đọc tiếp nối dời theo
-  if (!RESUME) return;
-  const nx = resumeNext(RESUME.book, RESUME.ch);
-  if (nx && nx.book === book && nx.ch === ch){ RESUME = { book, ch, n:0, at:Date.now() }; saveResume(); }
+function resumeAdvance(book, ch){                                // đọc XONG chương đang là chỗ đọc tiếp nối → dời sang chương kế tiếp
+  const nx = resumeNext(book, ch);
+  if (RESUME){
+    if (RESUME.book === book && RESUME.ch === ch){ if (nx){ RESUME = { book:nx.book, ch:nx.ch, n:0, at:Date.now() }; saveResume(); } }
+  } else if (PLAN && !rsIsOff() && nx) setResume(nx.book, nx.ch, 0);   // đã chọn kế hoạch mà chưa có chỗ nối tiếp → bắt đầu từ chương kế sau chương vừa đọc xong
 }
 async function restoreResume(){                                  // gọi một lần khi mở app
   if (RESUME && bibleMeta.some(m => m.name === RESUME.book)){
@@ -1553,19 +1550,53 @@ lsBadge();
 /* Hành trình đọc: ghi lại chương đã đọc mỗi ngày (kt.reads) */
 let RD = {}; try { RD = JSON.parse(localStorage.getItem('kt.reads') || '{}'); } catch(e){}
 const dayKey = (t = Date.now()) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-let rdTimer;
+/* ĐẾM CHƯƠNG ĐÃ ĐỌC — chỉ tính khi đọc xong CHÍNH THỨC chương đó. Một chương được tính khi đủ cả ba điều kiện:
+   1) Đã đọc tới cuối chương (cuộn tới câu cuối; chế độ Trang giấy: tới trang cuối).
+   2) Thời gian đọc TẬP TRUNG đủ lâu so với độ dài chương (≈ tối đa 60 ký tự/giây, tối thiểu 12 giây).
+      Chỉ đếm giờ khi: app đang mở và hiển thị, đang ở màn hình đọc (không tìm kiếm / hộp thoại / cài đặt / Hành trình),
+      không đang lật trang, và có thao tác (chạm, cuộn, lật) trong 60 giây gần nhất.
+   3) Vẫn đang ở đúng chương đó. Lật qua nhanh, nhảy chương, mở app lại, tra cứu… đều không được tính.
+   Chương đã đọc xong cũng là lúc “Đọc tiếp nối” dời sang chương kế tiếp. */
+const RD_MIN_SEC = 12, RD_CPS = 60, RD_IDLE_MS = 60000;
+const rdSt = { key:'', secs:0, need:RD_MIN_SEC, done:false };
+let rdAct = Date.now();
+['touchstart', 'touchmove', 'pointerdown', 'keydown', 'wheel'].forEach(ev => addEventListener(ev, () => { rdAct = Date.now(); }, { passive:true, capture:true }));
+SCR.addEventListener('scroll', () => { rdAct = Date.now(); }, { passive:true });
+function rdNeed(verses){ const chars = (verses || []).reduce((n, v) => n + String(v.t || '').length, 0); return Math.max(RD_MIN_SEC, Math.min(300, Math.round(chars / RD_CPS))); }
+function rdReachedEnd(){
+  if (document.body.classList.contains('pg')){ return !!(pg && pg.pages > 0 && pg.page >= pg.pages - 1); }
+  const vs = $$('#bibleText .v'); if (!vs.length) return false;
+  const last = vs[vs.length - 1].getBoundingClientRect(), mb = SCR.getBoundingClientRect().bottom;
+  return last.bottom <= mb + 40;                                    // câu cuối đã hiện ra trong khung đọc
+}
+function rdEngaged(){
+  if (document.hidden || document.visibilityState === 'hidden') return false;
+  if (document.body.classList.contains('searching') || document.documentElement.dataset.flipping) return false;
+  if (document.querySelector('.overlay:not([hidden]), .lssheet.open')) return false;
+  if (['#editor', '#admin', '#settings', '#login'].some(q => { const e = $(q); return e && !e.hidden; })) return false;
+  if (typeof pg !== 'undefined' && pg && pg.busy) return false;
+  return Date.now() - rdAct <= RD_IDLE_MS;
+}
+function chapterCompleted(b, c){                                    // đọc xong chính thức → ghi vào Hành trình + dời “Đọc tiếp nối”
+  const k = dayKey(), id = b + '|' + c, a = RD[k] || (RD[k] = []);
+  if (!a.includes(id)){ a.push(id); try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){} }
+  try { resumeAdvance(b, c); } catch(e){}
+}
 { const _rcRead = renderChapter;
   renderChapter = function(){
-    _rcRead.apply(this, arguments); clearTimeout(rdTimer);
-    const b = S.book, c = S.chapter;
-    rdTimer = setTimeout(() => {                                    // đọc ở lại ≥ 8 giây mới tính là đã đọc
-      if (!curBook || S.book !== b || S.chapter !== c || document.hidden) return;
-      const k = dayKey(), id = b + '|' + c, a = RD[k] || (RD[k] = []);
-      if (!a.includes(id)){ a.push(id); try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){} }
-      try { resumeAdvance(b, c); } catch(e){}
-      try { rsAuto(b, c); } catch(e){}
-    }, 8000);
+    _rcRead.apply(this, arguments);
+    if (!curBook) return;
+    const key = curBook.name + '|' + S.chapter;
+    if (rdSt.key !== key){                                          // sang chương khác → đếm lại từ đầu
+      rdSt.key = key; rdSt.secs = 0; rdSt.done = false; rdSt.need = rdNeed(curBook.chapters[S.chapter - 1]);
+    }
   }; }
+setInterval(() => {
+  if (!curBook || rdSt.done || rdSt.key !== curBook.name + '|' + S.chapter) return;
+  if (!rdEngaged()) return;
+  rdSt.secs++;
+  if (rdSt.secs >= rdSt.need && rdReachedEnd()){ rdSt.done = true; chapterCompleted(curBook.name, S.chapter); }
+}, 1000);
 const streakOf = set => { let n = 0, d = new Date(); if (!set.has(dayKey(d))) d.setDate(d.getDate() - 1); while (set.has(dayKey(d))){ n++; d.setDate(d.getDate() - 1); } return n; };
 
 /* Tự liên kết câu Kinh Thánh trong ghi chú: "Mat 5:3", "1 Cô-rinh-tô 13:4-7", "Ma-thi-ơ 5:3; 7:12" … */
