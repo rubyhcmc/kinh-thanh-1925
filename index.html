@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2783,7 +2783,7 @@ function detectVerses(raw, o){
   const defs = [];                                   // dòng chú thích cuối: "[1] Ê-va, nghĩa là sự sống."
   { const L = t.split('\n'), keep = [];                       // chú thích có thể dài nhiều dòng: nối các dòng sau nếu là câu trích (có địa chỉ Kinh Thánh) hoặc dấu nháy chưa đóng
     for (let i = 0; i < L.length; i++){
-      const m = L[i].match(/^[ \t]*\[(\d{1,3})\][ \t]+(\S.*)$/);
+      const m = L[i].match(/^[ \t]*\[(\d{1,3})\][ \t:.)\-–]*(\S.*)$/);
       if (!m){ keep.push(L[i]); continue; }
       let txt = m[2].trim(), j = i + 1;
       for (;;){
@@ -2878,7 +2878,7 @@ function parseMarkup(text, startAt){
     if (m){ lastFn = null; pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
     m = line.match(/^(>{1,2})\s*(.*)$/);
     const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
-    const fm = !lvl && body.match(/^\[(\d{1,3})\]\s+(\S.*)$/);          // "[1] chú thích" → gắn vào câu liền trước
+    const fm = !lvl && body.match(/^\[(\d{1,3})\][\s:.)\-–]*(\S.*)$/);      // chấp nhận cả "[1]Nội dung", "[1]: Nội dung"          // "[1] chú thích" → gắn vào câu liền trước
     if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
     const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
     const nn = nm ? +(nm[1] || nm[2]) : 0;
