@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-A';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-B';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1547,7 +1547,7 @@ function openLessons(){
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
     let planBox;
     { const pl = PLAN && planDef(PLAN);
-      if (!pl) planBox = `<div class="hjbig"><span>Chưa chọn kế hoạch</span></div><small>Hãy chọn một kế hoạch đọc để xem thống kê chi tiết: số chương và câu hôm nay, chuỗi ngày, cột mốc. Có các lộ trình 1 năm, 2 năm, 6 tháng hoặc tự thiết kế riêng.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
+      if (!pl) planBox = `<div class="hjbig"><span>Chưa có kế hoạch</span></div><small>Chọn một kế hoạch để theo dõi chương đã đọc, chuỗi ngày và cột mốc.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
       else {
         const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
@@ -1556,7 +1556,7 @@ function openLessons(){
           + `<small>${t.over || t.none ? '' : (!t.items.length ? '' : 'Hôm nay đọc: ' + esc(plRanges(t.items)) + (dn === t.items.length ? ' ✔' : ` (${dn}/${t.items.length} chương)`))}</small>`
           + `<button class="btn primary hjplanbtn" data-plan="1">Mở kế hoạch</button>`;
       } }
-    const quote = 'Hôm nay Bạn đã đọc Lời CHÚA chưa?';
+    const quote = 'Hôm nay bạn đã đọc Lời CHÚA chưa?';
     const doneAll = times > 0 && lastDone === today;
     list.innerHTML = `<div class="hj">
       <p class="hjq">${esc(quote)}</p>
