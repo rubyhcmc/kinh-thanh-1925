@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-A';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2791,7 +2791,7 @@ function detectVerses(raw, o){
         if (k >= L.length) break;
         const ln = L[k].trim();
         if (/^\[\d{1,3}\]/.test(ln) || /^#/.test(ln)) break;
-        if (FN_REF.test(ln) || (k === j && quoteOpen(txt) && !/^(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s)/.test(ln))){ txt += '\n' + ln; j = k + 1; } else break;
+        if (FN_REF.test(ln) || !/^(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s)/.test(ln)){ txt += '\n' + ln; j = k + 1; } else break;
       }
       defs.push({ k:m[1], t:`[${m[1]}] ${txt}` }); i = j - 1;
     }
@@ -2867,13 +2867,12 @@ function serializeVerses(vs){
 }
 // Văn bản soạn thảo → câu
 function parseMarkup(text, startAt){
-  const vs = []; let pendH = null, pendP = false, lastFn = null, fnGap = false;     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
+  const vs = []; let pendH = null, pendP = false, lastFn = null;     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
   const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
   for (let li = 0; li < lines.length; li++){
     const line = lines[li].trim();
-    if (!line){ pendP = true; if (lastFn) fnGap = true; continue; }
-    if (lastFn){ if (fnGap && !FN_REF.test(line.replace(/^>{1,2}\s*/, ''))) lastFn = null; fnGap = false; }      // sau dòng trống chỉ nối tiếp nếu dòng kế là một câu trích có địa chỉ
+    if (!line){ pendP = true; continue; }                              // dòng trống không làm đứt chú thích dài
     let m = line.match(/^#\s+(.+)$/);
     if (m){ lastFn = null; pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
     m = line.match(/^(>{1,2})\s*(.*)$/);
@@ -2882,7 +2881,8 @@ function parseMarkup(text, startAt){
     if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
     const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
     const nn = nm ? +(nm[1] || nm[2]) : 0;
-    if (lastFn && !lvl && (FN_REF.test(body) || !(nm && accept(nn)))){ lastFn.v.fn[lastFn.i] += '\n' + body; continue; }   // dòng tiếp theo của chú thích dài: nối vào chú thích, không để rơi vào câu
+    const lastN = vs.length ? vs[vs.length - 1].n : 0, nextVerse = !!nm && nn > lastN && nn - lastN <= 2 && !FN_REF.test(body);
+    if (lastFn && !lvl && !nextVerse){ lastFn.v.fn[lastFn.i] += '\n' + body; continue; }   // chú thích dài: mọi dòng sau (kể cả cách dòng trống, dài bao nhiêu cũng được) đều nối vào chú thích cho tới khi gặp câu kế tiếp, tiêu đề # hoặc dòng thơ >
     lastFn = null;
     if (nm && accept(nn)){
       const v = { n:nn, t:(nm[3] || '').trim() };
