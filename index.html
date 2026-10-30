@@ -895,7 +895,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3383,7 +3383,9 @@ function makeLayout(){
   L.flow = (runs, o) => {
     const size = o.size || 10.5, lh = o.lh || size * 1.55, x0 = o.x == null ? PG.L : o.x, w = o.w == null ? PG.W - PG.R - x0 : o.w;
     const bst = o.st || 'n', toks = pdfTokens(runs, size, bst, o.color), sp = pdfW(' ', size, bst);
-    const first = o.first || 0, hang = o.hang || 0, avail = i => w - (i === 0 ? first : hang);
+    const first = o.first || 0, hang = o.hang || 0, dc = o.dc || null, dcl = dc ? dc.lines : 0, dcw = dc ? pdfW(dc.s, dc.sz, 'b') + 4 : 0;
+    const avail = i => w - (i === 0 ? first : hang) - (i < dcl ? dcw : 0);
+    if (dc) L.ensure(lh * dcl + 2);
     const lines = []; let cur = [], lw = 0;
     for (const t of toks){
       const add = (cur.length && t.sp ? sp : 0) + t.w + t.gap;
@@ -3394,7 +3396,8 @@ function makeLayout(){
     lines.forEach((ln, i) => {
       if (y + lh > PG.H - PG.B) L.newPage();
       const base = y + size, av = avail(i);
-      let x = x0 + (i === 0 ? first : hang), extra = 0;
+      let x = x0 + (i === 0 ? first : hang) + (i < dcl ? dcw : 0), extra = 0;
+      if (dc && i === 0) ops.push({ s:dc.s, x:x0, y:base + (dcl - 1) * lh, f:pdfFont(dc.sz, 'b'), c:'#8a5a1f' });
       const gaps = ln.cur.filter((t, k) => k > 0 && t.sp).length;
       if (o.align === 'center') x = x0 + (w - ln.lw) / 2;
       else if (o.justify && i < lines.length - 1 && gaps) extra = Math.max(0, (av - ln.lw) / gaps);
@@ -3433,10 +3436,6 @@ function layoutBook(book){
   L.gap(8);
   L.flow([{ s:book.name, k:'n' }], { size:26, lh:32, align:'center', st:'b' });
   L.gap(10);
-  L.flow([{ s:`${done.length} chương · ${nv} câu`, k:'n' }], { size:10, lh:15, align:'center', color:'#6b6150', st:'i' });
-  L.setY(PG.H - 130);
-  L.flow([{ s:'Xuất ngày ' + new Date().toLocaleDateString('vi-VN') + '. Tệp PDF này có kèm sẵn dữ liệu để khôi phục: mở ứng dụng → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn tệp này.', k:'n' }],
-    { size:7.5, lh:11, align:'center', color:'#7a6e60', st:'i' });
   // Nội dung
   let first = true;
   book.chapters.forEach((vs, ci) => {
@@ -3446,10 +3445,10 @@ function layoutBook(book){
     L.ensure(70);
     L.marks.push({ title:`${book.name} ${ci + 1}`, page:L.pages.length - 1 });
     L.flow([{ s:book.name.toUpperCase(), k:'n' }], { size:12.5, lh:17, align:'center', st:'b' });
-    L.flow([{ s:'CHƯƠNG ' + (ci + 1), k:'n' }], { size:8, lh:12, align:'center', color:'#7a6e60' });
     L.gap(10);
-    let para = null, wasPoem = false;
-    const flush = () => { if (para && para.length){ L.flow(para, { size:SZ, lh:LH, justify:true }); L.gap(5); } para = null; };
+    let para = null, wasPoem = false, dcNext = vs[0] && vs[0].n === 1;       // số chương lớn đứng trước câu 1
+    const dcPara = () => { if (!dcNext) return null; dcNext = false; return { s:String(ci + 1), sz:SZ * 3.1, lines:2 }; };
+    const flush = () => { if (para && para.length){ L.flow(para, { size:SZ, lh:LH, justify:true, dc:para.dc || null }); L.gap(5); } para = null; };
     vs.forEach(v => {
       const poem = Array.isArray(v.q) && v.q.length;
       if (v.h){ flush(); pdfHeading(L, v.h); wasPoem = false; }
@@ -3458,12 +3457,12 @@ function layoutBook(book){
         String(v.t).split('\n').forEach((ln, k) => {
           const runs = []; if (k === 0) runs.push({ s:String(v.n), k:'vn' });
           runs.push(...pdfRuns(ln));
-          L.flow(runs, { size:SZ, lh:LH, x:PG.L + ((v.q[k] || 1) - 1) * 16, hang:12 });
+          L.flow(runs, { size:SZ, lh:LH, x:PG.L + ((v.q[k] || 1) - 1) * 16, hang:12, dc:k === 0 && dcNext ? (dcNext = false, { s:String(ci + 1), sz:SZ * 2.2, lines:1 }) : null });
         });
         L.gap(1.5); wasPoem = true;
       } else {
         if (wasPoem){ L.gap(6); wasPoem = false; }
-        if (!para || v.p){ flush(); para = []; }
+        if (!para || v.p){ flush(); para = []; para.dc = dcPara(); }
         para.push({ s:String(v.n), k:'vn' }, ...pdfRuns(v.t));
       }
     });
