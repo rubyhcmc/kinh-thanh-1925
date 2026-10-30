@@ -1547,7 +1547,7 @@ function openLessons(){
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
     let planBox;
     { const pl = PLAN && planDef(PLAN);
-      if (!pl) planBox = `<div style="margin:14px auto 0;max-width:300px;font:700 19px/1.55 var(--serif);letter-spacing:.01em;color:var(--accent);text-align:center;text-wrap:balance">Bắt đầu kế hoạch đọc<br>để lưu dấu hành trình theo CHÚA!</div><hr style="width:56px;height:1px;border:0;margin:16px auto 2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7"><button class="btn primary hjplanbtn" style="max-width:260px;margin-top:16px;padding:12px 16px;font-size:16px" data-plan="1">Chọn kế hoạch</button>`;
+      if (!pl) planBox = `<div style="margin:4px auto 0;max-width:300px;font:700 19px/1.55 var(--serif);letter-spacing:.01em;color:var(--accent);text-align:center;text-wrap:balance">Bắt đầu kế hoạch đọc<br>để lưu dấu hành trình theo CHÚA!</div><hr style="width:56px;height:1px;border:0;margin:16px auto 2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7"><button class="btn primary hjplanbtn" style="max-width:260px;margin-top:16px;padding:12px 16px;font-size:16px" data-plan="1">Chọn kế hoạch</button>`;
       else {
         const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
@@ -1572,7 +1572,7 @@ function openLessons(){
         <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total.toLocaleString('vi-VN')} chương trong Kinh Thánh` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
         <div class="hjtimes">Đã hoàn thành toàn bộ Kinh Thánh: <b>${times}</b> lần</div>
         ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>` : ''}
-      <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}<div class="plcomm" id="hjComm"></div></section>
+      <section class="hjs">${(PLAN && planDef(PLAN)) ? '<h4>Kế hoạch đọc</h4>' : ''}${planBox}<div class="plcomm" id="hjComm"></div></section>
     </div>`;
     const cb = list.querySelector('#hjComm');
     if (cb) ctRender(cb);
