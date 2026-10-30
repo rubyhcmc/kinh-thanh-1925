@@ -893,7 +893,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -920,7 +920,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = fals
 // Hộp thoại nhiều lựa chọn (thay cho confirm khi cần chọn 2–3 hướng)
 function choose(title, msg, opts){
   return new Promise(res => {
-    const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+    const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
     o.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3><p style="white-space:pre-line;margin:0 0 6px">${esc(msg)}</p>
       <div class="btns" style="flex-direction:column">${opts.map((x, i) => `<button class="btn ${x.cls || ''}" data-i="${i}">${esc(x.t)}</button>`).join('')}</div></div>`;
     o.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b){ o.remove(); res(+b.dataset.i); } });
