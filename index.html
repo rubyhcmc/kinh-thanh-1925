@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-B';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-C';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1230,7 +1230,7 @@ $('#nextChap').onclick = () => stepChapter(1);
   const el = c => { const d = document.createElement('div'); d.className = c; return d; };
   function buildStage(dir, nbHTML){
     const mr = main.getBoundingClientRect(), tab = $('#tab-bible').getBoundingClientRect(), W = mr.width;
-    const persp = Math.round(Math.max(W * 2.4, 900));
+    const persp = Math.round(Math.max(W * 6, 2400));
     const stage = el('fl-stage'), book = el('fl-book');
     book.style.left = mr.left + 'px'; book.style.width = W + 'px'; book.style.perspective = persp + 'px';
     const cur = $('#tab-bible').cloneNode(true);
@@ -1253,11 +1253,11 @@ $('#nextChap').onclick = () => stepChapter(1);
   // prog: 0 → 1 là mức "đã chuyển sang chương mới"
   function apply(sg, prog){
     const t = sg.dir > 0 ? prog : 1 - prog;                 // t = mức tờ giấy đã lật đi (0 phẳng, 1 lật hết)
-    const a = -MAXA * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
+    const a = MAXA * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;   // xoay ra xa người xem: mép tờ giấy co lại, không phình quá mép trên/dưới màn hình
     sg.leaf.style.transform = 'rotateY(' + a + 'deg)';
     sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
     sg.cast.style.opacity = String((1 - t) * 0.4);
-    const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp - sg.W * Math.sin(r));   // vị trí mép phải của tờ giấy khi chiếu phối cảnh
+    const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp + sg.W * Math.sin(r));   // vị trí mép phải của tờ giấy khi chiếu phối cảnh
     sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
     sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
   }
@@ -3954,17 +3954,17 @@ async function pgNbrHTML(d){
   return paperHTML(name, ch, verses, S.view, 'x');
 }
 function pgApply(sg, prog){
-  const t = sg.dir > 0 ? prog : 1 - prog, a = -100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
+  const t = sg.dir > 0 ? prog : 1 - prog, a = 100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;
   sg.leaf.style.transform = 'perspective(' + sg.persp + 'px) rotateY(' + a + 'deg)';
   sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
   sg.cast.style.opacity = String((1 - t) * 0.4);
-  const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp - sg.W * Math.sin(r));
+  const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp + sg.W * Math.sin(r));
   sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
   sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
 }
 /* Tờ giấy đang lật là CHÍNH khung đọc thật (hoặc 1 bản sao của trang lân cận); lớp bên dưới là phần còn lại → chỉ phải dựng tối đa 1 bản sao */
 function pgStage(dir, nbNode, shadow){
-  const real = $('#pgView'), host = real.getBoundingClientRect(), W = innerWidth, persp = Math.round(Math.max(W * 2.4, 900));
+  const real = $('#pgView'), host = real.getBoundingClientRect(), W = innerWidth, persp = Math.round(Math.max(W * 6, 2400));
   const pos = n => { n.style.cssText += `;position:fixed;left:0;width:${W}px;top:${host.top}px;height:${host.height}px;pointer-events:none`; return n; };
   const cast = pos(pgDiv('fl-cast')), strip = pos(pgDiv('fl-strip')), shade = pgDiv('fl-shade');
   strip.style.width = '46px'; strip.style.willChange = 'transform'; cast.style.zIndex = strip.style.zIndex = '6';
