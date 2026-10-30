@@ -895,7 +895,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1519,7 +1519,7 @@ function openLessons(){
     let verses = 0; for (const id of ids) verses += await verseCount(id);
     if (tok !== hjTok || !list.isConnected) return;
     const readDays = new Set(Object.keys(RD).filter(k => RD[k].length)), streak = streakOf(readDays);
-    const info = new Map(bibleMeta.map(m => [m.name, m.chapterCount || 0])), total = [...info.values()].reduce((x, y) => x + y, 0);
+    const info = new Map(bibleMeta.map(m => [m.name, m.chapterCount || 0])), total = BIBLE_CHAPTERS;           // mốc tiến độ luôn tính trên toàn bộ 1.189 chương
     // Đếm số lần đọc trọn bộ: duyệt lịch sử theo ngày; mỗi khi đã đọc đủ mọi chương thì +1 lần và bắt đầu lượt mới
     let cur = new Set(), times = 0, lastDone = '';
     Object.keys(RD).sort().forEach(k => (RD[k] || []).forEach(id => {
@@ -1554,7 +1554,7 @@ function openLessons(){
       <section class="hjs"><h4>Cột mốc</h4>
         <div class="hjbig"><span><b>${pctTxt}</b>%</span></div>
         <div class="hjbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${Math.max(pct > 0 ? 1.5 : 0, Math.min(100, pct))}%"></i></div>
-        <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total} chương trong Kinh Thánh của bạn` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
+        <small>${total ? `${times ? 'Lượt đọc thứ ' + (times + 1) + ': ' : ''}Đã đọc ${done} / ${total.toLocaleString('vi-VN')} chương trong Kinh Thánh` : 'Chưa có dữ liệu Kinh Thánh để tính tiến độ.'}</small>
         <div class="hjtimes">Đã hoàn thành toàn bộ Kinh Thánh: <b>${times}</b> lần</div>
         ${doneAll ? '<div class="hjdone"><b>🎉 Chúc mừng bạn!</b>Bạn đã đọc trọn bộ Kinh Thánh. Tạ ơn Chúa đã đồng hành cùng bạn suốt hành trình này.</div>' : ''}</section>
       <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}<div class="plcomm" id="hjComm"></div></section>
