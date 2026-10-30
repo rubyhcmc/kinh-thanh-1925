@@ -501,15 +501,12 @@ html[data-paper] .reader.print{text-align:justify}
 .plbtns{display:flex;gap:8px;margin:10px 0 4px}
 .plbtns .btn{flex:1}
 .plcomm{margin:18px 0 6px}
-.ctcard{position:relative;overflow:hidden;text-align:center;padding:18px 18px 16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--accent-soft),var(--bg))}
-.ctav{display:flex;justify-content:center;margin:0 0 10px;padding-left:10px}
-.ctav i{width:36px;height:36px;margin-left:-10px;border-radius:50%;border:2.5px solid var(--bg);display:flex;align-items:center;justify-content:center;color:#fff}
-.ctav .a1{background:#8a5a1f}.ctav .a2{background:#b07a3a}.ctav .a3{background:#c9a96a}.ctav .a4{background:#6f4a1a}
-.ctn b{display:block;font:700 34px/1.1 var(--serif);color:var(--accent);letter-spacing:.01em;font-variant-numeric:tabular-nums}
-.ctn span{display:block;margin-top:4px;font:600 13px/1.4 var(--sans);letter-spacing:.02em;color:var(--fg)}
-.ctn .ctone{font:600 15px/1.5 var(--serif);margin-top:0}
-.ctme{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font:600 12px var(--sans);color:var(--accent)}
-.ctmsg{margin:12px auto 0;max-width:290px;font:italic 14px/1.6 var(--serif);color:var(--muted)}
+.ctcard{position:relative;overflow:hidden;text-align:center;padding:22px 20px 20px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--accent-soft),var(--card))}
+.ctlab{font:600 11.5px var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.ctn b{display:block;font:700 38px/1.1 var(--serif);color:var(--accent);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.ctrule{width:56px;height:1px;border:0;margin:16px auto 14px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7}
+.cthi{margin:0;font:700 17px/1.4 var(--serif);color:var(--fg)}
+.ctmsg{margin:8px auto 0;max-width:290px;font:italic 14px/1.65 var(--serif);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -896,7 +893,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1498,7 +1495,7 @@ function openLessons(){
     <div class="lstabs"><button data-tab="notes" class="on">Ghi chú</button><button data-tab="stats">Hành trình</button></div>
     <input class="lsq" id="lsQ" type="search" placeholder="Tìm trong ghi chú (không cần gõ dấu)…" autocomplete="off">
     <div id="lsList"></div>
-    <div class="btns"><button class="btn" data-word="1">📄 Xuất Word</button><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+    <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
   const list = o.querySelector('#lsList'), inp = o.querySelector('#lsQ');
   const drawNotes = () => {
     const toks = fold(q).split(/\s+/).filter(Boolean);
@@ -1561,7 +1558,7 @@ function openLessons(){
       <section class="hjs"><h4>Kế hoạch đọc</h4>${planBox}<div class="plcomm" id="hjComm"></div></section>
     </div>`;
     const cb = list.querySelector('#hjComm');
-    if (cb){ ctRender(cb); if (PLAN) ctJoin().then(() => { if (cb.isConnected) ctRender(cb); }); }
+    if (cb) ctRender(cb);
   };
   const draw = () => { inp.hidden = tab !== 'notes'; tab === 'notes' ? drawNotes() : drawStats(); o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); };
   draw();
@@ -1569,12 +1566,6 @@ function openLessons(){
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const tb = e.target.closest('[data-tab]'); if (tb){ tab = tb.dataset.tab; draw(); return; }
-    if (e.target.closest('[data-word]')){
-      const toks = fold(q).split(/\s+/).filter(Boolean);
-      const rows = LS.filter(b => { const hay = fold(`${b.book} ${b.ch}:${lsKey(b)} ${b.text}`).replace(/-/g, ' '); return toks.every(t => hay.includes(t)); });
-      if (!rows.length) return toast('Chưa có ghi chú để xuất');
-      exportNotesWord(rows); return;
-    }
     if (e.target.closest('[data-plan]')){ openPlan({ onClose:() => { if (o.isConnected && tab === 'stats') draw(); }, onGo:() => o.remove() }); return; }
     const ed = e.target.closest('[data-edit]'), g = e.target.closest('[data-go]');
     if (ed){ const b = LS[+ed.dataset.edit]; o.remove(); if (b) window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:b.book, ch:b.ch, ns:b.ns || [b.n], back:true } })); return; }
@@ -1696,22 +1687,6 @@ function docxFile(items, title, fname){                               // items: 
     { name:'word/document.xml', data:enc.encode(doc) }
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-async function exportNotesWord(rows){
-  try {
-    const order = new Map(bibleMeta.map((m, i) => [m.name, i])), cache = new Map(), items = [];
-    const list = [...rows].sort((a, b) => (order.has(a.book) ? order.get(a.book) : 999) - (order.has(b.book) ? order.get(b.book) : 999) || a.ch - b.ch || (a.ns || [a.n])[0] - (b.ns || [b.n])[0]);
-    for (const x of list){
-      const ns = x.ns || [x.n];
-      if (!cache.has(x.book)) cache.set(x.book, await dbGet('books', x.book));
-      const rec = cache.get(x.book), vs = (rec && rec.chapters[x.ch - 1]) || [];
-      const quote = ns.map(k => { const v = vs.find(y => y.n === k); return v ? String(v.t).replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
-      items.push({ ref:`${x.book} ${x.ch}:${lsKey(x)}`, quote, text:x.text, at:x.at });
-    }
-    const name = items.length === 1 ? 'bai-hoc-' + (fold(items[0].ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu') : 'bai-hoc-ca-nhan-' + dayKey();
-    await saveFiles([docxFile(items, 'Bài học cá nhân', name + '.docx')]);
-    toast('📄 Đã tạo file Word');
-  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 }
 $('#lsWord').onclick = () => {
   const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
@@ -4299,8 +4274,8 @@ function planSum(){
   const pl = planDef(PLAN), d = plDay(PLAN.start);
   a.textContent = 'Kế hoạch ' + pl.name; b.textContent = d > pl.days ? 'Đã hoàn thành 🎉' : d < 1 ? 'Chưa đến ngày bắt đầu' : `Ngày ${d} / ${pl.days}`;
 }
-/* Bộ đếm anh em: CountAPI (bản thay thế còn hoạt động trước, bản gốc api.countapi.xyz làm dự phòng); mỗi thiết bị chỉ cộng 1 lần (kt.joined) */
-const CT = { key:'kinhthanh-anh-em-doc-ke-hoach', ns:'kinhthanh-vn' };
+/* Bộ đếm lượt truy cập: CountAPI (bản thay thế còn hoạt động trước, bản gốc api.countapi.xyz làm dự phòng); mỗi lần mở app (một phiên) cộng 1 lượt */
+const CT = { key:'kinhthanh-luot-truy-cap', ns:'kinhthanh-vn' };
 async function ctFetch(url){
   const c = new AbortController(), t = setTimeout(() => c.abort(), 6000);
   try { const r = await fetch(url, { signal:c.signal, cache:'no-store' }); if (!r.ok) throw new Error('http'); const j = await r.json(); const v = Number(j.value ?? j.count); if (!isFinite(v)) throw new Error('nan'); return v; }
@@ -4313,27 +4288,22 @@ async function ctCount(hit){
   }
   return null;
 }
-const ctCache = () => { try { return +localStorage.getItem('kt.joinedCount') || 0; } catch(e){ return 0; } };
-async function ctJoin(){
-  let joined = false; try { joined = localStorage.getItem('kt.joined') === '1'; } catch(e){}
-  if (joined) return;                                                // kiểm tra localStorage: đã tính rồi thì không cộng nữa
+const ctCache = () => { try { return +localStorage.getItem('kt.visitCount') || 0; } catch(e){ return 0; } };
+async function ctJoin(){                                             // tính 1 lượt truy cập cho mỗi phiên mở app
+  let done = false; try { done = sessionStorage.getItem('kt.visited') === '1'; } catch(e){}
+  if (done) return;
+  try { sessionStorage.setItem('kt.visited', '1'); } catch(e){}
   const v = await ctCount(true);
-  if (v != null){ try { localStorage.setItem('kt.joined', '1'); localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} }
+  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} }
 }
-const CT_MSG = ['Mỗi ngày một chút, chúng ta cùng nhau lớn lên trong Lời Chúa.', 'Bạn không đi một mình: bao người đang đọc cùng bạn hôm nay.', 'Một trang hôm nay là một bước chung của cả gia đình đức tin.', 'Cùng nâng đỡ nhau, cùng đọc Lời Chúa đến cùng hành trình.'];
-const CT_AV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5c0-4 3.4-6.4 7.5-6.4s7.5 2.4 7.5 6.4z"/></svg>';
 async function ctRender(box){
-  const msg = CT_MSG[Math.floor(Date.now() / 864e5) % CT_MSG.length];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const draw = (n, from) => {
-    let me = false; try { me = localStorage.getItem('kt.joined') === '1'; } catch(e){}
-    box.innerHTML = `<div class="ctcard"><div class="ctav" aria-hidden="true">${[1, 2, 3, 4].map(x => `<i class="a${x}">${CT_AV}</i>`).join('')}</div>`
-      + (n ? `<div class="ctn"><b>${n.toLocaleString('vi-VN')}</b><span>anh chị em cùng đọc Lời Chúa</span></div>`
-           : `<div class="ctn"><span class="ctone">Hãy là một trong những người đầu tiên<br>cùng đọc Lời Chúa mỗi ngày</span></div>`)
-      + (me ? '<div class="ctme">✓ Bạn đang đồng hành cùng họ</div>' : '')
-      + `<p class="ctmsg">${esc(msg)}</p></div>`;
+    box.innerHTML = `<div class="ctcard"><div class="ctn"><div class="ctlab">Lượt truy cập</div><b>${n ? n.toLocaleString('vi-VN') : '—'}</b></div>`
+      + `<hr class="ctrule"><p class="cthi">Rất vui vì bạn ở đây!</p>`
+      + `<p class="ctmsg">Mỗi ngày một chút, chúng ta cùng nhau lớn lên trong Lời Chúa.</p></div>`;
     const el = box.querySelector('.ctn b');
-    if (el && !reduce && from != null && from < n){                    // số tăng nhẹ lên giá trị mới
+    if (el && n && !reduce && from != null && from < n){                // số tăng nhẹ lên giá trị mới
       const t0 = performance.now();
       const step = now => { const k = Math.min(1, (now - t0) / 800), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (n - from) * e).toLocaleString('vi-VN'); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
       requestAnimationFrame(step);
@@ -4341,7 +4311,7 @@ async function ctRender(box){
   };
   const cached = ctCache(); draw(cached);
   const v = await ctCount(false);
-  if (v != null){ try { localStorage.setItem('kt.joinedCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
+  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
 }
 function openPlan(opts){
   opts = opts || {};
@@ -4437,7 +4407,7 @@ planSum();
   catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
-  if (PLAN) ctJoin();                   // đã chọn kế hoạch từ trước mà chưa được tính vào bộ đếm → tính 1 lần
+  ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
 </script>
