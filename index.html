@@ -616,7 +616,7 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="updwrap"><button class="btn" id="btnUpd">🔄 Kiểm tra cập nhật</button><div class="updmsg" id="updMsg" aria-live="polite"></div></div>
     </div>
 
-    <button class="adminlink" id="btnAdmin" aria-label="Đăng nhập quản trị viên"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Quản trị viên</button>
+    <!-- Chế độ chỉ đọc: không có nút quản trị công khai. Quản trị viên mở bảng đăng nhập bằng cách chạm 5 lần liên tiếp vào chữ “Cài đặt” hoặc tên ứng dụng. -->
   </div>
 </div>
 
@@ -893,7 +893,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1980,7 +1980,7 @@ const isDemoBook = b => b && b.name === 'Sách Mẫu' && b.chapters && b.chapter
  * ========================================================= */
 const GH_KEY = 'kt.gh', SY_KEY = 'kt.sync', GH_API = 'https://api.github.com';
 let GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true };
-let SY = { sha:'', dirty:false, at:0 };
+let SY = { sha:'', dirty:false, at:0, store:'' };
 try { Object.assign(GH, JSON.parse(localStorage.getItem(GH_KEY) || '{}')); } catch(e){}
 try { Object.assign(SY, JSON.parse(localStorage.getItem(SY_KEY) || '{}')); } catch(e){}
 const saveGH = () => { try { localStorage.setItem(GH_KEY, JSON.stringify(GH)); } catch(e){} };
@@ -2047,38 +2047,31 @@ async function buildBooks(){
 }
 const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
 
-async function ghPull(sha){
-  const res = await ghReq(`/repos/${GH.repo}/contents/${ghFile()}${ghRef()}`, { raw:true });
-  let j; try { j = JSON.parse(await res.text()); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); }
-  const books = normBible(j.bible || j);
-  if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
-  await importBible(books, 'replace'); applyAbout(j.about);
-  SY = { sha, dirty:false, at:Date.now() }; saveSY();
-  const y = SCR.scrollTop; await reloadAll(); SCR.scrollTop = y;
-}
-async function ghPush(auto){
-  const books = await buildBooks();
-  if (!books.length){
-    if (auto){ setSync('dirty', 'Dữ liệu trong máy đang trống nên chưa đẩy lên GitHub.'); return; }
-    if (!confirm('Dữ liệu trong máy đang trống. Xóa luôn dữ liệu trên GitHub?')) return;
-  }
-  const remote = await ghRemote();
-  const body = { message:'Cập nhật Kinh Thánh ' + new Date().toLocaleString('vi-VN'), content:toB64(JSON.stringify(makePayload(books))) };
-  if (GH.branch) body.branch = GH.branch;
-  if (remote) body.sha = remote.sha;
-  const put = () => ghJSON(`/repos/${GH.repo}/contents/${ghFile()}`, { method:'PUT', body:JSON.stringify(body) });
-  let r;
-  try { r = await put(); }
-  catch(e){
-    if (e.status !== 409 && e.status !== 422) throw e;
-    const rm = await ghRemote();                       // mã cũ bị lệch → lấy mã mới nhất rồi ghi lại một lần
-    if (rm) body.sha = rm.sha; else delete body.sha;
-    r = await put();
-  }
-  SY = { sha:r.content.sha, dirty:false, at:Date.now() }; saveSY();
-}
+/* =========================================================
+ *  LỚP LƯU TRỮ (ADAPTER) – tách rời giao diện khỏi nơi lưu dữ liệu
+ *  Giao diện đọc và bộ máy đồng bộ ở dưới CHỈ nói chuyện với một "adapter" qua các hàm sau:
+ *    id, label                          tên định danh / tên hiển thị
+ *    configured()  → bool               đã cấu hình nơi lưu chưa
+ *    canWrite()    → bool               máy này có quyền ghi không (false = chỉ đọc)
+ *    autoSync()    → bool               có tự đẩy lên sau mỗi thay đổi không
+ *    describe()    → string             mô tả ngắn hiện ở trạng thái đồng bộ
+ *    head()        → {version} | null   "phiên bản" bản dữ liệu từ xa (null = chưa có dữ liệu)
+ *    read()        → {version, payload} | null    tải dữ liệu từ xa; payload là đối tượng JSON của app
+ *    write(payload)→ {version}          ghi dữ liệu, trả phiên bản mới
+ *    shareUrl()    → string (tùy chọn)  liên kết chia sẻ cho người đọc
+ *  Muốn chuyển khỏi GitHub: viết thêm 1 adapter theo mẫu (xem ví dụ cuối mục này), gọi Store.register(...)
+ *  rồi đặt Store.active = 'id-của-bạn'. Giao diện đọc, ghi chú, kế hoạch… không phải sửa gì.
+ * ========================================================= */
+const Store = {
+  adapters:{}, active:'github',
+  register(a){ this.adapters[a.id] = a; return a; },
+  cur(){ return this.adapters[this.active] || null; }
+};
+const syncOn = () => { const a = Store.cur(); return !!(a && a.configured()); };
+const syncCanWrite = () => { const a = Store.cur(); return !!(a && a.configured() && a.canWrite()); };
 
-/* --- Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt --- */
+/* --- Adapter 1: GitHub (các hàm ghReq / ghRemote… ở trên chỉ phục vụ adapter này) --- */
+/* Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt */
 async function rawFetch(){
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
@@ -2090,23 +2083,84 @@ async function rawFetch(){
   return res.text();
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
-async function syncReadOnly(o){
-  const text = await rawFetch(), sig = sigOf(text), hasLocal = bibleMeta.length > 0;
-  if (sig === SY.sha && hasLocal){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
-  let j; try { j = JSON.parse(text.replace(/^\uFEFF/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); }
-  const books = normBible(j.bible || j);
-  if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
+const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
+const GitHubStore = Store.register({
+  id:'github', label:'GitHub',
+  configured: () => !!GH.repo,
+  canWrite: () => !!(GH.repo && GH.token),
+  autoSync: () => GH.auto !== false,
+  describe: () => 'Kho: ' + GH.repo,
+  shareUrl: () => location.origin + location.pathname + '?kho=' + GH.repo,
+  async head(){ const r = await ghRemote(); return r ? { version:r.sha } : null; },
+  async read(){
+    if (!this.canWrite()){ const text = await rawFetch(); return { version:sigOf(text), payload:parseRemote(text) }; }
+    const h = await ghRemote(); if (!h) return null;
+    const res = await ghReq(`/repos/${GH.repo}/contents/${ghFile()}${ghRef()}`, { raw:true });
+    return { version:h.sha, payload:parseRemote(await res.text()) };
+  },
+  async write(payload){
+    const remote = await ghRemote();
+    const body = { message:'Cập nhật Kinh Thánh ' + new Date().toLocaleString('vi-VN'), content:toB64(JSON.stringify(payload)) };
+    if (GH.branch) body.branch = GH.branch;
+    if (remote) body.sha = remote.sha;
+    const put = () => ghJSON(`/repos/${GH.repo}/contents/${ghFile()}`, { method:'PUT', body:JSON.stringify(body) });
+    let r;
+    try { r = await put(); }
+    catch(e){
+      if (e.status !== 409 && e.status !== 422) throw e;
+      const rm = await ghRemote();                       // mã cũ bị lệch → lấy mã mới nhất rồi ghi lại một lần
+      if (rm) body.sha = rm.sha; else delete body.sha;
+      r = await put();
+    }
+    return { version:r.content.sha };
+  }
+});
+/* --- Mẫu cho adapter khác (ví dụ máy chủ riêng, Cloudflare R2, Firebase, Supabase…): chỉ cần cùng các hàm trên ---
+const MyServerStore = Store.register({
+  id:'myserver', label:'Máy chủ của tôi',
+  configured: () => true, canWrite: () => isAdmin(), autoSync: () => true, describe: () => 'api.example.com',
+  async head(){ const r = await fetch('https://api.example.com/bible/version'); return r.ok ? { version:(await r.json()).v } : null; },
+  async read(){ const r = await fetch('https://api.example.com/bible'); return r.ok ? { version:r.headers.get('etag'), payload:await r.json() } : null; },
+  async write(payload){ const r = await fetch('https://api.example.com/bible', { method:'PUT', headers:{ Authorization:'Bearer …' }, body:JSON.stringify(payload) }); return { version:(await r.json()).v }; }
+});
+Store.active = 'myserver';
+--- */
+
+/* --- Bộ máy đồng bộ (dùng chung cho mọi adapter) --- */
+async function applyRemote(A, r){
+  const j = r.payload || {}, books = normBible(j.bible || j);
+  if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
+  await importBible(books, 'replace'); applyAbout(j.about);
+  SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
+  const y = SCR.scrollTop; await reloadAll(); SCR.scrollTop = y;
+}
+async function pullFrom(A){
+  const r = await A.read(); if (!r) throw new Error(`${A.label} chưa có dữ liệu.`);
+  await applyRemote(A, r);
+}
+async function pushTo(A, auto){
+  const books = await buildBooks();
+  if (!books.length){
+    if (auto){ setSync('dirty', `Dữ liệu trong máy đang trống nên chưa đẩy lên ${A.label}.`); return; }
+    if (!confirm(`Dữ liệu trong máy đang trống. Xóa luôn dữ liệu trên ${A.label}?`)) return;
+  }
+  const r = await A.write(makePayload(books));
+  SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
+}
+async function syncReadOnly(A, o){
+  const r = await A.read(), hasLocal = bibleMeta.length > 0;
+  if (!r){ setSync('ok', `Trên ${A.label} chưa có dữ liệu.`); return; }
+  if (r.version === SY.sha && hasLocal){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
+  if (!normBible((r.payload || {}).bible || r.payload || {}).length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
   if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
-    if (o.auto){ setSync('conflict', 'Máy này đã có dữ liệu riêng khác với GitHub. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.'); toast('Dữ liệu máy này khác GitHub – vào Quản lý dữ liệu → Đồng bộ ngay để chọn'); return; }
+    if (o.auto){ setSync('conflict', `Máy này đã có dữ liệu riêng khác với ${A.label}. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); toast(`Dữ liệu máy này khác ${A.label} – vào Quản lý dữ liệu → Đồng bộ ngay để chọn`); return; }
     syncBusy = false;
-    const c = await choose('Dữ liệu khác nhau', 'Máy này đang có dữ liệu riêng. Thay bằng dữ liệu từ GitHub?', [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)', cls:'primary' }, { t:'Để sau' }]);
+    const c = await choose('Dữ liệu khác nhau', 'Máy này đang có dữ liệu riêng. Thay bằng dữ liệu từ ' + A.label + '?', [{ t:`⬇️ Lấy dữ liệu từ ${A.label} (bỏ bản trong máy)`, cls:'primary' }, { t:'Để sau' }]);
     syncBusy = true;
     if (c !== 0){ setSync('conflict', 'Chưa chọn bản nào.'); return; }
   }
-  await importBible(books, 'replace'); applyAbout(j.about);
-  SY = { sha:sig, dirty:false, at:Date.now() }; saveSY();
-  const y = SCR.scrollTop; await reloadAll(); SCR.scrollTop = y;
-  setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); if (!o.auto || !hasLocal) toast('Đã tải dữ liệu từ GitHub');
+  await applyRemote(A, r);
+  setSync('ok', `Đã cập nhật nội dung mới từ ${A.label}.`); if (!o.auto || !hasLocal) toast(`Đã tải dữ liệu từ ${A.label}`);
 }
 
 /* --- Trạng thái hiển thị --- */
@@ -2114,52 +2168,55 @@ const SYNC_TXT = { off:'', ok:'☁ Đã đồng bộ', busy:'⟳ Đang đồng b
 let syncState = 'off', syncMsg = '', syncBusy = false, pushTimer, lastCheck = 0;
 function setSync(st, msg){ syncState = st; syncMsg = msg || ''; updateSyncUI(); }
 function updateSyncUI(){
-  const on = ghOn();
-  let st = syncState; if (st === 'ok' && SY.dirty && ghCanPush()) st = 'dirty';
+  const A = Store.cur(), on = syncOn();
+  let st = syncState; if (st === 'ok' && SY.dirty && syncCanWrite()) st = 'dirty';
   $('#stSync').textContent = on ? 'Bật' : 'Tắt';
   const at = SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa lần nào';
   const l = $('#ghStatus');
-  l.textContent = on ? `Kho: ${GH.repo}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${ghCanPush() ? 'đọc & ghi (có token)' : 'chỉ đọc (không có token)'}` : 'Chưa kết nối GitHub.';
+  l.textContent = on ? `${A.describe()}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${A.canWrite() ? 'đọc & ghi (có quyền ghi)' : 'chỉ đọc'}` : 'Chưa kết nối nơi lưu trữ.';
   l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
   const es = $('#emptySync');
   if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
-  const sh = $('#ghShare'); sh.hidden = !on;
-  if (on) $('#ghShareUrl').value = location.origin + location.pathname + '?kho=' + GH.repo;
+  const sh = $('#ghShare'); sh.hidden = !(on && A.shareUrl);
+  if (on && A.shareUrl) $('#ghShareUrl').value = A.shareUrl();
 }
 
-// Đánh dấu có thay đổi → tự đẩy lên GitHub sau vài giây
+// Đánh dấu có thay đổi → tự đẩy lên nơi lưu trữ sau vài giây (chỉ khi adapter cho phép ghi)
 function markDirty(){
   SY.dirty = true; saveSY(); updateSyncUI();
-  if (ghOn() && GH.auto && ghCanPush()){ clearTimeout(pushTimer); pushTimer = setTimeout(() => syncNow({ auto:true }), 4000); }
+  const A = Store.cur();
+  if (A && A.configured() && A.canWrite() && A.autoSync()){ clearTimeout(pushTimer); pushTimer = setTimeout(() => syncNow({ auto:true }), 4000); }
 }
 
 async function syncNow(o = {}){
-  if (!ghOn() || syncBusy) return;
+  const A = Store.cur();
+  if (!A || !A.configured() || syncBusy) return;
   if (!navigator.onLine){ setSync('offline', 'Sẽ tự đồng bộ khi có mạng.'); return; }
+  if (SY.store !== A.id){ SY = { sha:SY.store ? '' : SY.sha, dirty:SY.dirty, at:SY.store ? 0 : SY.at, store:A.id }; saveSY(); }   // đổi nơi lưu → coi như chưa từng đồng bộ với nơi mới
   syncBusy = true; setSync('busy'); lastCheck = Date.now();
   try {
-    if (!ghCanPush()){ await syncReadOnly(o); return; }
-    const remote = await ghRemote(), hasLocal = bibleMeta.length > 0;
+    if (!A.canWrite()){ await syncReadOnly(A, o); return; }
+    const remote = await A.head(), hasLocal = bibleMeta.length > 0;
     if (!remote){
-      if (ghCanPush() && hasLocal){ await ghPush(o.auto); setSync('ok', 'Đã tạo tệp dữ liệu trên GitHub.'); }
-      else setSync('ok', ghCanPush() ? 'Chưa có dữ liệu để đồng bộ.' : 'Trên GitHub chưa có dữ liệu.');
-    } else if (remote.sha === SY.sha){
-      if (SY.dirty && ghCanPush()){ await ghPush(o.auto); setSync('ok', 'Đã lưu lên GitHub.'); }
+      if (hasLocal){ await pushTo(A, o.auto); setSync('ok', `Đã tạo dữ liệu trên ${A.label}.`); }
+      else setSync('ok', 'Chưa có dữ liệu để đồng bộ.');
+    } else if (remote.version === SY.sha){
+      if (SY.dirty){ await pushTo(A, o.auto); setSync('ok', `Đã lưu lên ${A.label}.`); }
       else setSync('ok', 'Nội dung đã là bản mới nhất.');
     } else {
-      const conflict = ghCanPush() ? (SY.dirty || (!SY.sha && hasLocal)) : (!SY.sha && hasLocal);
-      if (!conflict){ await ghPull(remote.sha); setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); toast('Đã cập nhật nội dung mới'); }
-      else if (o.auto){ setSync('conflict', 'Máy này và GitHub đều có nội dung khác nhau. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.'); toast('Dữ liệu máy này và GitHub khác nhau – vào Quản lý dữ liệu → Đồng bộ ngay để chọn bản giữ lại'); }
+      const conflict = SY.dirty || (!SY.sha && hasLocal);
+      if (!conflict){ await pullFrom(A); setSync('ok', `Đã cập nhật nội dung mới từ ${A.label}.`); toast('Đã cập nhật nội dung mới'); }
+      else if (o.auto){ setSync('conflict', `Máy này và ${A.label} đều có nội dung khác nhau. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); toast(`Dữ liệu máy này và ${A.label} khác nhau – vào Quản lý dữ liệu → Đồng bộ ngay để chọn bản giữ lại`); }
       else {
         syncBusy = false;
-        const opts = [{ t:'⬇️ Lấy dữ liệu từ GitHub (bỏ bản trong máy)' }];
-        if (ghCanPush()) opts.unshift({ t:'⬆️ Giữ dữ liệu máy này (ghi đè GitHub)', cls:'primary' });
+        const opts = [{ t:`⬇️ Lấy dữ liệu từ ${A.label} (bỏ bản trong máy)` }];
+        opts.unshift({ t:`⬆️ Giữ dữ liệu máy này (ghi đè ${A.label})`, cls:'primary' });
         opts.push({ t:'Để sau' });
-        const c = await choose('Dữ liệu khác nhau', 'Nội dung trong máy và trên GitHub không giống nhau. Bạn muốn giữ bản nào?', opts);
+        const c = await choose('Dữ liệu khác nhau', `Nội dung trong máy và trên ${A.label} không giống nhau. Bạn muốn giữ bản nào?`, opts);
         const pick = opts[c] ? opts[c].t : '';
         syncBusy = true; setSync('busy');
-        if (pick.startsWith('⬆️')){ await ghPush(false); setSync('ok', 'Đã ghi đè GitHub bằng dữ liệu máy này.'); }
-        else if (pick.startsWith('⬇️')){ await ghPull(remote.sha); setSync('ok', 'Đã lấy dữ liệu từ GitHub.'); toast('Đã cập nhật từ GitHub'); }
+        if (pick.startsWith('⬆️')){ await pushTo(A, false); setSync('ok', `Đã ghi đè ${A.label} bằng dữ liệu máy này.`); }
+        else if (pick.startsWith('⬇️')){ await pullFrom(A); setSync('ok', `Đã lấy dữ liệu từ ${A.label}.`); toast(`Đã cập nhật từ ${A.label}`); }
         else setSync('conflict', 'Chưa chọn bản nào.');
       }
     }
@@ -2223,7 +2280,7 @@ $('#ghSyncNow').onclick = () => { if (!ghOn()) return ghSay('Hãy bấm "Kết n
 $('#ghDisconnect').onclick = () => {
   if (!ghOn()) return;
   if (!confirm('Ngắt kết nối GitHub? Dữ liệu trong máy vẫn được giữ nguyên.')) return;
-  GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0 };
+  GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0, store:'github' };
   try { localStorage.setItem('kt.nodefault', '1'); } catch(e){}
   saveGH(); saveSY(); fillGhFields(); setSync('off'); ghSay('Đã ngắt kết nối.', true);
 };
@@ -2237,9 +2294,9 @@ $('#ghCode').onclick = async () => {
 };
 
 // Tự kiểm tra nội dung mới khi mở lại app / có mạng trở lại
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ghOn() && Date.now() - lastCheck > 60000) syncNow({ auto:true }); });
-addEventListener('online', () => { if (ghOn()) syncNow({ auto:true }); });
-setInterval(() => { if (ghOn() && document.visibilityState === 'visible' && Date.now() - lastCheck > 300000) syncNow({ auto:true }); }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && syncOn() && Date.now() - lastCheck > 60000) syncNow({ auto:true }); });
+addEventListener('online', () => { if (syncOn()) syncNow({ auto:true }); });
+setInterval(() => { if (syncOn() && document.visibilityState === 'visible' && Date.now() - lastCheck > 300000) syncNow({ auto:true }); }, 60000);
 
 /* =========================================================
  *  ĐĂNG NHẬP & TRANG QUẢN LÝ
@@ -2335,7 +2392,13 @@ $('#btnUpd').onclick = async () => {
 $('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
-$('#btnAdmin').onclick = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
+const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
+/* Phím tắt bí mật: chạm 5 lần liên tiếp (mỗi lần cách nhau dưới 1,5 giây) vào chữ “Cài đặt” hoặc tên ứng dụng để mở đăng nhập quản trị */
+(function(){
+  let n = 0, t = 0;
+  const hit = () => { const now = Date.now(); n = (now - t > 1500) ? 1 : n + 1; t = now; if (n >= 5){ n = 0; openAdminLogin(); } };
+  ['#settings .shead h3', '#abName'].forEach(sel => { const el = $(sel); if (!el) return; el.addEventListener('click', hit); el.style.cssText += ';-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:default'; });
+})();
 $('#loginCancel').onclick = () => show('#login', false);
 /*--AUTH-START--*/
 const PW_KEY = 'kt.pwhash', LOCK_KEY = 'kt.lock', MAX_FAILS = 5, LOCK_MS = 5 * 60 * 1000;
@@ -2466,7 +2529,7 @@ async function refreshStats(){
   exSel.innerHTML = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('') || '<option value="">(chưa có sách)</option>';
   if (metas.some(m => m.name === exCur)) exSel.value = exCur;
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
-  $('#stSync').textContent = ghOn() ? 'Bật' : 'Tắt';
+  $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
 }
 function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
 async function reloadAll(){ await initBible(); await refreshStats(); }
@@ -2920,6 +2983,7 @@ const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 2
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
 async function persistChapter(name, ch, vs, abbr, sub){
+  if (!isAdmin()) throw new Error('Chỉ quản trị viên mới được sửa nội dung.');   // chế độ chỉ đọc cho cộng đồng
   const rec = (await dbGet('books', name)) || { name, chapters:[] };
   while (rec.chapters.length < ch) rec.chapters.push([]);
   rec.chapters[ch - 1] = vs;
@@ -4286,7 +4350,7 @@ planSum();
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   if (PLAN) ctJoin();                   // đã chọn kế hoạch từ trước mà chưa được tính vào bộ đếm → tính 1 lần
-  if (ghOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên GitHub
+  if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
 </script>
 </body>
