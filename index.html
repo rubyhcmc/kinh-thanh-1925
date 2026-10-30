@@ -64,7 +64,7 @@ html{overflow-anchor:none}
 body{overflow-anchor:none}
 
 
-main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:760px;margin:0 auto;perspective:1400px;touch-action:pan-y pinch-zoom;
+main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:760px;margin:0 auto;touch-action:pan-y pinch-zoom;
   overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom)}
 /* lật trang khi vuốt */
 #bibleText.flip{background:var(--bg);box-shadow:0 0 28px rgba(0,0,0,.28);border-radius:4px;will-change:transform,opacity;backface-visibility:hidden}
@@ -900,7 +900,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-E';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-F';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -936,6 +936,7 @@ function choose(title, msg, opts){
 }
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
+const PAPER_PAGED = false;   // false: chế độ Trang giấy cuộn dọc + lật chương như trang chủ (chỉ đổi giao diện đen trắng). true: chia trang ngang như bản cũ
 const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
@@ -943,7 +944,7 @@ const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S
 function applyTheme(){
   const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
   document.documentElement.toggleAttribute('data-paper', !!S.paper);
-  document.body.classList.toggle('pg', !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
+  document.body.classList.toggle('pg', PAPER_PAGED && !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
   try { pgRefresh(); } catch(e){}
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -1254,11 +1255,13 @@ $('#nextChap').onclick = () => stepChapter(1);
   // prog: 0 → 1 là mức "đã chuyển sang chương mới"
   function apply(sg, prog){
     const t = sg.dir > 0 ? prog : 1 - prog;                 // t = mức tờ giấy đã lật đi (0 phẳng, 1 lật hết)
-    const a = MAXA * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180;   // xoay ra xa người xem: mép tờ giấy co lại, không phình quá mép trên/dưới màn hình
-    sg.leaf.style.transform = 'rotateY(' + a + 'deg)';
+    const a = MAXA * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180, c = Math.cos(r);
+    // Lật bằng co ngang quanh gáy sách (không dùng phối cảnh 3D): chiều cao tờ giấy không đổi nên mép trên/dưới đứng yên, không giật
+    sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + Math.max(c, 0.001) + ')';
+    sg.leaf.style.visibility = a >= 90 ? 'hidden' : '';
     sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
     sg.cast.style.opacity = String((1 - t) * 0.4);
-    const edge = sg.W * Math.cos(r) * sg.persp / (sg.persp + sg.W * Math.sin(r));   // vị trí mép phải của tờ giấy khi chiếu phối cảnh
+    const edge = sg.W * c;                                   // mép phải của tờ giấy đang co lại
     sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
     sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
   }
@@ -3796,9 +3799,9 @@ function paperFullscreen(on){
     }
   } catch(e){}
 }
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen(S.paper); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen(PAPER_PAGED && S.paper); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
 // Mở app đang ở chế độ Trang giấy: chạm lần đầu để vào toàn màn hình (trình duyệt chỉ cho phép sau một cú chạm)
-document.addEventListener('click', () => { if (S.paper) paperFullscreen(true); }, { once:true, capture:true });
+document.addEventListener('click', () => { if (PAPER_PAGED && S.paper) paperFullscreen(true); }, { once:true, capture:true });
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
