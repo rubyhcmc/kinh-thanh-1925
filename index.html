@@ -895,7 +895,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4239,6 +4239,7 @@ $('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (
 
 
 /* ============ KẾ HOẠCH ĐỌC (3 lộ trình chuẩn + 1 lộ trình tự thiết kế) + BỘ ĐẾM ANH EM ============ */
+const BIBLE_CHAPTERS = 1189;                                          // tổng số chương toàn bộ Kinh Thánh (dùng cho công cụ tính kế hoạch)
 const PLANS = [
   { id:'y1', name:'1 năm',   days:365, sub:'365 ngày', per:'Khoảng 3 - 4 chương/ngày' },
   { id:'y2', name:'2 năm',   days:730, sub:'730 ngày', per:'Khoảng 2 chương/ngày' },
@@ -4255,7 +4256,7 @@ if (!planOK(PLAN)) PLAN = null;
 const savePlan = () => { try { PLAN ? localStorage.setItem('kt.plan', JSON.stringify(PLAN)) : localStorage.removeItem('kt.plan'); } catch(e){} planSum(); };
 const plSeq = () => { const a = []; bibleMeta.forEach(m => { for (let c = 1; c <= (m.chapterCount || 0); c++) a.push({ book:m.name, ch:c }); }); return a; };
 const plPer = (days, T) => {                                         // nhãn "chương/ngày"
-  const per = (T || 1189) / days, f = Math.floor(per), c = Math.ceil(per);
+  const per = (T || BIBLE_CHAPTERS) / days, f = Math.floor(per), c = Math.ceil(per);
   return f === c ? `${f} chương/ngày` : per < 2 ? `khoảng ${Math.round(per)} chương/ngày` : `${f}–${c} chương/ngày`;
 };
 const plDay = start => { const [y, m, d] = start.split('-').map(Number), t = new Date(); return Math.floor((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(y, m - 1, d)) / 864e5) + 1; };
@@ -4321,8 +4322,8 @@ function openPlan(opts){
   const T = plSeq().length;
   const cust = { mode:(PCUST && PCUST.mode === 'chap') ? 'chap' : 'days', val:String((PCUST && PCUST.val) || '') };
   const custDays = () => {                                           // trả về số ngày hợp lệ hoặc 0
-    const n = parseInt(cust.val, 10), max = T || 1189; if (!(n >= 1) || n > max) return 0;
-    return cust.mode === 'days' ? n : Math.ceil(max / n);
+    const n = parseInt(cust.val, 10), max = BIBLE_CHAPTERS; if (!(n >= 1) || n > max) return 0;
+    return cust.mode === 'days' ? n : Math.ceil(BIBLE_CHAPTERS / n);
   };
   const spanTxt = d => {                                            // "238 ngày (khoảng 7,8 tháng)"
     if (d < 30) return d + ' ngày';
@@ -4332,7 +4333,7 @@ function openPlan(opts){
   };
   const custPv = () => {
     const el = o.querySelector('#plCp'); if (!el) return;
-    const max = T || 1189, n = parseInt(cust.val, 10);
+    const max = BIBLE_CHAPTERS, n = parseInt(cust.val, 10);
     if (!cust.val){ el.textContent = 'Nhập số để xem thời gian hoàn thành.'; el.className = 'plcpv'; return; }
     if (!(n >= 1) || n > max){ el.textContent = `Hãy nhập số từ 1 đến ${max}.`; el.className = 'plcpv bad'; return; }
     const d = custDays(), end = new Date(); end.setDate(end.getDate() + d - 1);
@@ -4370,7 +4371,7 @@ function openPlan(opts){
   draw();
   const startCustom = () => {
     if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
-    const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${T}`); }
+    const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${BIBLE_CHAPTERS}`); }
     PCUST = { mode:cust.mode, val:cust.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
     PLAN = { id:'custom', start:dayKey(), days:d }; savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
     ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
