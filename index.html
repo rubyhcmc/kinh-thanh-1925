@@ -464,6 +464,8 @@ html[data-paper] .reader.print{text-align:justify}
 .plcustom input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .plcpv{min-height:1.5em;margin-top:8px;font:13px/1.5 var(--sans);color:var(--muted)}
 .plcpv.bad{color:var(--danger)}
+.plcpv{white-space:pre-line}
+.plcpv.ok{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--fg);line-height:1.6}
 .hjs .plcomm{margin-top:16px}
 
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
@@ -893,7 +895,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4323,15 +4325,23 @@ function openPlan(opts){
     const n = parseInt(cust.val, 10), max = T || 1189; if (!(n >= 1) || n > max) return 0;
     return cust.mode === 'days' ? n : Math.ceil(max / n);
   };
+  const spanTxt = d => {                                            // "238 ngày (khoảng 7,8 tháng)"
+    if (d < 30) return d + ' ngày';
+    if (d < 365) return `${d} ngày (khoảng ${(d / 30.44).toFixed(1).replace('.', ',').replace(/,0$/, '')} tháng)`;
+    const y = Math.floor(d / 365), m = Math.round((d - y * 365) / 30.44);
+    return `${d} ngày (khoảng ${y} năm${m ? ' ' + m + ' tháng' : ''})`;
+  };
   const custPv = () => {
     const el = o.querySelector('#plCp'); if (!el) return;
     const max = T || 1189, n = parseInt(cust.val, 10);
-    if (!cust.val){ el.textContent = ''; el.className = 'plcpv'; return; }
+    if (!cust.val){ el.textContent = 'Nhập số để xem thời gian hoàn thành.'; el.className = 'plcpv'; return; }
     if (!(n >= 1) || n > max){ el.textContent = `Hãy nhập số từ 1 đến ${max}.`; el.className = 'plcpv bad'; return; }
-    const d = custDays();
-    el.className = 'plcpv';
-    el.textContent = cust.mode === 'days' ? `≈ ${(max / d).toFixed(1).replace(/\.0$/, '')} chương mỗi ngày · hoàn thành sau ${d} ngày`
-      : `Hoàn thành sau ${d} ngày (khoảng ${d >= 60 ? Math.round(d / 30) + ' tháng' : d + ' ngày'})`;
+    const d = custDays(), end = new Date(); end.setDate(end.getDate() + d - 1);
+    const endTxt = end.toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
+    el.className = 'plcpv ok';
+    el.textContent = `Tổng cộng ${max} chương\n`
+      + (cust.mode === 'chap' ? `Mỗi ngày đọc ${n} chương → hoàn thành sau ${spanTxt(d)}` : `Hoàn thành trong ${spanTxt(d)} → ${plPer(d, max)}`)
+      + `\nDự kiến xong: ${endTxt} (nếu bắt đầu hôm nay)`;
   };
   const draw = () => {
     let body;
@@ -4340,7 +4350,7 @@ function openPlan(opts){
         PLANS.map(p => `<button class="plcard" data-pick="${p.id}"><b>${p.name}</b><span>${p.sub} · ${p.per}</span></button>`).join('') +
         `<div class="plcard plcustom"><b>Tự thiết kế riêng</b><span>Tự gõ số ngày hoặc số chương mỗi ngày theo ý bạn.</span>
           <div class="seg" id="plCm"><button data-cm="days" class="${cust.mode === 'days' ? 'on' : ''}">Số ngày</button><button data-cm="chap" class="${cust.mode === 'chap' ? 'on' : ''}">Số chương mỗi ngày</button></div>
-          <input type="text" id="plCv" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="5" placeholder="${cust.mode === 'days' ? `Số ngày (1–${T || 1189})` : `Số chương mỗi ngày (1–${T || 1189})`}" value="${esc(cust.val)}" aria-label="Số liệu kế hoạch tự thiết kế">
+          <input type="text" id="plCv" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="5" placeholder="${cust.mode === 'days' ? 'Số ngày' : 'Số chương mỗi ngày'}" value="${esc(cust.val)}" aria-label="Số liệu kế hoạch tự thiết kế">
           <div class="plcpv" id="plCp"></div>
           <button class="btn primary" data-custom="1" style="width:100%;margin-top:10px">Bắt đầu kế hoạch của tôi</button></div>`;
     } else {
