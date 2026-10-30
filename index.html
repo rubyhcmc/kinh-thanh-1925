@@ -56,14 +56,16 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area
 .syncb.dirty,.syncb.offline{color:var(--accent)}
 .syncb.err,.syncb.conflict{color:var(--danger)}
 /* thanh trên luôn cố định, không tự ẩn khi cuộn */
-body{padding-top:var(--hh)}
-body.pg:not(.searching){padding-top:0}
+/* Trang cố định: tài liệu không cuộn, không kéo trượt; chỉ vùng đọc (main) cuộn bên trong → hết giật cả trang khi đổi chương */
+html{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
+body{position:fixed;left:0;right:0;top:0;bottom:0;width:100%;overflow:hidden;overscroll-behavior:none}
 body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
 
-main{max-width:760px;margin:0 auto;perspective:1400px;touch-action:pan-y pinch-zoom;overflow-x:clip;min-height:calc(100vh - var(--hh))}
+main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:760px;margin:0 auto;perspective:1400px;touch-action:pan-y pinch-zoom;
+  overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom)}
 /* lật trang khi vuốt */
 #bibleText.flip{background:var(--bg);box-shadow:0 0 28px rgba(0,0,0,.28);border-radius:4px;will-change:transform,opacity;backface-visibility:hidden}
 
@@ -132,7 +134,7 @@ body.searching .top .sfield{display:flex}
 .para{margin:0 0 .75em}
 .dc{float:left;font-size:3.5em;line-height:.8;font-weight:700;color:var(--accent);margin:.07em .12em 0 0}
 .vn{font-family:var(--sans);font-size:.58em;font-weight:700;vertical-align:super;line-height:0;margin:0 .22em 0 .12em;color:var(--accent)}
-.v{border-radius:4px;scroll-margin-top:calc(var(--hh) + 14px)}
+.v{border-radius:4px;scroll-margin-top:14px}
 .v.sel{background:var(--hl)}
 .poem{margin:0 0 .9em;text-align:left}
 .poem .v{display:block}
@@ -419,7 +421,7 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 #pgFoot{display:none;position:fixed;z-index:6;left:0;right:0;bottom:0;height:calc(36px + env(safe-area-inset-bottom));padding:0 18px env(safe-area-inset-bottom);align-items:center;justify-content:space-between;font:12px var(--sans);letter-spacing:.04em;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
 body.pg:not(.searching) #pgFoot{display:flex}
 body.pg:not(.searching){overflow:hidden}
-body.pg:not(.searching) main{perspective:none;overflow:visible;min-height:0;max-width:none}
+body.pg:not(.searching) main{position:static;perspective:none;overflow:visible;min-height:0;max-width:none;padding:0;height:0}
 body.pg:not(.searching) #chapNav{display:none!important}
 body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(-100%)}
 body.pg.pgchrome:not(.searching) .top{transform:none}
@@ -891,7 +893,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -909,6 +911,7 @@ function guessRepo(){
 /* ============ TIỆN ÍCH ============ */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SCR = document.querySelector('main');   // khung cuộn duy nhất của vùng đọc
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Bỏ dấu tiếng Việt để tìm kiếm không phân biệt dấu
 const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -1097,7 +1100,7 @@ function syncVerse(){
   const v = $('#niVerse'); if (!v || document.activeElement === v) return;
   cancelAnimationFrame(svT); svT = requestAnimationFrame(() => { if (document.activeElement === v) return; v.placeholder = curBook ? (curVerseNo() || 'Câu') : 'Câu'; });
 }
-addEventListener('scroll', syncVerse, { passive:true });
+SCR.addEventListener('scroll', syncVerse, { passive:true });
 function setupNav(kind){
   const isC = kind === 'chap', LB = isC ? 'CHƯƠNG' : 'CÂU';
   const inp = $(isC ? '#niChap' : '#niVerse'), pill = $(isC ? '#rngChap' : '#rngVerse');
@@ -1657,8 +1660,8 @@ function showVerseMenu(n, x, y){
   const below = y + 24, top = below + r.height > H - 10 ? Math.max(10, y - r.height - 24) : below;
   m.style.top = top + 'px';
   const opened = Date.now(), close = () => bg.remove();
-  const onScroll = () => { close(); removeEventListener('scroll', onScroll); };
-  addEventListener('scroll', onScroll, { passive:true });
+  const onScroll = () => { close(); SCR.removeEventListener('scroll', onScroll); };
+  SCR.addEventListener('scroll', onScroll, { passive:true });
   bg.addEventListener('click', e => {
     e.stopPropagation(); e.preventDefault();
     if (Date.now() - opened < 450) return;              // bỏ qua cú thả tay sau khi giữ
@@ -1711,7 +1714,7 @@ function showVerseMenu(n, x, y){
     if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) cancel();
   }, { passive:true });
   ['touchend', 'touchcancel'].forEach(k => root.addEventListener(k, cancel, { passive:true }));
-  addEventListener('scroll', cancel, { passive:true });
+  SCR.addEventListener('scroll', cancel, { passive:true });
   root.addEventListener('mousedown', e => { if (e.button !== 0 || Date.now() - lastTouch < 800) return; start(e.target, e.clientX, e.clientY); });
   root.addEventListener('mousemove', e => { if (timer && (Math.abs(e.clientX - sx) > 6 || Math.abs(e.clientY - sy) > 6)) cancel(); });
   ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
@@ -1853,7 +1856,7 @@ function bsRender(){
 function setSearch(on){
   $('#tab-bible').classList.toggle('searching', on); document.body.classList.toggle('searching', on);
   $('#bSearch').hidden = !on;
-  window.scrollTo(0, 0);
+  SCR.scrollTop = 0;
   if (on){ $('#bsQ').focus(); clearSelection(); bsFillScope(); bsBuild(); }   // focus() phải chạy ngay trong cú chạm thì iPhone mới bật bàn phím
   else $('#bsQ').blur();
 }
@@ -1863,7 +1866,7 @@ let bsTimer;
 $('#bsQ').addEventListener('input', () => { clearTimeout(bsTimer); bsTimer = setTimeout(bsRun, 250); });
 $('#bsQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeout(bsTimer); bsRun(); e.target.blur(); } });
 ['bsMode', 'bsWord', 'bsScope'].forEach(id => $('#' + id).onchange = bsRun);
-$('#bsPager').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; bs.page += +b.dataset.p; bsRender(); window.scrollTo(0, 0); });
+$('#bsPager').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; bs.page += +b.dataset.p; bsRender(); SCR.scrollTop = 0; });
 $('#bsItems').addEventListener('click', async e => {
   const b = e.target.closest('[data-i]'); if (!b) return;
   const r = bs.res[+b.dataset.i]; if (!r) return;
@@ -2051,7 +2054,7 @@ async function ghPull(sha){
   if (!books.length) throw new Error('Tệp trên GitHub chưa có nội dung Kinh Thánh.');
   await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha, dirty:false, at:Date.now() }; saveSY();
-  const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
+  const y = SCR.scrollTop; await reloadAll(); SCR.scrollTop = y;
 }
 async function ghPush(auto){
   const books = await buildBooks();
@@ -2102,7 +2105,7 @@ async function syncReadOnly(o){
   }
   await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha:sig, dirty:false, at:Date.now() }; saveSY();
-  const y = window.scrollY; await reloadAll(); window.scrollTo(0, y);
+  const y = SCR.scrollTop; await reloadAll(); SCR.scrollTop = y;
   setSync('ok', 'Đã cập nhật nội dung mới từ GitHub.'); if (!o.auto || !hasLocal) toast('Đã tải dữ liệu từ GitHub');
 }
 
@@ -2500,7 +2503,7 @@ $('#doImport').onclick = async () => {
     await reloadAll(); markDirty();
     setLog('✔ Đã lưu: ' + res.msg + '. Đang mở nội dung mới…', true); $('#impText').value = '';
     // Tự hiển thị nội dung vừa nạp ở trang chủ
-    setTimeout(() => { show('#admin', false); window.scrollTo(0, 0); toast('Đã nạp ' + res.msg); }, 900);
+    setTimeout(() => { show('#admin', false); SCR.scrollTop = 0; toast('Đã nạp ' + res.msg); }, 900);
   } catch(e){ setLog('✖ ' + e.message, false); }
   btn.disabled = false;
 };
@@ -2858,7 +2861,7 @@ function paperHTML(book, ch, verses, view, idp){
 function applyView(){ $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view)); }
 $$('#viewSeg button').forEach(b => b.onclick = () => {
   S.view = b.dataset.v; saveS(); applyView();
-  if (curBook){ const y = window.scrollY; renderChapter(); window.scrollTo(0, y); }
+  if (curBook){ const y = SCR.scrollTop; renderChapter(); SCR.scrollTop = y; }
 });
 
 /* Dán từ trang web: chuyển HTML → văn bản có đánh dấu số câu (<sup>, class verse-num…) và tiêu đề (h1–h6) */
@@ -3615,29 +3618,8 @@ function setupPWA(){
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline);
 
-/* Thanh đầu trang tự ẩn khi cuộn xuống để dành chỗ cho chữ, hiện lại khi cuộn lên */
-var lastY = 0, hdrBusy = false, hdrIgnore = 0;
-/* Về đầu trang khi đổi sách/chương: tắt hiệu ứng trượt của thanh đầu trang, đặt lại trạng thái ẩn/hiện
-   và bỏ qua các sự kiện cuộn do chính lệnh này gây ra → thanh đầu trang đứng yên, không giật */
-function ktTop(){
-  const b = document.body;
-  b.classList.add('hdr-nt'); b.classList.remove('hdr-hide');
-  hdrIgnore = performance.now() + 250; lastY = 0;
-  if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
-  requestAnimationFrame(() => requestAnimationFrame(() => { lastY = 0; b.classList.remove('hdr-nt'); }));
-}
-addEventListener('scroll', () => {
-  if (hdrBusy) return; hdrBusy = true;
-  requestAnimationFrame(() => {
-    if (performance.now() < hdrIgnore){ hdrBusy = false; return; }
-    const y = Math.max(0, window.scrollY), d = y - lastY, cl = document.body.classList;
-    if (y < 60 || !$('#bSearch').hidden) cl.remove('hdr-hide');
-    else if (d > 8) cl.add('hdr-hide');
-    else if (d < -8) cl.remove('hdr-hide');
-    if (Math.abs(d) > 8 || y < 60) lastY = y;
-    hdrBusy = false;
-  });
-}, { passive:true });
+/* Về đầu chương khi đổi sách/chương: chỉ đặt lại vị trí của khung đọc; thanh đầu trang cố định nên không có gì nhảy */
+function ktTop(){ if (SCR.scrollTop !== 0) SCR.scrollTop = 0; }
 
 async function dropDemoBook(){
   try {
@@ -3924,15 +3906,15 @@ async function pgFlip(dir){                                        // chạm mé
   };
   view.addEventListener('touchend', () => { pg.touching = false; end(false); });
   view.addEventListener('touchcancel', () => { pg.touching = false; end(true); });
-  view.addEventListener('click', e => {                            // chạm mép trái/phải = lật; chạm dải trên cùng = hiện/ẩn thanh công cụ
+  view.addEventListener('click', e => {                            // chạm dải trên cùng = hiện/ẩn thanh công cụ
     if (!pgOn()) return;
     if (pg.busy || Date.now() < (pg.swallow || 0)){ e.stopPropagation(); e.preventDefault(); return; }
     if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgPrepClear(true); pgCount(); pgGo(pg.page); }, 40); return; }
     if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
-    const cl = document.body.classList, x = e.clientX / innerWidth, eat = () => { e.stopPropagation(); e.preventDefault(); };
+    const cl = document.body.classList, eat = () => { e.stopPropagation(); e.preventDefault(); };
     if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
     if (e.clientY < 64){ cl.add('pgchrome'); return eat(); }
-    if (x < 0.3){ eat(); pgFlip(-1); } else if (x > 0.7){ eat(); pgFlip(1); }
+    /* Đã bỏ chạm mép trái/phải để lật trang (dễ chạm nhầm): chỉ lật bằng vuốt, phím ← → hoặc lăn chuột */
   }, true);
   let wheelLast = 0, wheelFlipAt = 0;                              // laptop: lăn chuột / vuốt hai ngón
   view.addEventListener('wheel', e => {                             // mỗi lần cuộn chỉ lật ĐÚNG 1 trang: quán tính của touchpad (dòng sự kiện liên tục) bị bỏ qua
@@ -3945,7 +3927,6 @@ async function pgFlip(dir){                                        // chạm mé
     if (now - wheelFlipAt < 450) return;
     wheelFlipAt = now; pgFlip(d > 0 ? 1 : -1);
   }, { passive:false });
-  view.addEventListener('mousemove', e => { if (pgOn()) view.style.cursor = e.clientX < innerWidth * 0.3 ? 'w-resize' : e.clientX > innerWidth * 0.7 ? 'e-resize' : ''; });
   $('#pgFoot').addEventListener('click', () => document.body.classList.toggle('pgchrome'));
   let rsT; addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (!pg.busy && !st) pgRefresh(); }, 180); });
   addEventListener('keydown', e => {
@@ -4041,7 +4022,7 @@ const OB = [
   { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh, không cần gõ dấu.' },
   { ico:'👆', t:'Vuốt để lật chương', d:'Vuốt ngón tay sang trái để sang chương sau, vuốt sang phải để về chương trước, như lật trang sách giấy.' },
   { ico:'✍️', t:'Chạm giữ một câu', d:'Giữ ngón tay lên một câu khoảng nửa giây để đánh dấu chỗ đang đọc, sao chép, chia sẻ thành ảnh hoặc viết bài học cá nhân.' },
-  { ico:'📄', t:'Chế độ Trang giấy', d:'Bấm biểu tượng tờ giấy để đọc như sách in: chữ đen trên nền giấy, dễ đọc dưới nắng. Chạm mép trái hoặc phải để lật trang.' }
+  { ico:'📄', t:'Chế độ Trang giấy', d:'Bấm biểu tượng tờ giấy để đọc như sách in: chữ đen trên nền giấy, dễ đọc dưới nắng. Vuốt sang trái hoặc phải để lật trang.' }
 ];
 function showOnboard(){
   if ($('#obOverlay')) return;
