@@ -363,8 +363,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .bmlast{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:1px}
 [data-theme=dark] .bmlast{color:#1a1409}
 /* ===== Lật trang như sách giấy ===== */
-.fl-stage{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:hidden;pointer-events:none}
-.fl-book{position:absolute;top:0;bottom:0;perspective-origin:0% 50%}
+.fl-stage{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:hidden;pointer-events:none;contain:strict;transform:translateZ(0)}
+.fl-book{position:absolute;top:0;bottom:0}      /* KHÔNG có perspective: lật bằng co ngang, mép trên/dưới đứng yên */
 .fl-under,.fl-leaf{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
 .fl-leaf{transform-origin:0% 50%;-webkit-backface-visibility:hidden;backface-visibility:hidden;will-change:transform;
   box-shadow:6px 0 22px rgba(0,0,0,.22)}
@@ -901,7 +901,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-J';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-K';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1242,7 +1242,7 @@ $('#nextChap').onclick = () => stepChapter(1);
     const mr = main.getBoundingClientRect(), tab = $('#tab-bible').getBoundingClientRect(), W = mr.width;
     const persp = Math.round(Math.max(W * 6, 2400));
     const stage = el('fl-stage'), book = el('fl-book');
-    book.style.left = mr.left + 'px'; book.style.width = W + 'px'; book.style.perspective = persp + 'px';
+    book.style.left = mr.left + 'px'; book.style.width = W + 'px';
     const cur = $('#tab-bible').cloneNode(true);
     cur.classList.remove('searching');
     cur.querySelectorAll('.sel,.flash').forEach(e => e.classList.remove('sel', 'flash'));
@@ -1294,9 +1294,10 @@ $('#nextChap').onclick = () => stepChapter(1);
         await stepChapter(dir);                                                   // trang thật đã nằm đúng chỗ bên dưới
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
-    } finally { sg.cleanup(); }
+    } finally { sg.cleanup(); delete document.documentElement.dataset.flipping; }
   }
   async function begin(dir){
+    document.documentElement.dataset.flipping = '1';
     prefetch(); const n = nbr; let sg = n.s[dir];
     if (sg) delete n.s[dir];
     else {                                                                         // chưa kịp dựng sẵn → dựng ngay
@@ -1337,7 +1338,7 @@ $('#nextChap').onclick = () => stepChapter(1);
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
       if (Math.abs(dy) > Math.abs(dx) * 0.8){ st = null; return; }              // đang cuộn dọc → nhường cho trình duyệt
       st.lock = true; st.dir = dx < 0 ? 1 : -1; swallow = true;
-      SCR.style.overflowY = 'hidden'; if (SCR.scrollTop !== st.y0) SCR.scrollTop = st.y0;      // vuốt ngang: khóa cuộn dọc để trang không trượt lên/xuống theo ngón tay
+      if (SCR.scrollTop !== st.y0) SCR.scrollTop = st.y0;      // vuốt ngang: ghim vị trí cuộn dọc (KHÔNG đổi overflow của khung cuộn: trên iOS việc đó làm bố cục tính lại, giật mép trên/dưới)
       if (!canGo(st.dir)) st.edge = true;
       else {
         const s = st;
@@ -1385,6 +1386,18 @@ $('#nextChap').onclick = () => stepChapter(1);
   main.addEventListener('click', e => { if (swallow){ e.stopPropagation(); e.preventDefault(); } }, true);
   $('#prevChap').onclick = () => flip(-1);
   $('#nextChap').onclick = () => flip(1);
+  /* ===== KHÓA LẬT TRANG =====
+     Bộ máy lật trang (buildStage / apply / tween / finish / begin + CSS .fl-*) đã được chốt: mép trên/dưới đứng yên tuyệt đối.
+     Mỗi lần mở app, đoạn dưới tự kiểm tra: mã bị sửa hoặc CSS bị thêm perspective → hiện cảnh báo ở Cài đặt và Console.
+     Muốn sửa chủ ý: sửa xong, mở Console đọc giá trị KT_FLIP_HASH rồi dán vào FLIP_HASH_OK bên dưới. */
+  const FLIP_HASH_OK = '50527903';
+  const fnv = t => { let h = 2166136261; for (let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); };
+  window.KT_FLIP_HASH = fnv([buildStage, apply, tween, finish, begin].map(f => String(f).replace(/\s+/g, ' ')).join('|'));
+  setTimeout(() => {
+    let cs = ''; try { cs = getComputedStyle(main).perspective + '/' + getComputedStyle(document.body).perspective; } catch(e){}
+    window.KT_FLIP_LOCK = (window.KT_FLIP_HASH === FLIP_HASH_OK && /^none\/none$/.test(cs)) ? 'OK' : 'BROKEN';
+    if (window.KT_FLIP_LOCK !== 'OK') console.error('[Khóa lật trang] Mã lật trang đã bị thay đổi so với bản đã chốt (hash ' + window.KT_FLIP_HASH + ', perspective ' + cs + ').');
+  }, 1500);
   addEventListener('keydown', e => {                                                // máy tính: phím ← →
     if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = document.activeElement;
@@ -1428,6 +1441,7 @@ function rsSetOff(on){ try { on ? localStorage.setItem(RS_OFF, '1') : localStora
 let rsT = 0, rsHold = 0;
 function rsTrackNow(){
   clearTimeout(rsT);
+  if (document.documentElement.dataset.flipping){ rsT = setTimeout(rsTrackNow, 600); return; }
   if (!PLAN || !RESUME || !curBook || document.body.classList.contains('searching')) return;
   if (RESUME.book !== curBook.name || RESUME.ch !== S.chapter) return;
   const wait = rsHold - Date.now();
@@ -2556,7 +2570,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ' · 🔒 Lật trang đã khóa'); $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
