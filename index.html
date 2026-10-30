@@ -901,7 +901,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
  *  Đổi mật khẩu ban đầu / mã khôi phục: Quản lý → "Tạo mã băm", dán kết quả vào hai hằng số dưới đây. */
 const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b37bb1945099614';   // mật khẩu ban đầu (băm)
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
-const APP_VERSION = '2026.10.30-I';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.30-J';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3935,7 +3935,14 @@ function pgFitArt(art){
   pad = put(lh, n);                                                 // không gom được → giữ như cũ
 };
 const pgSetX = (art, page, W) => { art.style.transform = 'translateX(' + (-page * W) + 'px)'; };
-function pgCount(){ const a = $('#bibleText'); pgFitArt(a); pg.pages = pgPagesOf(a, pgW()); }
+function pgCount(){
+  const a = $('#bibleText'), f = pg.fit;
+  pg.sig = pgShKey();
+  if (pg.useFit && f && f.key === [S.book, S.chapter, S.view, S.fs, S.font, innerWidth, innerHeight, S.paper ? 1 : 0].join('|')){
+    const st = a.style; st.lineHeight = f.lh; st.paddingTop = f.pt; st.paddingBottom = f.pb; st.height = f.h; pg.pages = f.pages; pg.fit = null; return;
+  }
+  pgFitArt(a); pg.pages = pgPagesOf(a, pgW());
+}
 function pgFoot(){
   $('#pgPos').innerHTML = `<span class="pglab">Trang</span><b class="pgcur">${pg.page + 1}</b><span class="pgtot"> / ${pg.pages}</span>`;
   $('#pgBook').textContent = curBook ? `${curBook.name} · ${S.chapter}` : '';
@@ -3972,7 +3979,7 @@ function pgRefresh(keepVerse){                                     // dựng l�
     pgPrepClear(true);
     _rcPg.apply(this, arguments);
     if (!pgOn()){ pg.toEnd = false; return; }
-    pgRefresh(keep);
+    pg.useFit = true; try { pgRefresh(keep); } finally { pg.useFit = false; }
     if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => pgRefresh(keep));
   }; }
 
@@ -3998,7 +4005,7 @@ async function pgNbrHTML(d){
     const rec = await dbGet('books', nb.name); if (!rec) return null;
     name = nb.name; ch = d > 0 ? 1 : rec.chapters.length; verses = rec.chapters[ch - 1] || [];
   }
-  return paperHTML(name, ch, verses, S.view, 'x');
+  return { html:paperHTML(name, ch, verses, S.view, 'x'), name, ch };
 }
 function pgApply(sg, prog){
   const t = sg.dir > 0 ? prog : 1 - prog, a = 100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180, c = Math.cos(r);
@@ -4052,6 +4059,8 @@ async function pgPrepNow(){
   const key = pgKey(); if (pg.prep.key === key) return;
   pgPrepClear(); const P = pg.prep = { key, m:{} };
   for (const d of [1, -1]){
+    const cross = d > 0 ? pg.page >= pg.pages - 1 : pg.page <= 0;
+    if (cross && d !== (pg.lastDir || 1)) continue;          // chương ở hướng ngược lại dựng khi cần, để lúc vừa sang chương mới không phải dựng thêm
     let m = null; try { m = await pgMake(d); } catch(e){}
     if (pg.prep !== P || pg.busy || !pgOn()){ if (m && !m.shadow) m.node.remove(); if (pg.prep === P) pgPrep(); return; }
     if (m){ if (!m.shadow){ m.node.style.visibility = 'hidden'; m.node.style.pointerEvents = 'none'; } P.m[d] = m; }
@@ -4073,21 +4082,24 @@ async function pgMake(dir){                                        // trả về
     return { node:pgShadow(), page:tp, shadow:true, commit: async () => { if (pgSnap() === snap) pgGo(tp); } };   // trạng thái đã đổi → bỏ lệnh cũ, không nhảy cóc
   }
   if ((dir > 0 ? $('#nextChap') : $('#prevChap')).disabled) return null;
-  const html = await pgNbrHTML(dir); if (!html) return null;
+  const nb = await pgNbrHTML(dir); if (!nb) return null;
+  const html = nb.html;
   const nx = pgDiv('pgv'); nx.innerHTML = `<article class="reader${S.view !== 'verse' ? ' print' : ''}">${html}</article>`;
   nx.style.visibility = 'hidden'; document.body.appendChild(nx);     // đo số trang của chương kế khi chưa lật
   const a2 = nx.firstElementChild; pgFitArt(a2); const pages = pgPagesOf(a2, W);
   pgSetX(a2, dir > 0 ? 0 : pages - 1, W);
+  { const st = a2.style;      // nhớ kết quả dàn trang của chương kế: khi lật xong không phải đo lại lần nữa (đây là phần gây khựng ở cuối chương)
+    pg.fit = { key:[nb.name, nb.ch, S.view, S.fs, S.font, innerWidth, innerHeight, S.paper ? 1 : 0].join('|'), lh:st.lineHeight, pt:st.paddingTop, pb:st.paddingBottom, h:st.height, pages }; }
   return { node:nx, commit: async () => { if (pgSnap() !== snap) return; pg.toEnd = dir < 0; await stepChapter(dir); } };
 }
 function pgSync(){                                                  // đo lại số trang ngay trước khi lật: số trang cũ có thể đã lỗi thời (font tải xong, đổi cỡ chữ…)
-  if (!pgOn() || pg.busy) return;
+  if (!pgOn() || pg.busy || pg.sig === pgShKey()) return;      // chưa đổi gì → khỏi đo lại (đo lại mỗi lần chạm là việc nặng)
   const old = pg.pages; pgCount();
   if (pg.pages !== old){ pgPrepClear(); }
   if (pg.page > pg.pages - 1){ pg.page = pg.pages - 1; pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); }
 }
 async function pgBegin(dir){                                       // trả về { sg, commit } hoặc null nếu hết sách
-  document.body.classList.remove('pgchrome');
+  document.body.classList.remove('pgchrome'); pg.lastDir = dir;
   const P = pg.prep; let m = null;
   if (P.key === pgKey() && P.m[dir]){ m = P.m[dir]; delete P.m[dir]; }
   else m = await pgMake(dir);
