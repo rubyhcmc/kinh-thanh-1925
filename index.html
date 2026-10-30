@@ -1547,7 +1547,7 @@ function openLessons(){
     const pct = total ? done / total * 100 : 0, pctTxt = pct >= 100 ? '100' : pct >= 10 ? pct.toFixed(0) : pct.toFixed(1).replace(/\.0$/, '');
     let planBox;
     { const pl = PLAN && planDef(PLAN);
-      if (!pl) planBox = `<div class="hjbig"><span>Chưa có kế hoạch</span></div><small>Chọn một kế hoạch để theo dõi chương đã đọc, chuỗi ngày và cột mốc.</small><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
+      if (!pl) planBox = `<div style="margin:6px auto 0;max-width:320px;font:700 21px/1.45 var(--serif);color:var(--accent);text-align:center">Bắt đầu kế hoạch đọc để lưu dấu hành trình theo CHÚA!</div><button class="btn primary hjplanbtn" data-plan="1">Chọn kế hoạch</button>`;
       else {
         const t = plToday(), dn = t.items.filter(x => (RD[today] || []).includes(x.book + '|' + x.ch)).length;
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
