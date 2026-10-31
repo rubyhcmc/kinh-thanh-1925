@@ -912,7 +912,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-T';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-U';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1118,7 +1118,16 @@ function flashVerse(el){
   SCR.addEventListener('scroll', act, { passive:true });
   el._fl = setTimeout(() => { done = true; off(); el.classList.remove('flash', 'out'); }, 7100);
 }
-$('#selBook').onchange = e => openBook(e.target.value, 1);
+/* Chọn sách xong → con trỏ tự nhảy sang ô Chương (sách chỉ có 1 chương thì nhảy thẳng sang ô Câu) */
+$('#selBook').onchange = async e => {
+  const nc = $('#niChap'), nv = $('#niVerse');
+  if (!nc.disabled) nc.focus();                                // focus ngay trong cú chạm để iPhone giữ được bàn phím số
+  await openBook(e.target.value, 1);
+  if (!curBook) return;
+  if (curBook.chapters.length === 1){ nv.focus(); return; }
+  if (document.activeElement === nc) nc.dispatchEvent(new Event('focus'));   // cập nhật lại dải số chương theo sách mới
+  else nc.focus();
+};
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
 $('#selVerse').onchange = e => {
   const el = $('#v' + e.target.value); if (!el) return;
@@ -1174,16 +1183,18 @@ function setupNav(kind){
   const range = c => { say('', false); inp.placeholder = `1–${c.max}`; };
   const bad = (c, n) => say(isC ? `Chỉ có 1-${c.max} ${LB}` : (n > c.max || n < 1 ? `Chỉ có 1-${c.max} ${LB}` : `Không có câu ${n} (1-${c.max} ${LB})`), true);
   const canExtend = (c, n) => { const s = String(n); for (const m of c.nums) if (m > n && String(m).startsWith(s)) return true; return false; };
-  const jump = n => {
+  const jump = (n, adv) => {
     if (!(isC && n === S.chapter)){ sel.value = n; sel.onchange({ target:sel }); }
     if (!isC) inp.value = '';
-    pill.hidden = true; nf.classList.remove('bad'); inp.blur();
+    pill.hidden = true; nf.classList.remove('bad');
+    if (adv && isC) $('#niVerse').focus();     // nhập chương xong → con trỏ tự nhảy sang ô Câu
+    else inp.blur();
   };
-  const commit = () => {                       // true nếu hợp lệ và đã nhảy
+  const commit = adv => {                      // true nếu hợp lệ và đã nhảy; adv = có chuyển con trỏ sang ô kế tiếp
     const c = cfg(); if (!c) return false;
     const n = parseInt(inp.value, 10);
     if (!(n >= 1) || !c.nums.has(n)) return false;
-    jump(n); return true;
+    jump(n, adv); return true;
   };
   inp.addEventListener('focus', () => {
     const c = cfg(); if (!c){ inp.blur(); return; }
@@ -1195,11 +1206,11 @@ function setupNav(kind){
     const c = cfg(); if (!c) return;
     if (!inp.value) return range(c);
     const n = parseInt(inp.value, 10), ok = c.nums.has(n);
-    if (ok && !canExtend(c, n)) return void commit();          // đủ số hợp lệ → nhảy luôn
+    if (ok && !canExtend(c, n)) return void commit(true);          // đủ số hợp lệ → nhảy luôn
     if (!ok && !canExtend(c, n)) bad(c, n); else range(c);     // quá phạm vi → báo; còn có thể gõ tiếp → chờ
   });
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Done'){ e.preventDefault(); if (!commit()){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } }
+    if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Done'){ e.preventDefault(); if (!commit(true)){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } }
     else if (e.key === 'Escape'){ inp.value = ''; inp.blur(); }
   });
   inp.addEventListener('blur', () => {         // bấm "Xong" của bàn phím → blur → nhảy nếu hợp lệ
@@ -1209,7 +1220,7 @@ function setupNav(kind){
     pill.hidden = true; nf.classList.remove('bad'); inp.value = ''; syncNav(); busy = false;
   });
   pill.addEventListener('mousedown', e => e.preventDefault());   // giữ bàn phím khi bấm nút Xong
-  pill.querySelector('button').addEventListener('click', () => { if (!commit()){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } });
+  pill.querySelector('button').addEventListener('click', () => { if (!commit(true)){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } });
 }
 setupNav('chap'); setupNav('verse');
 $('#prevChap').onclick = () => stepChapter(-1);
