@@ -908,7 +908,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-O';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-P';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1253,8 +1253,11 @@ $('#nextChap').onclick = () => stepChapter(1);
     const cur = $('#tab-bible').cloneNode(true);
     cur.classList.remove('searching');
     cur.querySelectorAll('.sel,.flash').forEach(e => e.classList.remove('sel', 'flash'));
-    const curBox = el('fl-pg'); curBox.style.top = tab.top + 'px'; curBox.appendChild(cur);
-    const nxBox = el('fl-pg'); nxBox.style.top = $('.top').offsetHeight + 'px'; nxBox.innerHTML = nbHTML;
+    /* Sân khấu chỉ phủ ĐÚNG khung đọc (main), tọa độ tính từ mép trên khung đọc: trang đang lật và trang kế luôn khớp từng điểm ảnh
+       với trang thật (kể cả iPhone có thanh trạng thái / vùng an toàn), không còn lệch vài chục điểm ảnh khi chuyển giữa lúc lật và lúc ổn định */
+    stage.style.top = mr.top + 'px';
+    const curBox = el('fl-pg'); curBox.style.top = (tab.top - mr.top) + 'px'; curBox.appendChild(cur);
+    const nxBox = el('fl-pg'); nxBox.style.top = '0px'; nxBox.innerHTML = nbHTML;
     [curBox, nxBox].forEach(b => { b.querySelectorAll('[id]').forEach(e => e.removeAttribute('id')); b.removeAttribute('id'); });
     const under = el('fl-under'), leaf = el('fl-leaf'), cast = el('fl-cast'), strip = el('fl-strip'), shade = el('fl-shade');
     under.append(dir > 0 ? nxBox : curBox, cast, strip);
@@ -1312,7 +1315,8 @@ $('#nextChap').onclick = () => stepChapter(1);
       sg = buildStage(dir, html);
     }
     clearSelection();
-    sg.curBox.style.top = $('#tab-bible').getBoundingClientRect().top + 'px';      // khớp đúng vị trí cuộn lúc này
+    { const mt = main.getBoundingClientRect().top; sg.stage.style.top = mt + 'px';
+      sg.curBox.style.top = ($('#tab-bible').getBoundingClientRect().top - mt) + 'px'; }      // khớp đúng vị trí cuộn lúc này
     sg.stage.style.visibility = ''; apply(sg, 0);
     return sg;
   }
@@ -1397,7 +1401,7 @@ $('#nextChap').onclick = () => stepChapter(1);
      Bộ máy lật trang (buildStage / apply / tween / finish / begin + CSS .fl-*) đã được chốt: mép trên/dưới đứng yên tuyệt đối.
      Mỗi lần mở app, đoạn dưới tự kiểm tra: mã bị sửa hoặc CSS bị thêm perspective → hiện cảnh báo ở Cài đặt và Console.
      Muốn sửa chủ ý: sửa xong, mở Console đọc giá trị KT_FLIP_HASH rồi dán vào FLIP_HASH_OK bên dưới. */
-  const FLIP_HASH_OK = '50527903';
+  const FLIP_HASH_OK = 'd3c82e2d';
   const fnv = t => { let h = 2166136261; for (let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); };
   window.KT_FLIP_HASH = fnv([buildStage, apply, tween, finish, begin].map(f => String(f).replace(/\s+/g, ' ')).join('|'));
   setTimeout(() => {
