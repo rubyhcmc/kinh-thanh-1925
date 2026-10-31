@@ -3,10 +3,10 @@
      lần mở sau trình duyệt tự thử lại. Nhờ vậy không bao giờ có chuyện “đã cài mà kho lưu trống”.
    - Mở trang (navigate): chờ mạng tối đa 2,5 giây; quá hạn hoặc mất mạng thì mở ngay bản đã lưu; bản mới vẫn tải ngầm cho lần sau.
    - Tệp dữ liệu .json KHÔNG đi qua đây: Kinh Thánh nằm trong IndexedDB của app, không nằm trong Cache Storage.
-   - Kho 'kt-store-v1' (kho dự phòng cũ của app) được GIỮ LẠI để app chuyển dữ liệu sang IndexedDB rồi tự xóa.
+   - Kho 'kt-store-v1' (kho dự phòng cũ) và 'kt-fallback-v1' (kho dự phòng dùng khi IndexedDB của máy hỏng) KHÔNG bị xóa ở đây: do app tự quản.
    - Khóa lưu sẵn bỏ phần “?…”: mở trang với tham số khác nhau (?kho=…) vẫn dùng chung một bản lưu. */
-const CACHE = 'kt-20261101-b';
-const LEGACY_STORE = 'kt-store-v1';
+const CACHE = 'kt-20261101-c';
+const LEGACY_STORE = 'kt-store-v1', FALLBACK_STORE = 'kt-fallback-v1';
 const NAV_WAIT_MS = 2500;
 const ESSENTIAL = ['./', './index.html'];
 const OPTIONAL = ['./manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
@@ -22,7 +22,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     const ks = await caches.keys();
-    await Promise.all(ks.filter(k => k !== CACHE && k !== LEGACY_STORE).map(k => caches.delete(k)));
+    await Promise.all(ks.filter(k => k !== CACHE && k !== LEGACY_STORE && k !== FALLBACK_STORE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });

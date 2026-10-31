@@ -927,7 +927,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AI3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AI4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -975,10 +975,47 @@ function choose(title, msg, opts){
 const IDB_VER = 2, LEGACY_CACHE = 'kt-store-v1';
 /* Máy CHƯA từng tải dữ liệu (lần mở đầu): kho chắc chắn đang trống → chỉ chờ 2,5 giây rồi chạy tạm bằng RAM để tải & hiện chữ ngay,
    kho mở được lúc nào thì dữ liệu tự chép vào lúc đó. Máy đã có dữ liệu: chờ lâu hơn (8 giây) vì dữ liệu thật nằm trong kho. */
-const IDB_GIVEUP_MS = (() => { try { const s = JSON.parse(localStorage.getItem('kt.sync') || '{}'); return s && s.sha ? 8000 : 2500; } catch(e){ return 6000; } })();
+const IDB_GIVEUP_MS = (() => { try { const s = JSON.parse(localStorage.getItem('kt.sync') || '{}'); return s && s.sha && !localStorage.getItem('kt.idbBad') ? 8000 : 2500; } catch(e){ return 6000; } })();   // máy từng có kho hỏng → không chờ lâu
 const IDB = { db:null, ever:false, err:null };
 const MEM = { data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, v:0 };
 const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+const OP_READ_MS = 10000, OP_WRITE_MS = 30000, FALLBACK_CACHE = 'kt-fallback-v1';
+const timed = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('Bộ nhớ không phản hồi'), { name:'IdbTimeout' })), ms))]);
+/* Thăm dò kho: một số iPhone mở được IndexedDB nhưng giao dịch đầu tiên treo mãi. Thử ghi/xóa một bản ghi nhỏ, quá 4 giây coi như kho hỏng. */
+function idbProbe(d){
+  return new Promise((res, rej) => {
+    const tx = d.transaction('userdata', 'readwrite'), os = tx.objectStore('userdata');
+    os.put({ k:'kt.__probe', v:'1', t:Date.now() }); os.delete('kt.__probe');
+    tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error || new Error('Kho không ghi được'));
+  });
+}
+/* KHO DỰ PHÒNG — CHỈ dùng khi IndexedDB của máy này hỏng (không mở được / treo). Máy bình thường không bao giờ chạm vào nó.
+   Dữ liệu giữ trong RAM và sao một bản vào Cache Storage riêng ('kt-fallback-v1') để lần mở sau vẫn có chữ, vẫn đọc được khi không có mạng. */
+let memT = 0;
+const memHasData = () => Object.keys(MEM.data).some(st => MEM.data[st].size > 0);
+function memSave(){
+  clearTimeout(memT);
+  memT = setTimeout(async () => {
+    try {
+      if (IDB.db || !('caches' in self)) return;
+      const c = await caches.open(FALLBACK_CACHE);
+      for (const st of Object.keys(MEM.data)) await c.put('./__kt_fb__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
+      IDB.fb = Date.now();
+    } catch(e){}
+  }, 800);
+}
+let memLoaded = false;
+async function memLoad(){
+  if (memLoaded) return; memLoaded = true;
+  try {
+    if (!('caches' in self)) return;
+    const c = await caches.open(FALLBACK_CACHE);
+    for (const st of Object.keys(MEM.data)){
+      const r = await c.match('./__kt_fb__/' + st); if (!r) continue;
+      (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i));
+    }
+  } catch(e){}
+}
 const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 
 function openDB(ms){
@@ -1009,7 +1046,7 @@ function idbOpenLoop(){
   if (idbOpening) return idbOpening;
   idbOpening = (async () => {
     for (let i = 0; i < 220; i++){
-      try { const d = await openDB(1500); await idbAdopt(d); return d; }
+      try { const d = await openDB(1500); try { await timed(idbProbe(d), 4000); } catch(e){ try { d.close(); } catch(_){} throw e; } await idbAdopt(d); return d; }
       catch(e){ IDB.err = e; await sleepMs(i < 25 ? 120 : i < 60 ? 500 : 3000); }
     }
     return null;
@@ -1019,32 +1056,36 @@ function idbOpenLoop(){
 async function idbAdopt(d){
   d.onversionchange = () => { try { d.close(); } catch(e){} if (IDB.db === d) IDB.db = null; };
   d.onclose = () => { if (IDB.db === d) IDB.db = null; };
-  if (MEM.v){   // lúc kho chưa mở được đã có dữ liệu ghi tạm trong RAM → chép hết vào IndexedDB
+  if (memHasData()){   // lúc kho chưa dùng được đã có dữ liệu trong RAM / kho dự phòng → chép hết vào IndexedDB rồi dọn kho dự phòng
     for (let g = 0; g < 4; g++){
       const v0 = MEM.v;
       for (const st of Object.keys(MEM.data)){ const arr = [...MEM.data[st].values()]; if (arr.length) await putAll(d, st, arr); }
       if (v0 === MEM.v) break;
     }
     MEM.v = 0; for (const st of Object.keys(MEM.data)) MEM.data[st].clear();
+    try { caches.delete(FALLBACK_CACHE); } catch(e){}
   }
-  IDB.db = d; IDB.ever = true; IDB.err = null;
+  IDB.db = d; IDB.ever = true; IDB.bad = false; IDB.err = null;
+  try { localStorage.removeItem('kt.idbBad'); } catch(e){}
   KV.flush().catch(() => {});
   KV.late().catch(() => {});
 }
 /* Khởi động ngầm: idbReady xong khi kho mở được HOẶC sau 6 giây (khi đó app chạy tạm bằng RAM, vòng thử lại vẫn tiếp tục) */
-const idbReady = Promise.race([idbOpenLoop(), sleepMs(IDB_GIVEUP_MS).then(() => null)]);
+const idbReady = Promise.race([idbOpenLoop(), sleepMs(IDB_GIVEUP_MS).then(() => null)]).then(d => { try { if (!d) localStorage.setItem('kt.idbBad', String(Date.now())); } catch(e){} return d; });
 
 async function useDB(){
   await idbReady;
   if (IDB.db) return IDB.db;
-  if (IDB.ever) return idbOpenLoop();      // kết nối bị hệ thống đóng giữa chừng (iOS) → mở lại
-  return null;                             // chưa mở được lần nào → dùng RAM tạm
+  if (IDB.ever && !IDB.bad) return idbOpenLoop();      // kết nối bị hệ thống đóng giữa chừng (iOS) → mở lại
+  await memLoad();                                      // kho không dùng được → RAM + kho dự phòng
+  return null;
 }
-async function withDB(fn){
+async function withDB(fn, ms){
   let d = await useDB();
   if (!d) return fn(null);
-  try { return await fn(d); }
+  try { return await timed(Promise.resolve(fn(d)), ms || OP_WRITE_MS); }
   catch(e){
+    if (e && e.name === 'IdbTimeout'){ IDB.bad = true; IDB.err = e; if (IDB.db === d) IDB.db = null; try { d.close(); } catch(_){} await memLoad(); return fn(null); }
     if (e && e.name === 'InvalidStateError'){ if (IDB.db === d) IDB.db = null; d = await useDB(); return fn(d); }
     throw e;
   }
@@ -1056,13 +1097,13 @@ function putAll(d, st, items){
     tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
   });
 }
-const dbAll   = st => withDB(d => d ? reqP(d.transaction(st).objectStore(st).getAll()) : [...MEM.data[st].values()]);
-const dbGet   = (st, k) => withDB(d => d ? reqP(d.transaction(st).objectStore(st).get(k)) : MEM.data[st].get(k));
-const dbClear = st => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).clear()) : (MEM.data[st].clear(), MEM.v++));
-const dbDel   = (st, k) => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).delete(k)) : (MEM.data[st].delete(k), MEM.v++));
-const dbPut   = (st, items) => withDB(d => { if (d) return putAll(d, st, items); items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); MEM.v++; });
+const dbAll   = st => withDB(d => d ? reqP(d.transaction(st).objectStore(st).getAll()) : [...MEM.data[st].values()], OP_READ_MS);
+const dbGet   = (st, k) => withDB(d => d ? reqP(d.transaction(st).objectStore(st).get(k)) : MEM.data[st].get(k), OP_READ_MS);
+const dbClear = st => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).clear()) : (MEM.data[st].clear(), MEM.v++, memSave()));
+const dbDel   = (st, k) => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).delete(k)) : (MEM.data[st].delete(k), MEM.v++, memSave()));
+const dbPut   = (st, items) => withDB(d => { if (d) return putAll(d, st, items); items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); MEM.v++; memSave(); });
 /* kho 'userdata' (bản sao dữ liệu cá nhân): trả null nếu IndexedDB chưa sẵn sàng */
-const udAll = () => withDB(d => d ? reqP(d.transaction('userdata').objectStore('userdata').getAll()) : null);
+const udAll = () => withDB(d => d ? reqP(d.transaction('userdata').objectStore('userdata').getAll()) : null, OP_READ_MS);
 const udPut = recs => withDB(async d => { if (!d) return false; await putAll(d, 'userdata', recs); return true; });
 const udDel = keys => withDB(async d => {
   if (!d) return false;
@@ -1073,7 +1114,7 @@ const udDel = keys => withDB(async d => {
 /* ---- Dữ liệu cá nhân: localStorage làm bản chính (đọc đồng bộ, hiện ngay), IndexedDB làm bản sao tự động ---- */
 const KV = (() => {
   const MT = 'kt.__mt';                                         // bảng “mốc sửa lần cuối” của từng khóa (nằm trong localStorage)
-  const SKIP = new Set([MT, 'kt.mem', 'kt.visitCount', 'kt.snap']);   // dữ liệu tạm / dẫn xuất: không cần sao chép
+  const SKIP = new Set([MT, 'kt.mem', 'kt.visitCount', 'kt.snap', 'kt.__probe', 'kt.idbBad']);   // dữ liệu tạm / dẫn xuất: không cần sao chép
   const mirrored = k => typeof k === 'string' && k.startsWith('kt.') && !SKIP.has(k);
   const shadow = new Map();                                     // giữ tạm trong RAM nếu localStorage từ chối ghi (đầy / bị chặn)
   const watchers = [], dirty = new Set();
@@ -1120,6 +1161,7 @@ const KV = (() => {
   /* ĐỐI CHIẾU & CHỮA CHÉO — mỗi lần mở app. Trả về danh sách khóa vừa được khôi phục vào localStorage. */
   async function reconcile(){
     await idbReady;
+    if (!IDB.db){ needLate = true; return []; }
     const recs = await udAll();
     if (recs === null){ needLate = true; return []; }
     needLate = false;
@@ -2526,7 +2568,7 @@ function ownPagesRepo(){
 /* ===== TẢI LẦN ĐẦU: có thanh tiến độ, và BẮT ĐẦU NGAY khi mở app (song song với việc mở kho), không chờ kho mở xong ===== */
 const DL = { got:0, total:0 }, EARLY = { p:null };
 async function readTextProgress(res){
-  const total = +res.headers.get('content-length') || 0;
+  const total = res.headers.get('content-encoding') ? 0 : (+res.headers.get('content-length') || 0);   // có nén → Content-Length không khớp số byte nhận được
   DL.got = 0; DL.total = total;
   if (!res.body || !res.body.getReader) return res.text();
   const rd = res.body.getReader(), dec = new TextDecoder(); let out = '';
@@ -2537,7 +2579,7 @@ function dlPaint(){
   const i = $('#dlInfo'), f = $('#dlFill'); if (!i) return;
   const pct = DL.total && DL.got <= DL.total ? Math.round(DL.got / DL.total * 100) : 0;
   i.textContent = DL.got ? `Đã tải ${(DL.got / 1048576).toFixed(1).replace('.', ',')} MB${pct ? ' (' + pct + '%)' : ''}` : 'Đang kết nối…';
-  if (f && pct){ f.className = 'det'; f.style.width = pct + '%'; }
+  if (f){ if (pct){ f.className = 'det'; f.style.width = pct + '%'; } else { f.className = ''; f.style.width = ''; } }
 }
 function earlyStart(){
   if (EARLY.p || !navigator.onLine) return;
@@ -2667,7 +2709,7 @@ function updateSyncUI(){
   l.textContent = on ? `${A.describe()}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${A.canWrite() ? 'đọc & ghi (có quyền ghi)' : 'chỉ đọc'}` : 'Chưa kết nối nơi lưu trữ.';
   l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
   const es = $('#emptySync');
-  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
+  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button><br><button class="btn" id="diagOpen" style="margin-top:10px;font-size:13px">🔍 Kiểm tra bộ nhớ máy</button>` : '';
   const sh = $('#ghShare'); sh.hidden = !(on && A.shareUrl);
   if (on && A.shareUrl) $('#ghShareUrl').value = A.shareUrl();
 }
@@ -2880,7 +2922,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'tạm trong RAM, đang thử mở lại') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); ktOffline().then(r => { $('#verTag').textContent += ' · Offline: ' + (r.ok ? '✔ sẵn sàng' : '✘ ' + (!r.data ? 'chưa có dữ liệu' : !r.sw ? 'trang chưa được cài' : 'trang chưa được lưu')); }); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'dự phòng (IndexedDB của máy không dùng được)') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); ktOffline().then(r => { $('#verTag').textContent += ' · Offline: ' + (r.ok ? '✔ sẵn sàng' : '✘ ' + (!r.data ? 'chưa có dữ liệu' : !r.sw ? 'trang chưa được cài' : 'trang chưa được lưu')); }); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -4554,7 +4596,7 @@ function setupPWA(){
       reg.update().catch(() => {});
       navigator.serviceWorker.ready.then(persist);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
-    }).catch(() => {});
+    }).catch(e => { window.ktSwErr = String((e && e.message) || e); });
   }
 }
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
@@ -5330,11 +5372,49 @@ async function legacyImport(){
     if (IDB.db) await caches.delete(LEGACY_CACHE);     // chỉ xóa khi dữ liệu đã nằm an toàn trong IndexedDB
   } catch(e){}
 }
+/* ===== CHẨN ĐOÁN: bảng “Kiểm tra bộ nhớ máy” (để biết chính xác máy nào hỏng ở đâu) ===== */
+async function ktDiag(){
+  const L = [], add = (k, v) => L.push(k + ': ' + v);
+  add('Phiên bản', APP_VERSION);
+  add('Chế độ', (navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? 'app Màn hình chính' : 'trang web trong Safari');
+  add('Mạng', navigator.onLine ? 'có' : 'không');
+  add('IndexedDB', IDB.db ? 'dùng được' : 'KHÔNG dùng được' + (IDB.err ? ' – ' + (IDB.err.name || '') + ' ' + (IDB.err.message || IDB.err) : ''));
+  add('Kho lưu đang dùng', IDB.db ? 'IndexedDB' : 'dự phòng (RAM + Cache Storage)');
+  add('Kinh Thánh trong máy', bibleMeta.length + ' sách' + (DL.got ? ' · lần tải gần nhất ' + (DL.got / 1048576).toFixed(1) + ' MB' : ''));
+  try {
+    if ('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.getRegistration();
+      add('Service worker', reg ? (reg.active ? 'đang chạy' : reg.installing ? 'đang cài…' : reg.waiting ? 'đang chờ' : 'có đăng ký') : 'CHƯA đăng ký');
+      add('Service worker điều khiển trang', navigator.serviceWorker.controller ? 'có' : 'chưa');
+    } else add('Service worker', 'trình duyệt không hỗ trợ');
+  } catch(e){ add('Service worker', 'lỗi ' + (e.message || e)); }
+  if (window.ktSwErr) add('Lỗi đăng ký service worker', window.ktSwErr);
+  try {
+    const ks = await Promise.race([caches.keys(), sleepMs(3000).then(() => ['(không phản hồi)'])]);
+    add('Cache Storage', ks.join(', ') || '(trống)');
+    const hit = await Promise.race([caches.match(location.origin + location.pathname), sleepMs(3000).then(() => null)]);
+    add('Trang đã lưu để mở offline', hit ? 'có' : 'CHƯA');
+  } catch(e){ add('Cache Storage', 'lỗi ' + (e.message || e)); }
+  try {
+    if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); add('Dung lượng', ((e.usage || 0) / 1048576).toFixed(1) + ' / ' + ((e.quota || 0) / 1048576).toFixed(0) + ' MB'); }
+    if (navigator.storage && navigator.storage.persisted) add('Được giữ vĩnh viễn', (await navigator.storage.persisted()) ? 'có' : 'chưa');
+  } catch(e){}
+  add('Đồng bộ', syncState + (syncMsg ? ' – ' + syncMsg : ''));
+  return L.join('\n');
+}
+function ktDiagShow(){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
+  o.innerHTML = `<div class="sheet"><h3>Kiểm tra bộ nhớ máy</h3><pre id="diagTxt" style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;margin:0 0 12px;user-select:text">Đang kiểm tra…</pre><div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+  o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); });
+  document.body.appendChild(o);
+  ktDiag().then(s => { const p = o.querySelector('#diagTxt'); if (p) p.textContent = s; });
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#diagOpen, #diagBtn')) ktDiagShow(); });
 /* ===== SẴN SÀNG OFFLINE? = dữ liệu đã nằm trong IndexedDB + service worker đang chạy + trang đã được lưu ===== */
 async function ktOffline(){
   const r = { data:false, sw:false, shell:false, ok:false };
   try {
-    r.data = bibleMeta.length > 0 && !!IDB.db;
+    r.data = bibleMeta.length > 0 && (!!IDB.db || !!(await caches.match('./__kt_fb__/books')));   // IndexedDB, hoặc (máy có kho hỏng) kho dự phòng
     if ('serviceWorker' in navigator){
       const reg = await navigator.serviceWorker.getRegistration();
       r.sw = !!(reg && reg.active);
@@ -5402,7 +5482,7 @@ function ktRehydrate(keys){
   /* Máy đã có dữ liệu nhưng chưa có bản chụp: nếu kho mở chậm hơn 1,2 giây thì báo rõ lý do thay vì để màn hình trống */
   const hint = (painted || brandNew) ? 0 : setInterval(() => {
     if (window.ktReady || curBook){ clearInterval(hint); return; }
-    $('#bibleText').innerHTML = `<div class="empty"><b>Đang mở sách…</b>${IDB.db ? '' : `<small style="display:block;margin-top:8px;color:var(--muted)">Bộ nhớ của máy phản hồi chậm${IDB.err ? ' (' + esc(IDB.err.message || IDB.err) + ')' : ''}. Vui lòng chờ…</small>`}</div>`;
+    $('#bibleText').innerHTML = `<div class="empty"><b>Đang mở sách…</b>${IDB.db ? '' : `<small style="display:block;margin-top:8px;color:var(--muted)">Bộ nhớ của máy phản hồi chậm${IDB.err ? ' (' + esc(IDB.err.message || IDB.err) + ')' : ''}. Vui lòng chờ…</small>`}<br><button class="btn" id="diagOpen" style="margin-top:14px;font-size:13px">🔍 Kiểm tra bộ nhớ máy</button></div>`;
   }, 1200);
 
   try {
@@ -5440,6 +5520,7 @@ function ktRehydrate(keys){
     };
     return;
   }
+  try { if (!$('#diagBtn')) $('#verTag').insertAdjacentHTML('afterend', '<button class="btn" id="diagBtn" style="margin-top:8px">🔍 Kiểm tra bộ nhớ máy</button>'); } catch(e){}
   updateSyncUI();
   if (!KV.get('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
