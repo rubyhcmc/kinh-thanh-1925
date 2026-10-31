@@ -908,7 +908,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-P';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-Q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -980,7 +980,13 @@ function loadFont(name){                                  // trả về Promise:
   const l = document.createElement('link'); l.id = 'gf-' + name; l.rel = 'stylesheet';
   l.href = 'https://fonts.googleapis.com/css2?family=' + f.q + '&display=swap';
   fontP[name] = new Promise(res => { l.onload = res; l.onerror = res; })
-    .then(() => Promise.all([document.fonts.load('400 20px "' + name + '"'), document.fonts.load('700 20px "' + name + '"')])).catch(() => {});
+    .then(() => {
+      /* Tải TRỌN các bộ chữ tiếng Việt của font (Google Fonts chia nhỏ theo vùng ký tự): nếu để tải rời rạc, chương nào có chữ mới
+         thì font về trễ → dòng chữ bị tính lại, chữ từ “CHƯƠNG” trở xuống nhảy giật. Tải sẵn hết thì không còn cảnh đó. */
+      const VN = 'aàáảãạăằắẳẵặâầấẩẫậbcdđeèéẻẽẹêềếểễệfghiìíỉĩịjklmnoòóỏõọôồốổỗộơờớởỡợpqrstuùúủũụưừứửữựvwxyỳýỷỹỵzAÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬBCDĐEÈÉẺẼẸÊỀẾỂỄỆFGHIÌÍỈĨỊJKLMNOÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢPQRSTUÙÚỦŨỤƯỪỨỬỮỰVWXYỲÝỶỸỴZ0123456789 .,;:!?()[]“”‘’—–…«»-';
+      const specs = ['400 20px', '600 20px', '700 20px', 'italic 400 20px', 'italic 700 20px'];
+      return Promise.all(specs.map(sp => document.fonts.load(sp + ' "' + name + '"', VN)));
+    }).catch(() => {});
   document.head.appendChild(l);
   return fontP[name];
 }
@@ -988,7 +994,7 @@ function applyFont(){
   if (!FONTS[S.font]) S.font = 'Lora';
   /* Chữ chỉ hiện khi font đã sẵn sàng (tối đa 1,5 giây): không còn cảnh số chương to / chữ nháy đổi kiểu khi mở lại app */
   const de = document.documentElement; de.classList.add('fw');
-  Promise.race([loadFont(S.font), new Promise(r => setTimeout(r, 1500))]).then(() => { de.classList.remove('fw'); try { pgRefresh(); } catch(e){} });
+  Promise.race([loadFont(S.font), new Promise(r => setTimeout(r, 2500))]).then(() => { de.classList.remove('fw'); try { pgRefresh(); } catch(e){} });
   const st = document.documentElement.style;
   st.setProperty('--serif', FONTS[S.font].s); st.setProperty('--sans', FONTS[S.font].s);
   $('#fontSel').value = S.font;
