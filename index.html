@@ -922,7 +922,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.10.31-AF';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AG';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1040,10 +1040,16 @@ function openDB(){
 /* iPhone (nhất là app thêm vào Màn hình chính) thỉnh thoảng báo “Unable to open database file on disk” ngay lúc vừa khởi động,
    nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
 async function openDBRetry(onWait){
-  let last;
-  for (let i = 0; i < 8; i++){
+  /* Thử lại dày (mỗi ~0,12 giây trong 3 giây đầu, sau đó mỗi 0,5 giây, tổng tối đa ~12 giây) để vào được app ngay khi bộ nhớ sẵn sàng,
+     thay vì chờ theo nhịp tăng dần 0,25→0,5→1→2 giây như trước. Thông báo “Đang mở bộ nhớ…” chỉ hiện nếu quá 0,4 giây vẫn chưa mở được. */
+  const t0 = Date.now(); let last, i = 0, shown = false;
+  while (Date.now() - t0 < 12000){
     try { return await openDB(); }
-    catch(e){ last = e; if (onWait && i === 0) try { onWait(); } catch(err){} await new Promise(r => setTimeout(r, Math.min(250 * Math.pow(2, i), 2000))); }
+    catch(e){
+      last = e; i++;
+      if (onWait && !shown && Date.now() - t0 > 400){ shown = true; try { onWait(); } catch(err){} }
+      await new Promise(r => setTimeout(r, i < 25 ? 120 : 500));
+    }
   }
   throw last;
 }
@@ -4379,7 +4385,8 @@ function setupPWA(){
       if (!(await navigator.storage.persisted())) await navigator.storage.persist();
     } catch(e){}
   };
-  persist();
+  /* Chỉ xin giữ dữ liệu vĩnh viễn SAU khi app đã mở xong bộ nhớ: gọi cùng lúc lúc khởi động làm iPhone mở bộ nhớ chậm hơn */
+  { let pw = 0; const pt = setInterval(() => { pw += 500; if (window.ktReady || pw > 20000){ clearInterval(pt); persist(); } }, 500); }
   if ('serviceWorker' in navigator){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
@@ -5079,6 +5086,9 @@ planSum();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
+  /* Bắt đầu mở bộ nhớ NGAY từ đầu (chạy song song với phần dựng giao diện bên dưới), đến chỗ cần thì chỉ việc chờ kết quả */
+  const dbP = openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; });
+  dbP.catch(() => {});
   applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
   $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
   setupPWA();
@@ -5093,7 +5103,7 @@ planSum();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
   try {
-    try { db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }); }
+    try { db = await dbP; }
     catch(idbErr){ console.warn('IndexedDB không mở được, chuyển sang lưu dự phòng:', idbErr); await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
     await dropDemoBook(); await reloadAll(); await restoreResume();
     window.ktReady = true;
