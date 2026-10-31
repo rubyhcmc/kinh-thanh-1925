@@ -64,6 +64,9 @@ body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến chữ/biểu tượng bị vẽ mờ → ở chế độ này bỏ ép lớp; thanh vẫn cố định bằng position:fixed. Safari giữ nguyên. */
+html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa .top,html.sa .top *{-webkit-transform:none;will-change:auto;-webkit-font-smoothing:antialiased}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -440,8 +443,9 @@ body.pg:not(.searching) #pgFoot{display:flex}
 body.pg:not(.searching){overflow:hidden}
 body.pg:not(.searching) main{position:static;perspective:none;overflow:visible;min-height:0;max-width:none;padding:0;height:0}
 body.pg:not(.searching) #chapNav{display:none!important}
-body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(-100%)}
-body.pg.pgchrome:not(.searching) .top{transform:none}
+/* Trang giấy: ẩn/hiện thanh trên bằng visibility (KHÔNG dùng transform) → chữ thanh trên luôn sắc nét */
+body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:none!important;transition:none!important;visibility:hidden}
+body.pg.pgchrome:not(.searching) .top{visibility:visible}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
 body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
 body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none}
@@ -917,7 +921,9 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AA4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+/* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
+try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
+const APP_VERSION = '2026.10.31-AA6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1040,7 +1046,7 @@ function openDBv(ver){
    nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
 async function openDBRetry(onWait){
   let last;
-  for (let i = 0; i < 8; i++){
+  for (let i = 0; i < 3; i++){            // thử nhanh (~0,75 giây); không được thì chuyển ngay sang lưu dự phòng, không bắt người dùng chờ
     try { return await openDB(); }
     catch(e){ last = e; if (onWait && i === 0) try { onWait(); } catch(err){} await new Promise(r => setTimeout(r, Math.min(250 * Math.pow(2, i), 2000))); }
   }
@@ -4869,11 +4875,8 @@ planSum();
     try { db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }); }
     catch(idbErr){
       console.warn('IndexedDB không mở được:', idbErr);
-      /* TỰ SỬA: kho bị hỏng/kẹt → xóa kho cũ (chỉ chứa nội dung tải được, tải lại được) rồi tạo mới; lịch sử đọc/ghi chú nằm ở localStorage nên không mất */
-      try {
-        await new Promise(res => { let d = false; const go = () => { if (!d){ d = true; res(); } }; try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); } setTimeout(go, 3000); });
-        db = await openDBRetry(); window.ktHealed = true;
-      } catch(e2){ await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
+      /* KHÔNG xóa kho (tránh mất dữ liệu do lỗi tạm lúc khởi động) – chuyển sang lưu dự phòng, kho chính vẫn được thử lại ngầm */
+      await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500);
     }
     await dropDemoBook(); await reloadAll(); await restoreResume();
     if (!bibleMeta.length && await restoreFromDataCache()){ await restoreResume(); toast('Đã khôi phục Kinh Thánh từ bản lưu trong máy'); }
