@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AA';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AB';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2334,7 +2334,27 @@ const syncCanWrite = () => { const a = Store.cur(); return !!(a && a.configured(
 
 /* --- Adapter 1: GitHub (các hàm ghReq / ghRemote… ở trên chỉ phục vụ adapter này) --- */
 /* Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt */
+/* Nếu app đang chạy trên GitHub Pages của CHÍNH kho dữ liệu (vd rubyhcmc.github.io/kinh-thanh-1925/ ↔ kho rubyhcmc/kinh-thanh-1925),
+   tệp dữ liệu nằm ngay cạnh trang → tải cùng nguồn, không phụ thuộc raw.githubusercontent.com (dễ bị chặn, khác tên miền). */
+function ownPagesRepo(){
+  try {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i); if (!m) return '';
+    const seg = location.pathname.split('/').filter(Boolean)[0] || '';
+    return (seg && !/\.html?$/i.test(seg) ? m[1] + '/' + decodeURIComponent(seg) : m[1] + '/' + m[1] + '.github.io').toLowerCase();
+  } catch(e){ return ''; }
+}
+async function sameOriginFetch(){
+  if (!GH.repo || GH.branch || GH.repo.toLowerCase() !== ownPagesRepo()) return null;      // chỉ khi đúng kho này và dùng nhánh mặc định
+  try {
+    const url = new URL(ghFile(), location.href).href + '?_=' + Date.now();
+    const res = await fetch(url, { cache:'no-store' });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return /^\s*[\[{]/.test(text.replace(/^\uFEFF/, '')) ? text : null;                      // không phải JSON (trang lỗi, bản cũ…) → bỏ, dùng đường dự phòng
+  } catch(e){ return null; }
+}
 async function rawFetch(){
+  const own = await sameOriginFetch(); if (own !== null) return own;
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
   let res;
@@ -4004,19 +4024,31 @@ function makeIcon(size){
   return c.toDataURL('image/png');
 }
 function setupPWA(){
-  const icon180 = makeIcon(180);
-  const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = icon180; document.head.appendChild(link);
-  try {
-    const manifest = {
-      name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
-      start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
-      background_color:'#f7f3ea', theme_color:'#fffdf8',
-      icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
-    };
-    const m = document.createElement('link'); m.rel = 'manifest';
-    m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
-    document.head.appendChild(m);
-  } catch(e){}
+  /* Khai báo cài đặt: ưu tiên tệp thật manifest.webmanifest nằm cạnh trang (Android/Chrome nhận “Cài đặt ứng dụng” ổn định hơn).
+     Chưa có tệp đó (hoặc chưa tải lên) thì tự tạo bằng mã như trước, app vẫn cài được. */
+  const addDynamicManifest = () => {
+    try { const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = makeIcon(180); document.head.appendChild(link); } catch(e){}
+    try {
+      const manifest = {
+        name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
+        start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
+        background_color:'#f7f3ea', theme_color:'#fffdf8',
+        icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
+      };
+      const m = document.createElement('link'); m.rel = 'manifest';
+      m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
+      document.head.appendChild(m);
+    } catch(e){}
+  };
+  const addStaticManifest = () => {
+    const m = document.createElement('link'); m.rel = 'manifest'; m.href = 'manifest.webmanifest'; document.head.appendChild(m);
+    const i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.href = 'icon-192.png'; document.head.appendChild(i);
+    const t = document.createElement('link'); t.rel = 'apple-touch-icon'; t.href = 'apple-touch-icon.png'; document.head.appendChild(t);
+  };
+  if (/^https?:$/.test(location.protocol)){
+    fetch('manifest.webmanifest', { method:'HEAD', cache:'no-store' })
+      .then(r => r.ok ? addStaticManifest() : addDynamicManifest()).catch(addDynamicManifest);
+  } else addDynamicManifest();
   // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
   const persist = async () => {
     try {
