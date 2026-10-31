@@ -287,7 +287,10 @@ details a{color:var(--accent)}
 .fnk[aria-expanded=true]{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.22em}
 .fnk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .fnx{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.78em;line-height:1.55;color:var(--muted);
-  margin:.4em 0 .55em;padding:.45em .75em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;cursor:pointer;-webkit-hyphens:none;hyphens:none}
+  margin:.4em 0 .55em;padding:.45em .75em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;cursor:pointer;-webkit-hyphens:none;hyphens:none;
+  /* Khung chú thích là một “vùng độc lập” (BFC): không bao giờ chạy lùi vào dưới số chương chữ lớn đang nổi bên trái.
+     Nó tự thu hẹp để nằm cạnh số chương; nếu không đủ chỗ thì xuống ngay dưới số chương. */
+  display:flow-root;overflow:hidden;box-sizing:border-box;max-width:100%}
 /* ===== Trang cài đặt ===== */
 #settings .sheet{max-width:520px;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:var(--bg)}
 /* Cuộn mượt: không kéo trang nền, không giật ở mép trên/dưới */
@@ -914,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-V';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-W';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
