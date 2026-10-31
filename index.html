@@ -76,6 +76,10 @@ main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:7
 /* lật trang khi vuốt */
 #bibleText.flip{background:var(--bg);box-shadow:0 0 28px rgba(0,0,0,.28);border-radius:4px;will-change:transform,opacity;backface-visibility:hidden}
 
+.dlbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:20px auto 8px;max-width:260px}
+.dlbar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:3px;animation:dlmv 1.2s ease-in-out infinite}
+.dlbar i.det{animation:none;margin-left:0}
+@keyframes dlmv{0%{margin-left:-35%}100%{margin-left:100%}}
 body.booting .navrow,body.booting #chapNav{pointer-events:none}   /* bản chụp đang hiện: chờ dữ liệu thật vài chục mili-giây rồi mới cho đổi chương */
 /* Chọn sách / chương / câu */
 .navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px;
@@ -923,7 +927,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.10.31-AI2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AI3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -968,7 +972,10 @@ function choose(title, msg, opts){
  *     Mỗi lần ghi, bản sao tự chép sang IndexedDB (kho 'userdata') kèm mốc thời gian. Mỗi lần mở app, hai bên tự đối chiếu:
  *     bên nào bị iOS dọn mất hoặc cũ hơn sẽ được chữa lại từ bên còn lại. Người dùng không phải làm gì.
  * ========================================================= */
-const IDB_VER = 2, IDB_GIVEUP_MS = 6000, LEGACY_CACHE = 'kt-store-v1';
+const IDB_VER = 2, LEGACY_CACHE = 'kt-store-v1';
+/* Máy CHƯA từng tải dữ liệu (lần mở đầu): kho chắc chắn đang trống → chỉ chờ 2,5 giây rồi chạy tạm bằng RAM để tải & hiện chữ ngay,
+   kho mở được lúc nào thì dữ liệu tự chép vào lúc đó. Máy đã có dữ liệu: chờ lâu hơn (8 giây) vì dữ liệu thật nằm trong kho. */
+const IDB_GIVEUP_MS = (() => { try { const s = JSON.parse(localStorage.getItem('kt.sync') || '{}'); return s && s.sha ? 8000 : 2500; } catch(e){ return 6000; } })();
 const IDB = { db:null, ever:false, err:null };
 const MEM = { data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, v:0 };
 const sleepMs = ms => new Promise(r => setTimeout(r, ms));
@@ -1226,11 +1233,13 @@ async function loadBibleMeta(){
 }
 function renderBibleEmpty(){
   $('#bibleText').className = 'reader';
-  $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
+  $('#bibleText').innerHTML = syncOn()
+    ? `<div class="empty"><b>Tải Kinh Thánh về máy</b>${navigator.onLine ? 'Lần mở đầu tiên app tải toàn bộ Kinh Thánh về máy. Chỉ làm một lần – sau đó đọc được cả khi không có mạng.' : 'Chưa có Kinh Thánh trong máy. Hãy bật mạng để tải về lần đầu (chỉ một lần); sau đó dùng được cả khi không có mạng.'}${navigator.onLine ? '<div class="dlbar"><i id="dlFill"></i></div><div id="dlInfo" style="font-size:13px;color:var(--muted)"></div>' : ''}</div>`
+    : `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
   $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = ''; syncNav();
   $('#chapNav').hidden = true;
   $('#bibleText').insertAdjacentHTML('beforeend', '<div class="log" id="emptySync" style="text-align:center;padding:0 20px 30px"></div>');
-  updateSyncUI();
+  updateSyncUI(); dlPaint();
 }
 async function initBible(){
   await loadBibleMeta(); bs.idx = null; bsFillScope();
@@ -2514,17 +2523,41 @@ function ownPagesRepo(){
     return (seg && !/\.html?$/i.test(seg) ? m[1] + '/' + decodeURIComponent(seg) : m[1] + '/' + m[1] + '.github.io').toLowerCase();
   } catch(e){ return ''; }
 }
+/* ===== TẢI LẦN ĐẦU: có thanh tiến độ, và BẮT ĐẦU NGAY khi mở app (song song với việc mở kho), không chờ kho mở xong ===== */
+const DL = { got:0, total:0 }, EARLY = { p:null };
+async function readTextProgress(res){
+  const total = +res.headers.get('content-length') || 0;
+  DL.got = 0; DL.total = total;
+  if (!res.body || !res.body.getReader) return res.text();
+  const rd = res.body.getReader(), dec = new TextDecoder(); let out = '';
+  for (;;){ const { done, value } = await rd.read(); if (done) break; DL.got += value.length; out += dec.decode(value, { stream:true }); dlPaint(); }
+  return out + dec.decode();
+}
+function dlPaint(){
+  const i = $('#dlInfo'), f = $('#dlFill'); if (!i) return;
+  const pct = DL.total && DL.got <= DL.total ? Math.round(DL.got / DL.total * 100) : 0;
+  i.textContent = DL.got ? `Đã tải ${(DL.got / 1048576).toFixed(1).replace('.', ',')} MB${pct ? ' (' + pct + '%)' : ''}` : 'Đang kết nối…';
+  if (f && pct){ f.className = 'det'; f.style.width = pct + '%'; }
+}
+function earlyStart(){
+  if (EARLY.p || !navigator.onLine) return;
+  EARLY.p = rawFetchNet(); EARLY.p.catch(() => {});
+}
 async function sameOriginFetch(){
   if (!GH.repo || GH.branch || GH.repo.toLowerCase() !== ownPagesRepo()) return null;      // chỉ khi đúng kho này và dùng nhánh mặc định
   try {
     const url = new URL(ghFile(), location.href).href + '?_=' + Date.now();
     const res = await fetch(url, { cache:'no-store' });
     if (!res.ok) return null;
-    const text = await res.text();
+    const text = await readTextProgress(res);
     return /^\s*[\[{]/.test(text.replace(/^\uFEFF/, '')) ? text : null;                      // không phải JSON (trang lỗi, bản cũ…) → bỏ, dùng đường dự phòng
   } catch(e){ return null; }
 }
 async function rawFetch(){
+  if (EARLY.p){ const p = EARLY.p; EARLY.p = null; try { return await p; } catch(e){} }   // dùng luôn lượt tải đã chạy từ lúc mở app
+  return rawFetchNet();
+}
+async function rawFetchNet(){
   const own = await sameOriginFetch(); if (own !== null) return own;
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
@@ -2533,7 +2566,7 @@ async function rawFetch(){
   catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
   if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
   if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
-  return res.text();
+  return readTextProgress(res);
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
 const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
@@ -2581,12 +2614,13 @@ Store.active = 'myserver';
 
 /* --- Bộ máy đồng bộ (dùng chung cho mọi adapter) --- */
 async function applyRemote(A, r){
-  const j = r.payload || {}, books = normBible(j.bible || j);
+  const j = r.payload || {}, books = normBible(j.bible || j), wasEmpty = !bibleMeta.length;
   if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
   await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
   const y = SCR.scrollTop, kb = curBook && curBook.name, kc = S.chapter, kn = parseInt(curVerseNo(), 10) || 0;
   await reloadAll(); SCR.scrollTop = y;
+  if (wasEmpty) ktAnnounceOffline();
   if (kn > 1 && curBook && curBook.name === kb && S.chapter === kc){          // tải dữ liệu mới về vẫn giữ đúng câu đang đọc
     const el = $('#v' + kn); if (el && pgOn()) pgScrollTo(el);
   }
@@ -2846,7 +2880,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'tạm trong RAM, đang thử mở lại') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'tạm trong RAM, đang thử mở lại') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); ktOffline().then(r => { $('#verTag').textContent += ' · Offline: ' + (r.ok ? '✔ sẵn sàng' : '✘ ' + (!r.data ? 'chưa có dữ liệu' : !r.sw ? 'trang chưa được cài' : 'trang chưa được lưu')); }); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -5296,6 +5330,31 @@ async function legacyImport(){
     if (IDB.db) await caches.delete(LEGACY_CACHE);     // chỉ xóa khi dữ liệu đã nằm an toàn trong IndexedDB
   } catch(e){}
 }
+/* ===== SẴN SÀNG OFFLINE? = dữ liệu đã nằm trong IndexedDB + service worker đang chạy + trang đã được lưu ===== */
+async function ktOffline(){
+  const r = { data:false, sw:false, shell:false, ok:false };
+  try {
+    r.data = bibleMeta.length > 0 && !!IDB.db;
+    if ('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.getRegistration();
+      r.sw = !!(reg && reg.active);
+      r.shell = !!((await caches.match(location.origin + location.pathname)) || (await caches.match(new URL('./index.html', location.href).href)));
+      if (r.sw && !r.shell){ try { reg.active.postMessage('cache-shell'); } catch(e){} }   // nhờ service worker lưu lại trang
+    }
+  } catch(e){}
+  r.ok = r.data && r.sw && r.shell;
+  return r;
+}
+async function ktAnnounceOffline(){
+  try {
+    let r = await ktOffline();
+    for (let i = 0; i < 6 && !r.ok; i++){ await sleepMs(1500); r = await ktOffline(); }
+    if (r.ok){ if (!KV.get('kt.offlineOk')){ KV.set('kt.offlineOk', '1'); toast('✔ Đã tải xong – từ nay đọc được cả khi không có mạng'); } return; }
+    KV.remove('kt.offlineOk');
+    if (!r.data) toast('Kinh Thánh chưa lưu được vào máy – hãy mở lại app khi có mạng');
+    else toast('Chưa bật được chế độ không cần mạng cho trang – hãy mở lại app khi có mạng');
+  } catch(e){}
+}
 /* Khôi phục xong từ bản sao IndexedDB → nạp lại các biến trong bộ nhớ và làm mới giao diện (không cần tải lại trang) */
 function ktRehydrate(keys){
   const has = k => keys.includes(k);
@@ -5337,13 +5396,19 @@ function ktRehydrate(keys){
 
   /* ① HIỆN CHỮ NGAY từ bản chụp (đồng bộ, không chờ IndexedDB) */
   const painted = snapPaint();
-  /* Chưa có bản chụp (lần đầu / vừa đổi chỗ đọc): chỉ khi IndexedDB chậm hơn 1,2 giây mới hiện một dòng nhỏ báo đang mở sách */
-  const hint = painted ? 0 : setTimeout(() => { if (!window.ktReady && !curBook) $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở sách…</b></div>'; }, 1200);
+  /* Máy chưa từng tải dữ liệu: hiện NGAY màn hình tải (có tiến độ) và bắt đầu tải luôn, không chờ IndexedDB */
+  const brandNew = !painted && !SY.sha && !S.book;
+  if (brandNew){ try { if (syncOn() && !syncCanWrite()) earlyStart(); renderBibleEmpty(); } catch(e){} }
+  /* Máy đã có dữ liệu nhưng chưa có bản chụp: nếu kho mở chậm hơn 1,2 giây thì báo rõ lý do thay vì để màn hình trống */
+  const hint = (painted || brandNew) ? 0 : setInterval(() => {
+    if (window.ktReady || curBook){ clearInterval(hint); return; }
+    $('#bibleText').innerHTML = `<div class="empty"><b>Đang mở sách…</b>${IDB.db ? '' : `<small style="display:block;margin-top:8px;color:var(--muted)">Bộ nhớ của máy phản hồi chậm${IDB.err ? ' (' + esc(IDB.err.message || IDB.err) + ')' : ''}. Vui lòng chờ…</small>`}</div>`;
+  }, 1200);
 
   try {
     /* ② NGẦM: IndexedDB đã được mở từ lúc tải trang; ở đây chỉ chờ kết quả */
     const d = await idbReady;
-    if (!d) setTimeout(() => toast('Bộ nhớ chính của máy chưa mở được: app tạm giữ trong RAM và tự thử lại ngầm'), 1500);
+    if (!d) setTimeout(() => toast('Kho dữ liệu của máy mở chậm – app vẫn dùng được và sẽ tự lưu vào máy ngay khi kho sẵn sàng'), 1500);
     const restored = await KV.reconcile();                             // ③ chữa chéo localStorage ⇄ IndexedDB
     if (restored.length) ktRehydrate(restored);
     await legacyImport();
@@ -5354,6 +5419,7 @@ function ktRehydrate(keys){
     clearTimeout(hint);
     window.ktReady = true;
     snapSave();
+    if (bibleMeta.length) ktAnnounceOffline();
   }
   catch(e){
     clearTimeout(hint); ktBootEnd();
