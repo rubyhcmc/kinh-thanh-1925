@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-X';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-Y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3626,7 +3626,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
  *  - Song song tạo tệp JSON cùng nội dung.
  * ========================================================= */
 const PG = { W:419.53, H:595.28, L:44, R:44, T:52, B:58 };
-const PDF_SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif';
+/* Font mặc định của PDF xuất ra: Arial (máy không có Arial thì dùng Liberation Sans / Helvetica / Roboto, tương đương về hình dạng và độ rộng) */
+const PDF_SERIF = 'Arial,"Liberation Sans",Helvetica,"Helvetica Neue",Roboto,sans-serif';
 const pdfFont = (sz, st) => `${/i/.test(st) ? 'italic ' : ''}${/b/.test(st) ? 'bold ' : ''}${sz}px ${PDF_SERIF}`;
 let _mctx = null;
 function pdfW(s, sz, st){
