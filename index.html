@@ -865,6 +865,8 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     <div class="edcols">
       <div class="edpane on" id="paneEdit">
         <div class="tbar">
+          <button class="btn" id="edPasteBtn" title="Dán từ bộ nhớ tạm vào vị trí con trỏ (tự nhận dạng số câu, tiêu đề, thơ)">📥 Dán</button>
+          <button class="btn" id="edDelBtn" title="Xóa phần đang bôi chọn; không chọn gì thì xóa dòng đang đứng">⌫ Xóa</button>
           <button class="btn" id="edH">＃ Tiêu đề</button>
           <button class="btn" id="edQ1">＞ Thơ</button>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
@@ -912,7 +914,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-U';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-V';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3321,7 +3323,7 @@ $('#openEditor').onclick = openEditor;
 $('#edClose').onclick = async () => { await edAuto(); show('#editor', false); };
 
 // Dán: tự nhận dạng số câu / tiêu đề / đoạn / thơ
-ed.Text.addEventListener('paste', e => {
+const edPasteHandler = e => {
   const cd = e.clipboardData; if (!cd) return;
   let raw = cd.getData('text/plain') || '';
   const html = cd.getData('text/html');
@@ -3337,7 +3339,55 @@ ed.Text.addEventListener('paste', e => {
   else t.setRangeText((s > 0 && t.value[s - 1] !== '\n' ? '\n' : '') + txt + '\n', s, en, 'end');
   ed.lastPaste = whole ? { raw, out:t.value } : null;               // nhớ bản gốc (còn nguyên xuống dòng) để đổi "Giữ như thơ" / "Nối thành văn xuôi" sau khi dán
   toast(`Đã nhận dạng ${vs.length} câu` + (ed.Poem.value === '1' ? ' (dạng thơ)' : '')); edRefresh(); edQueue();
-});
+};
+ed.Text.addEventListener('paste', edPasteHandler);
+
+/* Nút 📥 Dán: đọc bộ nhớ tạm rồi đi qua đúng bộ nhận dạng của thao tác dán thường (số câu, tiêu đề, đoạn, thơ).
+   Không nhận dạng được thì chèn nguyên văn tại con trỏ (thay phần đang bôi chọn). */
+async function edInsertText(txt){
+  const t = ed.Text; t.focus();
+  let ok = false; try { ok = document.execCommand('insertText', false, txt); } catch(e){}          // giữ được Hoàn tác (Ctrl+Z)
+  if (!ok){ const s = t.selectionStart, en = t.selectionEnd; t.setRangeText(txt, s, en, 'end'); }
+  edRefresh(); edQueue();
+}
+$('#edPasteBtn').onclick = async () => {
+  let text = '', html = '';
+  try {
+    if (navigator.clipboard && navigator.clipboard.read){
+      for (const it of await navigator.clipboard.read()){
+        if (it.types.includes('text/html')) html = await (await it.getType('text/html')).text();
+        if (it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
+      }
+    }
+  } catch(e){}
+  if (!text){
+    try { text = await navigator.clipboard.readText(); }
+    catch(e){ ed.Text.focus(); return toast('Máy chưa cho đọc bộ nhớ tạm: chạm giữ trong ô soạn rồi chọn “Dán”'); }
+  }
+  if (!text && !html) return toast('Bộ nhớ tạm đang trống');
+  let handled = false;
+  edPasteHandler({ clipboardData:{ getData:k => k === 'text/html' ? html : text }, preventDefault:() => { handled = true; } });
+  if (!handled){ await edInsertText(text); toast('Đã dán'); }
+  ed.Text.focus();
+};
+
+/* Nút ⌫ Xóa: xóa phần đang bôi chọn; không chọn gì thì xóa cả dòng đang đứng. (“Xóa ô” bên cạnh vẫn xóa toàn bộ.) */
+$('#edDelBtn').onclick = () => {
+  const t = ed.Text, v = t.value; if (!v) return toast('Ô soạn đang trống');
+  t.focus();
+  let s = t.selectionStart, e = t.selectionEnd, whole = false;
+  if (s === e){                                                     // không bôi chọn → chọn cả dòng hiện tại (kèm dấu xuống dòng)
+    const a = s === 0 ? 0 : v.lastIndexOf('\n', s - 1) + 1;
+    let b = v.indexOf('\n', s); b = b < 0 ? v.length : b + 1;
+    if (b === v.length && a > 0 && v[a - 1] === '\n') s = a - 1; else s = a;
+    e = b; whole = true;
+  }
+  t.setSelectionRange(s, e);
+  let ok = false; try { ok = document.execCommand('delete'); } catch(err){}
+  if (!ok){ t.setRangeText('', s, e, 'end'); }
+  edRefresh(); edQueue();
+  toast(whole ? 'Đã xóa dòng' : 'Đã xóa phần chọn');
+};
 
 // Nút chép trên trang Xem trước: "bản soạn" giữ nguyên # > [chú thích] để dán lại được; "văn bản thuần" chỉ có số câu + chữ
 async function edCopy(txt, label){
