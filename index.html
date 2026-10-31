@@ -928,7 +928,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AJ';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AK';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2613,7 +2613,39 @@ async function rawFetch(){
   if (EARLY.p){ const p = EARLY.p; EARLY.p = null; try { return await p; } catch(e){} }   // dùng luôn lượt tải đã chạy từ lúc mở app
   return rawFetchNet();
 }
+/* ===== BẢN GỐC DỰ PHÒNG: ngay khi tải xong, cất nguyên tệp dữ liệu vào Cache Storage (độc lập với IndexedDB).
+   Nếu IndexedDB của iPhone lỗi / bị dọn / mở chậm khiến app trống, lần mở sau (kể cả không có mạng) tự khôi phục từ bản này. ===== */
+const DATA_CACHE = 'kt-data-v1', dataKeyUrl = () => new URL('./__ktdata__.json', location.href).href;
+async function dataCachePut(text, stamp){
+  try {
+    if (!('caches' in self) || !text || !GH.repo) return;
+    const c = await caches.open(DATA_CACHE);
+    await c.put(dataKeyUrl(), new Response(text, { headers:{ 'content-type':'application/json', 'x-kt-stamp':stamp || '', 'x-kt-repo':GH.repo } }));
+  } catch(e){}
+}
+async function dataCacheGet(){
+  try {
+    if (!('caches' in self)) return null;
+    const c = await Promise.race([caches.open(DATA_CACHE), sleepMs(4000).then(() => null)]); if (!c) return null;
+    const r = await c.match(dataKeyUrl()); if (!r) return null;
+    if (GH.repo && r.headers.get('x-kt-repo') && r.headers.get('x-kt-repo') !== GH.repo) return null;
+    const text = await r.text(); return text ? { text, stamp:r.headers.get('x-kt-stamp') || '' } : null;
+  } catch(e){ return null; }
+}
+async function restoreFromDataCache(){
+  if (bibleMeta.length || SY.dirty) return false;
+  const c = await dataCacheGet(); if (!c) return false;
+  try {
+    const j = parseRemote(c.text), books = normBible(j.bible || j); if (!books.length) return false;
+    await importBible(books, 'replace'); applyAbout(j.about);
+    SY = { sha:sigOf(c.text), dirty:false, at:Date.now(), store:'github', stamp:c.stamp }; saveSY();
+    await reloadAll(); return bibleMeta.length > 0;
+  } catch(e){ return false; }
+}
 async function rawFetchNet(){
+  const t = await rawFetchNet0(); dataCachePut(t, LASTSTAMP); return t;
+}
+async function rawFetchNet0(){
   LASTSTAMP = '';
   const own = await sameOriginFetch(); if (own !== null) return own;
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
@@ -5517,6 +5549,7 @@ function ktRehydrate(keys){
     await dropDemoBook();
     if (painted && !restored.length) await snapAdopt();
     else { ktBootEnd(); await reloadAll(); await restoreResume(); }
+    if (!bibleMeta.length && await restoreFromDataCache()){ ktBootEnd(); await restoreResume(); toast('Đã khôi phục Kinh Thánh từ bản lưu trong máy'); }   // kho trống/lỗi → lấy lại từ bản gốc dự phòng, không cần mạng
     if (!bibleMeta.length && SY.sha && !SY.dirty){ SY.sha = ''; SY.at = 0; saveSY(); }   // kho Kinh Thánh trống mà tưởng đã đồng bộ → để lần đồng bộ tới tải lại
     clearTimeout(hint);
     window.ktReady = true;
