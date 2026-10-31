@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AA3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AA4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2406,7 +2406,33 @@ async function rawFetch(){
   catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
   if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
   if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
-  return res.text();
+  const text = await res.text(); dataCachePut(text); return text;
+}
+/* ===== BẢN GỐC DỰ PHÒNG trong Cache Storage (độc lập IndexedDB): tải xong là cất nguyên tệp; mở app thấy kho trống thì khôi phục từ đây, không cần mạng ===== */
+const DATA_CACHE = 'kt-data-v1', dataKeyUrl = () => new URL('./__ktdata__.json', location.href).href;
+async function dataCachePut(text){
+  try { if (!('caches' in self) || !text || !GH.repo) return;
+    const c = await caches.open(DATA_CACHE);
+    await c.put(dataKeyUrl(), new Response(text, { headers:{ 'content-type':'application/json', 'x-kt-repo':GH.repo } }));
+  } catch(e){}
+}
+async function dataCacheGet(){
+  try { if (!('caches' in self)) return null;
+    const c = await Promise.race([caches.open(DATA_CACHE), new Promise(r => setTimeout(() => r(null), 4000))]); if (!c) return null;
+    const r = await c.match(dataKeyUrl()); if (!r) return null;
+    if (GH.repo && r.headers.get('x-kt-repo') && r.headers.get('x-kt-repo') !== GH.repo) return null;
+    return (await r.text()) || null;
+  } catch(e){ return null; }
+}
+async function restoreFromDataCache(){
+  if (bibleMeta.length || SY.dirty) return false;
+  const text = await dataCacheGet(); if (!text) return false;
+  try {
+    const j = parseRemote(text), books = normBible(j.bible || j); if (!books.length) return false;
+    await importBible(books, 'replace'); applyAbout(j.about);
+    SY = { sha:sigOf(text), dirty:false, at:Date.now(), store:'github' }; saveSY();
+    await reloadAll(); return bibleMeta.length > 0;
+  } catch(e){ return false; }
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
 const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
@@ -2478,9 +2504,10 @@ async function pushTo(A, auto){
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
 }
 async function syncReadOnly(A, o){
+  if (o.auto && bibleMeta.length && SY.sha && !SY.dirty && Date.now() - SY.at < 6 * 3600 * 1000){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }   // đã kiểm tra trong 6 giờ qua → mở app nhanh, không tải lại vài MB
   const r = await A.read(), hasLocal = bibleMeta.length > 0;
   if (!r){ setSync('ok', `Trên ${A.label} chưa có dữ liệu.`); return; }
-  if (r.version === SY.sha && hasLocal){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
+  if (r.version === SY.sha && hasLocal){ SY.at = Date.now(); saveSY(); setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
   if (!normBible((r.payload || {}).bible || r.payload || {}).length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
   if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
     if (o.auto){ setSync('conflict', `Máy này đã có dữ liệu riêng khác với ${A.label}. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); toast(`Dữ liệu máy này khác ${A.label} – vào Quản lý dữ liệu → Đồng bộ ngay để chọn`); return; }
@@ -4117,6 +4144,36 @@ addEventListener('online', updateOnline); addEventListener('offline', updateOnli
 /* Về đầu chương khi đổi sách/chương: chỉ đặt lại vị trí của khung đọc; thanh đầu trang cố định nên không có gì nhảy */
 function ktTop(){ if (SCR.scrollTop !== 0) SCR.scrollTop = 0; }
 
+/* Báo cáo tình trạng bộ nhớ của máy: mỗi nơi lưu (IndexedDB, Cache Storage, localStorage) đang giữ gì – để biết chính xác nơi nào hỏng */
+async function ktDiag(){
+  const L = [], add = (k, v) => L.push(k + ': ' + v);
+  add('Bản app', APP_VERSION);
+  add('Chạy từ Màn hình chính', (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) ? 'có' : 'không (đang ở Safari)');
+  add('iOS / trình duyệt', (navigator.userAgent.match(/OS ([\d_]+)/) || [])[1] || navigator.userAgent.slice(0, 60));
+  add('Mạng', navigator.onLine ? 'có' : 'không');
+  add('IndexedDB mở được', db ? 'có' : 'KHÔNG');
+  if (db){ try { add('  số sách trong IndexedDB', (await dbAll('bookMeta')).length); } catch(e){ add('  đọc IndexedDB', 'lỗi: ' + (e.message || e)); } }
+  add('Chế độ lưu tạm (RAM)', MEM.on ? 'ĐANG BẬT' : 'tắt');
+  add('Tự sửa kho đã chạy', window.ktHealed ? 'có' : 'không');
+  try {
+    if (!('caches' in self)) add('Cache Storage', 'không hỗ trợ');
+    else {
+      const ks = await caches.keys(); add('Cache Storage', ks.length ? ks.join(', ') : '(trống)');
+      const t = await dataCacheGet(); add('  bản gốc dữ liệu (kt-data-v1)', t ? (t.length / 1048576).toFixed(1) + ' MB' : 'chưa có');
+    }
+  } catch(e){ add('Cache Storage', 'lỗi: ' + (e.message || e)); }
+  try { let n = 0, c = 0; for (let i = 0; i < localStorage.length; i++){ n++; c += (localStorage.getItem(localStorage.key(i)) || '').length; } add('localStorage', n + ' khóa, ' + (c / 1024).toFixed(0) + ' KB'); } catch(e){ add('localStorage', 'lỗi: ' + (e.message || e)); }
+  try { add('Xin lưu vĩnh viễn', navigator.storage && navigator.storage.persisted ? (await navigator.storage.persisted() ? 'được' : 'chưa') : 'không hỗ trợ'); } catch(e){}
+  try { if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); add('Dung lượng', ((e.usage || 0) / 1048576).toFixed(1) + ' MB / ' + ((e.quota || 0) / 1048576).toFixed(0) + ' MB'); } } catch(e){}
+  add('Service worker điều khiển trang', ('serviceWorker' in navigator && navigator.serviceWorker.controller) ? 'có' : 'chưa');
+  add('Đồng bộ gần nhất', SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa');
+  const txt = L.join('\n');
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = `<div class="sheet"><h3>Tình trạng bộ nhớ máy</h3><pre style="white-space:pre-wrap;font-size:13px;line-height:1.5;margin:0 0 12px;user-select:text;-webkit-user-select:text">${esc(txt)}</pre><div class="btns" style="flex-direction:column"><button class="btn primary" data-k="c">Chép nội dung</button><button class="btn" data-k="x">Đóng</button></div></div>`;
+  o.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b){ if (e.target === o) o.remove(); return; } if (b.dataset.k === 'x') return o.remove(); try { navigator.clipboard.writeText(txt); toast('Đã chép'); } catch(_){} });
+  document.body.appendChild(o);
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#diagBtn')) ktDiag(); });
 async function dropDemoBook(){
   try {
     const d = await dbGet('books', 'Sách Mẫu');
@@ -4810,8 +4867,16 @@ planSum();
   } catch(e){}
   try {
     try { db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }); }
-    catch(idbErr){ console.warn('IndexedDB không mở được, chuyển sang lưu dự phòng:', idbErr); await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
+    catch(idbErr){
+      console.warn('IndexedDB không mở được:', idbErr);
+      /* TỰ SỬA: kho bị hỏng/kẹt → xóa kho cũ (chỉ chứa nội dung tải được, tải lại được) rồi tạo mới; lịch sử đọc/ghi chú nằm ở localStorage nên không mất */
+      try {
+        await new Promise(res => { let d = false; const go = () => { if (!d){ d = true; res(); } }; try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); } setTimeout(go, 3000); });
+        db = await openDBRetry(); window.ktHealed = true;
+      } catch(e2){ await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
+    }
     await dropDemoBook(); await reloadAll(); await restoreResume();
+    if (!bibleMeta.length && await restoreFromDataCache()){ await restoreResume(); toast('Đã khôi phục Kinh Thánh từ bản lưu trong máy'); }
     window.ktReady = true;
   }
   catch(e){
@@ -4819,7 +4884,7 @@ planSum();
       Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
       3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
       <span style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
-        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button></span>
+        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button><button class="btn" id="diagBtn">🔍 Kiểm tra</button></span>
       <small style="display:block;margin-top:10px;color:var(--muted)">“Đặt lại” chỉ xóa nội dung Kinh Thánh đã tải trong máy (tự tải lại khi có mạng). Lịch sử đọc, dấu trang, ghi chú, kế hoạch vẫn được giữ.</small></div>`;
     const rt = $('#dbRetry'), rs = $('#dbReset');
     if (rt) rt.onclick = () => location.reload();
@@ -4831,6 +4896,7 @@ planSum();
     };
     return;
   }
+  try { if (!$('#diagBtn')) $('#verTag').insertAdjacentHTML('afterend', '<button class="btn" id="diagBtn" style="margin-top:8px">🔍 Kiểm tra bộ nhớ máy</button>'); } catch(e){}
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập

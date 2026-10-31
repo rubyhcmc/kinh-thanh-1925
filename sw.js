@@ -1,11 +1,11 @@
 /* Service worker: luôn thử lấy bản MỚI NHẤT từ mạng trước, chỉ dùng bản lưu sẵn khi mất mạng. */
-const CACHE = 'kt-20261101-aa3';
+const CACHE = 'kt-20261101-aa4';
 self.addEventListener('install', e => {
   self.skipWaiting();                                   // bản mới kích hoạt ngay, không chờ đóng hết tab
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])).catch(() => {}));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== 'kt-store-v1').map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== 'kt-store-v1' && k !== 'kt-data-v1').map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const r = e.request;
