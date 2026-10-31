@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AB';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AC';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1019,7 +1019,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyThe
 let db;
 function openDB(){
   return new Promise((res, rej) => {
-    const r = indexedDB.open(DB_NAME, 1);
+    let r; try { r = indexedDB.open(DB_NAME, 1); } catch(e){ return rej(e); }
+    r.onblocked = () => rej(new Error('Bộ nhớ đang bị một cửa sổ khác giữ'));
     r.onupgradeneeded = () => {
       const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
       if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
@@ -1030,6 +1031,16 @@ function openDB(){
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
   });
+}
+/* iPhone (nhất là app thêm vào Màn hình chính) thỉnh thoảng báo “Unable to open database file on disk” ngay lúc vừa khởi động,
+   nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
+async function openDBRetry(onWait){
+  let last;
+  for (let i = 0; i < 8; i++){
+    try { return await openDB(); }
+    catch(e){ last = e; if (onWait && i === 0) try { onWait(); } catch(err){} await new Promise(r => setTimeout(r, Math.min(250 * Math.pow(2, i), 2000))); }
+  }
+  throw last;
 }
 const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
@@ -4061,7 +4072,9 @@ function setupPWA(){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
       if (!had || reloaded) return; reloaded = true;
-      if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật');
+      const go = () => { if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật'); };
+      /* Không tải lại trang khi app đang mở bộ nhớ lúc khởi động (dễ gây lỗi “database file on disk” trên iPhone): chờ app mở xong rồi mới làm mới */
+      let waited = 0; const t = setInterval(() => { waited += 300; if (window.ktReady || waited > 15000){ clearInterval(t); setTimeout(go, 1500); } }, 300);
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
@@ -4767,8 +4780,28 @@ planSum();
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreResume(); }
-  catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
+  try {
+    db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; });
+    await dropDemoBook(); await reloadAll(); await restoreResume();
+    window.ktReady = true;
+  }
+  catch(e){
+    $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ của app</b>${esc(e.message || e)}<br>
+      Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
+      3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
+      <span style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button></span>
+      <small style="display:block;margin-top:10px;color:var(--muted)">“Đặt lại” chỉ xóa nội dung Kinh Thánh đã tải trong máy (tự tải lại khi có mạng). Lịch sử đọc, dấu trang, ghi chú, kế hoạch vẫn được giữ.</small></div>`;
+    const rt = $('#dbRetry'), rs = $('#dbReset');
+    if (rt) rt.onclick = () => location.reload();
+    if (rs) rs.onclick = () => {
+      if (!confirm('Xóa nội dung Kinh Thánh đã tải trong máy để mở lại từ đầu? Lịch sử đọc, ghi chú, dấu trang được giữ nguyên.')) return;
+      let done = false; const go = () => { if (!done){ done = true; location.reload(); } };
+      try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); }
+      setTimeout(go, 3000);
+    };
+    return;
+  }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
