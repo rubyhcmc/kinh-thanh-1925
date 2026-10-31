@@ -64,9 +64,6 @@ body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
-/* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến ô Sách/Chương/Câu bị vẽ mờ → ở chế độ này bỏ ép lớp, thanh vẫn cố định (position:fixed). Safari giữ nguyên như cũ. */
-html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
-html.sa .top select,html.sa .top input{-webkit-transform:none;transform:none;will-change:auto}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -738,7 +735,7 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <textarea id="impText" placeholder="Dán JSON hoặc văn bản vào đây…" spellcheck="false"></textarea>
       <div class="btns">
-        <input type="file" id="impFile" accept=".json,.pdf,.docx,.txt,.md,text/plain,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden multiple>
+        <input type="file" id="impFile" accept=".json,.pdf,.txt,.md,text/plain,application/json,application/pdf" hidden multiple>
         <button class="btn" id="pickFile">📂 Chọn tệp…</button>
         <button class="btn" id="fillSample">Chèn mẫu định dạng</button>
         <button class="btn primary" id="doImport" style="margin-left:auto">Nhập vào máy</button>
@@ -756,14 +753,14 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>4. Xuất trọn bộ 1 sách (PDF + Word + JSON) &amp; khôi phục</h4>
-      <p class="hint">Khi hoàn thành một sách, xuất thành tệp PDF dàn trang như sách in và tệp Word (.docx) khổ A5 dàn trang chuẩn, có thể mở sửa/in bằng Word. Cả PDF và Word đều kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF, Word (hoặc tệp JSON đi kèm) để khôi phục. Sửa chữ trong Word rồi nhập lại cũng được: app khôi phục theo nội dung đã sửa.</p>
+      <h4>4. Xuất trọn bộ 1 sách (PDF + JSON) &amp; khôi phục</h4>
+      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục.</p>
       <select id="exBook" aria-label="Chọn sách cần xuất"></select>
       <div class="btns">
-        <button class="btn primary" id="exGo">📕 Xuất PDF + Word + JSON</button>
-        <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/Word/JSON</button>
+        <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
+        <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
       </div>
-      <input type="file" id="exFile" accept=".pdf,.docx,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/json" hidden multiple>
+      <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
       <div class="log" id="exLog"></div>
     </div>
 
@@ -918,11 +915,9 @@ const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
 /* Chặn mọi kiểu zoom trên iOS: chụm hai ngón, chạm đúp, gesture của Safari */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
-/* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
+document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-/* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
-try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.10.31-AG';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-Z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1024,8 +1019,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyThe
 let db;
 function openDB(){
   return new Promise((res, rej) => {
-    let r; try { r = indexedDB.open(DB_NAME, 1); } catch(e){ return rej(e); }
-    r.onblocked = () => rej(new Error('Bộ nhớ đang bị một cửa sổ khác giữ'));
+    const r = indexedDB.open(DB_NAME, 1);
     r.onupgradeneeded = () => {
       const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
       if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
@@ -1037,56 +1031,12 @@ function openDB(){
     r.onerror = () => rej(r.error);
   });
 }
-/* iPhone (nhất là app thêm vào Màn hình chính) thỉnh thoảng báo “Unable to open database file on disk” ngay lúc vừa khởi động,
-   nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
-async function openDBRetry(onWait){
-  /* Thử lại dày (mỗi ~0,12 giây trong 3 giây đầu, sau đó mỗi 0,5 giây, tổng tối đa ~12 giây) để vào được app ngay khi bộ nhớ sẵn sàng,
-     thay vì chờ theo nhịp tăng dần 0,25→0,5→1→2 giây như trước. Thông báo “Đang mở bộ nhớ…” chỉ hiện nếu quá 0,4 giây vẫn chưa mở được. */
-  const t0 = Date.now(); let last, i = 0, shown = false;
-  while (Date.now() - t0 < 12000){
-    try { return await openDB(); }
-    catch(e){
-      last = e; i++;
-      if (onWait && !shown && Date.now() - t0 > 400){ shown = true; try { onWait(); } catch(err){} }
-      await new Promise(r => setTimeout(r, i < 25 ? 120 : 500));
-    }
-  }
-  throw last;
-}
 const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-/* ===== CHẾ ĐỘ LƯU DỰ PHÒNG =====
-   Có iPhone không mở được IndexedDB trong app thêm vào Màn hình chính (lỗi “Unable to open database file on disk”, thử lại vẫn lỗi).
-   Khi đó app chuyển sang lưu trong bộ nhớ (RAM) và sao một bản vào Cache Storage (kho riêng, không dùng IndexedDB) để mở lại không cần tải lại.
-   Nội dung Kinh Thánh luôn tải lại được từ GitHub; lịch sử đọc, dấu trang, ghi chú nằm ở localStorage nên không bị ảnh hưởng. */
-const MEM = { on:false, data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, t:0 };
-const MEM_CACHE = 'kt-store-v1';
-async function memActivate(){
-  MEM.on = true; window.ktMemMode = true;
-  try {
-    if (!('caches' in window)) return;
-    const c = await caches.open(MEM_CACHE);
-    for (const st of Object.keys(MEM.data)){
-      const r = await c.match('./__kt_store__/' + st); if (!r) continue;
-      try { (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); } catch(e){}
-    }
-  } catch(e){}
-}
-function memSave(){
-  clearTimeout(MEM.t);
-  MEM.t = setTimeout(async () => {
-    try {
-      if (!('caches' in window)) return;
-      const c = await caches.open(MEM_CACHE);
-      for (const st of Object.keys(MEM.data)) await c.put('./__kt_store__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
-    } catch(e){}
-  }, 600);
-}
-const dbAll   = st => MEM.on ? Promise.resolve([...MEM.data[st].values()]) : reqP(db.transaction(st).objectStore(st).getAll());
-const dbGet   = (st, k) => MEM.on ? Promise.resolve(MEM.data[st].get(k)) : reqP(db.transaction(st).objectStore(st).get(k));
-const dbClear = st => MEM.on ? (MEM.data[st].clear(), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
-const dbDel   = (st, k) => MEM.on ? (MEM.data[st].delete(k), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
+const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
+const dbGet   = (st, k) => reqP(db.transaction(st).objectStore(st).get(k));
+const dbClear = st => reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
+const dbDel   = (st, k) => reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
 function dbPut(st, items){
-  if (MEM.on){ items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); memSave(); return Promise.resolve(); }
   return new Promise((res, rej) => {
     const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
     items.forEach(i => os.put(i));
@@ -2384,27 +2334,7 @@ const syncCanWrite = () => { const a = Store.cur(); return !!(a && a.configured(
 
 /* --- Adapter 1: GitHub (các hàm ghReq / ghRemote… ở trên chỉ phục vụ adapter này) --- */
 /* Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt */
-/* Nếu app đang chạy trên GitHub Pages của CHÍNH kho dữ liệu (vd rubyhcmc.github.io/kinh-thanh-1925/ ↔ kho rubyhcmc/kinh-thanh-1925),
-   tệp dữ liệu nằm ngay cạnh trang → tải cùng nguồn, không phụ thuộc raw.githubusercontent.com (dễ bị chặn, khác tên miền). */
-function ownPagesRepo(){
-  try {
-    const m = location.hostname.match(/^([^.]+)\.github\.io$/i); if (!m) return '';
-    const seg = location.pathname.split('/').filter(Boolean)[0] || '';
-    return (seg && !/\.html?$/i.test(seg) ? m[1] + '/' + decodeURIComponent(seg) : m[1] + '/' + m[1] + '.github.io').toLowerCase();
-  } catch(e){ return ''; }
-}
-async function sameOriginFetch(){
-  if (!GH.repo || GH.branch || GH.repo.toLowerCase() !== ownPagesRepo()) return null;      // chỉ khi đúng kho này và dùng nhánh mặc định
-  try {
-    const url = new URL(ghFile(), location.href).href + '?_=' + Date.now();
-    const res = await fetch(url, { cache:'no-store' });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return /^\s*[\[{]/.test(text.replace(/^\uFEFF/, '')) ? text : null;                      // không phải JSON (trang lỗi, bản cũ…) → bỏ, dùng đường dự phòng
-  } catch(e){ return null; }
-}
 async function rawFetch(){
-  const own = await sameOriginFetch(); if (own !== null) return own;
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
   let res;
@@ -2725,7 +2655,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : '') + (window.ktMemMode ? ' · lưu tạm' : ''); $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -3925,283 +3855,8 @@ async function pdfToJson(buf){
   return new TextDecoder('utf-8').decode(data);
 }
 async function fileToText(f){
-  if (/\.docx$/i.test(f.name) || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'){
-    const r = await docxToJson(await f.arrayBuffer()); return { text:r.text, pdf:true, note:r.note };
-  }
   if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') return { text:await pdfToJson(await f.arrayBuffer()), pdf:true };
   return { text:await f.text() };
-}
-
-/* =========================================================
- *  XUẤT SÁCH → WORD (.docx) dàn trang như sách in + KHÔI PHỤC từ Word
- *  - Khổ A5 (như bản PDF), phông Times New Roman 11pt, căn đều hai bên.
- *  - Bìa riêng; đầu trang là tên sách, chân trang là số trang (đánh số từ 1 sau bìa).
- *  - Mỗi chương có tiêu đề (hiện trong ngăn Điều hướng của Word), số câu in nhỏ nâng lên,
- *    tiêu đề đoạn căn giữa, thơ thụt lề theo cấp, chú thích gom cuối chương.
- *  - Dữ liệu gốc (JSON) được nhúng kín trong tệp (customXml) → nhập lại là khôi phục đúng nguyên bản.
- *    Nếu bạn sửa chữ trong Word rồi nhập lại, app nhận ra và khôi phục theo nội dung đã sửa
- *    (đọc từ các kiểu đoạn KT-…, vì vậy khi sửa chỉ nên sửa chữ, đừng đổi kiểu đoạn/số câu).
- * ========================================================= */
-const DX_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const DX_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-const DX_NS = `xmlns:w="${DX_W}" xmlns:r="${DX_R}"`;
-const DX_URN = 'urn:kinhthanh-data';
-const DX_BROWN = '8A5A1F', DX_GREY = '6B6150';
-const DX_PAGE = '<w:pgSz w:w="8391" w:h="11906"/><w:pgMar w:top="1247" w:right="1134" w:bottom="1247" w:left="1134" w:header="624" w:footer="624" w:gutter="0"/>';
-const dxN = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
-const dxSig = chs => crc32(new TextEncoder().encode(JSON.stringify(chs.map(c => (c || []).map(v => [v.n, dxN(v.t), dxN(v.h), (v.fn || []).map(dxN)]))))).toString(16);
-
-/* --- Zip có nén (deflate-raw); trình duyệt không hỗ trợ nén thì tự lưu không nén --- */
-async function dxRawDeflate(bytes){
-  if (typeof CompressionStream === 'undefined') return null;
-  try { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); }
-  catch(e){ return null; }
-}
-async function dxRawInflate(bytes){
-  if (typeof DecompressionStream === 'undefined') throw new Error('Trình duyệt chưa hỗ trợ giải nén tệp Word. Hãy dùng tệp JSON đi kèm.');
-  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
-}
-async function zipPack(files){                                        // files: [{name, data:Uint8Array}] → Uint8Array
-  const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
-  for (const f of files){
-    const nm = enc.encode(f.name), crc = crc32(f.data), raw = f.data.length;
-    let data = f.data, method = 0;
-    const z = raw > 256 ? await dxRawDeflate(f.data) : null;
-    if (z && z.length < raw){ data = z; method = 8; }
-    const sz = data.length;
-    const lh = new DataView(new ArrayBuffer(30));
-    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
-    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, raw, true);
-    lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
-    loc.push(new Uint8Array(lh.buffer), nm, data);
-    const ch = new DataView(new ArrayBuffer(46));
-    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, method, true);
-    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, raw, true);
-    ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
-    cen.push(new Uint8Array(ch.buffer), nm);
-    off += 30 + nm.length + sz;
-  }
-  const cenSize = cen.reduce((a, u) => a + u.length, 0);
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
-  end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
-  const all = [...loc, ...cen, new Uint8Array(end.buffer)], out = new Uint8Array(all.reduce((a, u) => a + u.length, 0));
-  let p = 0; all.forEach(u => { out.set(u, p); p += u.length; });
-  return out;
-}
-function unzipIndex(buf){                                             // đọc danh mục zip → { tên: {method, data} }
-  const u = new Uint8Array(buf), dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
-  let e = u.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
-  if (e < 0) throw new Error('Tệp này không phải file Word (.docx) hợp lệ.');
-  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
-  const out = {}, dec = new TextDecoder();
-  for (let i = 0; i < n; i++){
-    if (p + 46 > u.length || dv.getUint32(p, true) !== 0x02014b50) break;
-    const method = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
-    const name = dec.decode(u.subarray(p + 46, p + 46 + nl));
-    p += 46 + nl + xl + cl;
-    const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
-    out[name] = { method, data:u.subarray(ds, ds + csz) };
-  }
-  return out;
-}
-async function unzipText(ent){
-  if (!ent) return null;
-  const b = ent.method === 0 ? ent.data : ent.method === 8 ? await dxRawInflate(ent.data) : null;
-  if (!b) throw new Error('Tệp Word dùng kiểu nén không hỗ trợ.');
-  return new TextDecoder('utf-8').decode(b);
-}
-
-/* --- Dựng nội dung Word --- */
-const dxRun = (t, o) => {
-  o = o || {};
-  const rp = (o.cs ? `<w:rStyle w:val="${o.cs}"/>` : '') + (o.b ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') + (o.color ? `<w:color w:val="${o.color}"/>` : '') + (o.sz ? `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>` : '');
-  return `<w:r>${rp ? `<w:rPr>${rp}</w:rPr>` : ''}<w:t xml:space="preserve">${wx(t)}</w:t></w:r>`;
-};
-const DX_BR = '<w:r><w:br/></w:r>';
-const dxLines = (txt, o) => String(txt).split('\n').map((l, i) => (i ? DX_BR : '') + dxRun(l, o)).join('');
-const dxP = (style, inner, ppr) => `<w:p><w:pPr><w:pStyle w:val="${style}"/>${ppr || ''}</w:pPr>${inner}</w:p>`;
-function dxTextRuns(s){                                               // văn bản câu → các run (chú thích [n] nâng lên, ghi chú [ … ] nghiêng)
-  return pdfRuns(s).map(r => r.k === 'fn' ? dxRun('[' + r.s + ']', { cs:'KTFn' }) : r.k === 'note' ? dxRun(r.s, { cs:'KTNote' }) : dxRun(r.s)).join('');
-}
-function dxHeading(h){
-  const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
-  const isRef = l => /^\([^()]*\)$/.test(l), multi = ls.filter(l => !isRef(l)).length > 1; let k = 0, out = '';
-  ls.forEach((l, i) => {
-    if (i) out += DX_BR;
-    if (isRef(l)){ out += dxRun(l, { i:true, sz:18, color:DX_GREY }); return; }
-    const big = !multi || k === 0; k++;
-    const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    if (m && m[1]) out += dxRun(m[1], { b:true, sz:big ? 24 : 21 }) + dxRun(' ' + m[2], { i:true, sz:18, color:DX_GREY });
-    else out += dxRun(l, { b:true, sz:big ? 24 : 21 });
-  });
-  return dxP('KTHead', out);
-}
-function dxBody(book){
-  let cover = '', main = '';
-  cover += dxP('KTCover', dxRun('KINH THÁNH'));
-  cover += dxP('KTTitle', dxLines(book.name));
-  if (book.sub) cover += dxP('KTSub', dxLines(book.sub));
-  const nch = book.chapters.filter(c => c && c.length).length, nv = book.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
-  cover += dxP('KTInfo', dxRun(`${nch} chương · ${nv} câu · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`));
-  cover += dxP('KTInfo', dxRun('Tệp này có kèm dữ liệu khôi phục. Khi cần: Aa → Quản lý dữ liệu → "Khôi phục từ PDF/Word/JSON" rồi chọn tệp .docx này. Nếu sửa chữ trong Word, chỉ nên sửa nội dung, đừng đổi kiểu đoạn hoặc số câu.'),
-    `<w:sectPr>${DX_PAGE}</w:sectPr>`);                               // kết thúc phần bìa (không đầu/chân trang)
-  book.chapters.forEach((vs, ci) => {
-    if (!vs || !vs.length) return;
-    main += dxP('KTChap', dxRun(book.name.toUpperCase(), { b:true, sz:22, color:DX_BROWN }) + DX_BR + dxRun(String(ci + 1), { b:true, sz:44, color:DX_BROWN }));
-    let prose = null, afterPoem = false;                              // prose = các run của đoạn văn đang gom
-    const flush = () => { if (prose){ main += dxP('KTBody', prose, afterPoem ? '<w:spacing w:before="120"/>' : ''); prose = null; afterPoem = false; } };
-    vs.forEach(v => {
-      const poem = Array.isArray(v.q) && v.q.length;
-      if (v.h){ flush(); main += dxHeading(v.h); }
-      if (poem){
-        flush();
-        String(v.t).split('\n').forEach((ln, k) => {
-          main += dxP(+v.q[k] === 2 ? 'KTPoem2' : 'KTPoem1', (k === 0 ? dxRun(String(v.n), { cs:'KTVerse' }) : '') + dxTextRuns(ln));
-        });
-        afterPoem = true;
-      } else {
-        if (prose === null) prose = '';
-        else if (v.p){ flush(); prose = ''; }
-        else prose += dxRun(' ');
-        prose += dxRun(String(v.n), { cs:'KTVerse' }) + dxTextRuns(String(v.t).replace(/\s*\n\s*/g, ' '));
-      }
-    });
-    flush();
-    vs.flatMap(v => v.fn || []).forEach((f, i) => {
-      main += dxP('KTFoot', dxLines(f), i === 0 ? '<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="B9AE9A"/></w:pBdr><w:spacing w:before="240"/>' : '');
-    });
-  });
-  return { cover, main };
-}
-const DX_STYLES = (() => {
-  const ps = (id, name, o) => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr>${o.ppr || ''}</w:pPr>${o.rpr ? `<w:rPr>${o.rpr}</w:rPr>` : ''}</w:style>`;
-  const cs = (id, name, rpr) => `<w:style w:type="character" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="DefaultParagraphFont"/><w:qFormat/><w:rPr>${rpr}</w:rPr></w:style>`;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${DX_W}">`
-    + `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="vi-VN" w:eastAsia="vi-VN" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>`
-    + `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>`
-    + `<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/></w:style>`
-    + ps('KTBody', 'KT Body', { ppr:'<w:widowControl/><w:spacing w:after="100" w:line="340" w:lineRule="auto"/><w:jc w:val="both"/>' })
-    + ps('KTPoem1', 'KT Poem 1', { ppr:'<w:widowControl/><w:spacing w:after="20" w:line="340" w:lineRule="auto"/><w:ind w:left="240" w:hanging="240"/>' })
-    + ps('KTPoem2', 'KT Poem 2', { ppr:'<w:widowControl/><w:spacing w:after="20" w:line="340" w:lineRule="auto"/><w:ind w:left="560" w:hanging="240"/>' })
-    + ps('KTChap', 'KT Chapter', { ppr:'<w:keepNext/><w:keepLines/><w:spacing w:before="400" w:after="160" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/>' })
-    + ps('KTHead', 'KT Heading', { ppr:'<w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="100" w:line="260" w:lineRule="auto"/><w:jc w:val="center"/>' })
-    + ps('KTFoot', 'KT Footnote', { ppr:'<w:spacing w:after="30" w:line="260" w:lineRule="auto"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="17"/><w:szCs w:val="17"/>` })
-    + ps('KTCover', 'KT Cover', { ppr:'<w:spacing w:before="2800" w:after="160"/><w:jc w:val="center"/>', rpr:`<w:b/><w:color w:val="${DX_BROWN}"/><w:sz w:val="20"/><w:szCs w:val="20"/>` })
-    + ps('KTTitle', 'KT Title', { ppr:'<w:spacing w:before="0" w:after="200" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/>', rpr:'<w:b/><w:sz w:val="56"/><w:szCs w:val="56"/>' })
-    + ps('KTSub', 'KT Subtitle', { ppr:'<w:spacing w:after="200"/><w:jc w:val="center"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="24"/><w:szCs w:val="24"/>` })
-    + ps('KTInfo', 'KT Info', { ppr:'<w:spacing w:before="160" w:after="60" w:line="260" w:lineRule="auto"/><w:jc w:val="center"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + ps('KTHeader', 'KT Header', { ppr:`<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="3" w:color="C9BFA9"/></w:pBdr><w:jc w:val="center"/>`, rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + ps('KTFooter', 'KT Footer', { ppr:'<w:jc w:val="center"/>', rpr:`<w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + cs('KTVerse', 'KT Verse Number', `<w:b/><w:color w:val="${DX_BROWN}"/><w:vertAlign w:val="superscript"/>`)
-    + cs('KTFn', 'KT Footnote Mark', `<w:i/><w:color w:val="${DX_BROWN}"/><w:vertAlign w:val="superscript"/>`)
-    + cs('KTNote', 'KT Inline Note', `<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="19"/><w:szCs w:val="19"/>`)
-    + `</w:styles>`;
-})();
-async function buildBookDocx(book, payload, fname){
-  const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', enc = new TextEncoder();
-  const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-  const b = dxBody(book);
-  const docXml = `${XML}<w:document ${DX_NS}><w:body>${b.cover}${b.main}<w:sectPr><w:headerReference w:type="default" r:id="rId3"/><w:footerReference w:type="default" r:id="rId4"/>${DX_PAGE}<w:pgNumType w:start="1"/></w:sectPr></w:body></w:document>`;
-  const sig = dxSig(dxParse(docXml).chapters);                        // dấu vân tay nội dung văn bản → phát hiện file Word đã bị sửa
-  const stamp = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-  const files = [
-    ['[Content_Types].xml', `${XML}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/customXml/itemProps1.xml" ContentType="application/vnd.openxmlformats-officedocument.customXmlProperties+xml"/></Types>`],
-    ['_rels/.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`],
-    ['docProps/core.xml', `${XML}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${wx(book.name)} - Kinh Thánh</dc:title><dc:creator>Kinh Thánh</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${stamp}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${stamp}</dcterms:modified></cp:coreProperties>`],
-    ['word/document.xml', docXml],
-    ['word/_rels/document.xml.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/styles" Target="styles.xml"/><Relationship Id="rId2" Type="${REL}/settings" Target="settings.xml"/><Relationship Id="rId3" Type="${REL}/header" Target="header1.xml"/><Relationship Id="rId4" Type="${REL}/footer" Target="footer1.xml"/><Relationship Id="rId5" Type="${REL}/customXml" Target="../customXml/item1.xml"/></Relationships>`],
-    ['word/styles.xml', DX_STYLES],
-    ['word/settings.xml', `${XML}<w:settings xmlns:w="${DX_W}"><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`],
-    ['word/header1.xml', `${XML}<w:hdr ${DX_NS}>${dxP('KTHeader', dxRun(book.name))}</w:hdr>`],
-    ['word/footer1.xml', `${XML}<w:ftr ${DX_NS}>${dxP('KTFooter', '<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>')}</w:ftr>`],
-    ['customXml/item1.xml', `${XML}<kinhthanh xmlns="${DX_URN}" app="kinhthanh" version="1" sig="${sig}"><data>${wx(JSON.stringify(payload))}</data></kinhthanh>`],
-    ['customXml/_rels/item1.xml.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/customXmlProps" Target="itemProps1.xml"/></Relationships>`],
-    ['customXml/itemProps1.xml', `${XML}<ds:datastoreItem ds:itemID="{4B1E5A7C-0A3D-4C55-9E1F-6B7D2C8A9F01}" xmlns:ds="http://schemas.openxmlformats.org/officeDocument/2006/customXml"><ds:schemaRefs><ds:schemaRef ds:uri="${DX_URN}"/></ds:schemaRefs></ds:datastoreItem>`]
-  ].map(([name, s]) => ({ name, data:enc.encode(s) }));
-  return new File([await zipPack(files)], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-/* --- Đọc ngược file Word → dữ liệu sách --- */
-function dxParse(xml){
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length) throw new Error('Nội dung file Word bị hỏng.');
-  const W = DX_W, body = doc.getElementsByTagNameNS(W, 'body')[0];
-  if (!body) throw new Error('File Word không có nội dung.');
-  const attr = (el, n) => el ? el.getAttributeNS(W, n) : '';
-  const runsOf = p => [...p.getElementsByTagNameNS(W, 'r')].map(r => {
-    const rp = [...r.children].find(c => c.localName === 'rPr');
-    const sub = n => rp ? [...rp.children].find(c => c.localName === n) : null;
-    let t = ''; for (const c of r.children){ if (c.localName === 't') t += c.textContent; else if (c.localName === 'br' || c.localName === 'cr') t += '\n'; else if (c.localName === 'tab') t += ' '; }
-    return { t, cs:attr(sub('rStyle'), 'val'), sup:attr(sub('vertAlign'), 'val') === 'superscript' };
-  });
-  const isVerse = r => r.cs === 'KTVerse' || (r.sup && /^\s*\d{1,3}\s*$/.test(r.t));
-  let name = '', chs = [], cur = null, pendH = null, lastV = null, prevProse = false, curNo = 0; const fnBy = {};
-  for (const p of [...body.children].filter(c => c.localName === 'p')){
-    const ps = [...p.children].find(c => c.localName === 'pPr'), st = attr(ps && [...ps.children].find(c => c.localName === 'pStyle'), 'val');
-    const runs = runsOf(p), text = runs.map(r => r.t).join('');
-    if (st === 'KTTitle'){ if (!name) name = dxN(text); continue; }
-    if (st === 'KTChap'){
-      const ls = text.split('\n').map(s => s.trim()).filter(Boolean), num = parseInt(ls[ls.length - 1], 10);
-      if (!(num >= 1)) continue;
-      curNo = num; cur = chs[num - 1] = chs[num - 1] || []; pendH = null; lastV = null; prevProse = false; continue;
-    }
-    if (!cur) continue;
-    if (st === 'KTHead'){ pendH = text.split('\n').map(dxN).filter(Boolean).join('\n'); prevProse = false; continue; }
-    if (st === 'KTFoot'){ (fnBy[curNo] = fnBy[curNo] || []).push(text.split('\n').map(dxN).filter(Boolean).join('\n')); continue; }
-    const poemLv = st === 'KTPoem1' ? 1 : st === 'KTPoem2' ? 2 : 0;
-    if (!poemLv && st !== 'KTBody') continue;
-    let started = false;
-    runs.forEach(r => {
-      if (isVerse(r)){
-        const v = { n:parseInt(r.t, 10), t:'' };
-        if (pendH){ v.h = pendH; pendH = null; }
-        if (poemLv) v.q = [poemLv];
-        else if (!started && prevProse && !v.h) v.p = true;
-        cur.push(v); lastV = v; started = true;
-      } else if (lastV){
-        if (!started && poemLv){ lastV.t += '\n'; (lastV.q = lastV.q || []).push(poemLv); started = true; }   // dòng thơ nối tiếp của cùng một câu
-        lastV.t += r.t;
-      }
-    });
-    if (!started && lastV && poemLv === 0 && text.trim()) lastV.t += ' ';
-    prevProse = !poemLv;
-  }
-  chs = Array.from(chs, c => c || []);
-  chs.forEach((vs, i) => {
-    vs.forEach(v => { v.t = String(v.t).split('\n').map(dxN).join('\n').trim(); });
-    const fns = (fnBy[i + 1] || []).slice(), used = fns.map(() => false);
-    vs.forEach(v => {
-      (v.t.match(/\[\d{1,3}\]/g) || []).forEach(mk => {
-        const k = fns.findIndex((f, j) => !used[j] && f.startsWith(mk));
-        if (k >= 0){ used[k] = true; (v.fn = v.fn || []).push(fns[k]); }
-      });
-    });
-    const left = fns.filter((f, j) => !used[j]);
-    if (left.length && vs.length){ const lv = vs[vs.length - 1]; lv.fn = (lv.fn || []).concat(left); }
-  });
-  return { name, chapters:chs };
-}
-async function docxToJson(buf){
-  const z = unzipIndex(buf);
-  const docXml = await unzipText(z['word/document.xml']);
-  if (!docXml) throw new Error('Tệp Word không hợp lệ (thiếu nội dung).');
-  let emb = null;
-  for (const n of Object.keys(z)){
-    if (!/^customXml\/item\d*\.xml$/.test(n)) continue;
-    const x = await unzipText(z[n]);
-    if (!x || x.indexOf(DX_URN) < 0) continue;
-    const d = new DOMParser().parseFromString(x, 'application/xml'), root = d.documentElement, dn = d.getElementsByTagName('data')[0];
-    if (dn && dn.textContent.trim()){ emb = { sig:root.getAttribute('sig') || '', json:dn.textContent }; break; }
-  }
-  let parsed = null; try { parsed = dxParse(docXml); } catch(e){}
-  const hasText = !!(parsed && parsed.name && parsed.chapters.some(c => c && c.length));
-  if (emb && (!hasText || dxSig(parsed.chapters) === emb.sig)) return { text:emb.json, note:'dữ liệu gốc nhúng trong file Word' };
-  if (!hasText) throw new Error('File Word này không phải do ứng dụng xuất ra nên không đọc được cấu trúc sách. Hãy dùng tệp JSON hoặc PDF.');
-  let abbr = '', sub = '';
-  if (emb){ try { const b0 = JSON.parse(emb.json).bible.books[0]; if (b0 && b0.name === parsed.name){ abbr = b0.abbr || ''; sub = b0.sub || ''; } } catch(e){} }
-  const payload = { app:'kinhthanh', version:1, kind:'book', updatedAt:new Date().toISOString(), bible:{ books:[{ name:parsed.name, abbr, sub, chapters:parsed.chapters }] } };
-  return { text:JSON.stringify(payload), note:'file Word đã được chỉnh sửa nên khôi phục theo nội dung trong văn bản' };
 }
 
 /* --- Giao diện xuất --- */
@@ -4235,16 +3890,15 @@ async function saveFiles(files){
     if (i < files.length - 1) await new Promise(r => setTimeout(r, 700));
   }
 }
-function exportResult(name, pdf, json, pages, docx){
+function exportResult(name, pdf, json, pages){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet"><h3>Đã xuất xong: ${esc(name)}</h3>
-    <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)})${docx ? `, Word (${mb(docx)})` : ''} và JSON (${mb(json)}). Hãy cất ${docx ? 'cả ba' : 'cả hai'} nơi an toàn.</p>
-    <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/Word/JSON" rồi chọn một trong các tệp.</p>
+    <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)}) và JSON (${mb(json)}). Hãy cất cả hai nơi an toàn.</p>
+    <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn một trong hai tệp.</p>
     <div class="btns" style="flex-direction:column">
-      <button class="btn primary" data-k="both">⬇️ Tải cả ${docx ? 'ba' : 'hai'} tệp</button>
+      <button class="btn primary" data-k="both">⬇️ Tải cả hai tệp</button>
       <button class="btn" data-k="pdf">📕 Chỉ tải PDF</button>
-      ${docx ? '<button class="btn" data-k="docx">📘 Chỉ tải Word (.docx)</button>' : ''}
       <button class="btn" data-k="json">🧾 Chỉ tải JSON</button>
       <button class="btn" data-k="x">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
@@ -4252,7 +3906,7 @@ function exportResult(name, pdf, json, pages, docx){
     if (!b){ if (e.target === o) o.remove(); return; }
     const k = b.dataset.k;
     if (k === 'x') return o.remove();
-    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : k === 'docx' ? [docx] : [pdf, docx, json].filter(Boolean));
+    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
   });
   document.body.appendChild(o);
 }
@@ -4267,7 +3921,7 @@ async function exportBook(name){
   if (empty && !confirm(`Sách còn ${empty} chương trống (sẽ bị bỏ qua trong PDF). Vẫn xuất?`)) return;
   exBusy = true;
   const pr = document.createElement('div'); pr.className = 'overlay'; pr.style.zIndex = 90;
-  pr.innerHTML = '<div class="sheet"><h3>Đang tạo PDF và Word…</h3><p id="exProg" style="margin:0">Đang dàn trang…</p></div>';
+  pr.innerHTML = '<div class="sheet"><h3>Đang tạo PDF…</h3><p id="exProg" style="margin:0">Đang dàn trang…</p></div>';
   document.body.appendChild(pr);
   const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
   try {
@@ -4285,10 +3939,7 @@ async function exportBook(name){
       .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
     const pdf = new File(parts, base + '.pdf', { type:'application/pdf' });
     const json = new File([jsonStr], base + '.json', { type:'application/json' });
-    say('Đang tạo file Word…');
-    let docx = null;
-    try { docx = await buildBookDocx(book, payload, base + '.docx'); } catch(err){ console.error(err); toast('Không tạo được file Word: ' + (err.message || err)); }
-    pr.remove(); exportResult(name, pdf, json, lay.pages.length, docx);
+    pr.remove(); exportResult(name, pdf, json, lay.pages.length);
   } catch(e){ pr.remove(); console.error(e); toast('Lỗi xuất sách: ' + (e.message || e)); }
   finally { exBusy = false; }
 }
@@ -4301,10 +3952,10 @@ $('#exFile').onchange = async e => {
   try {
     let first = null; const names = [];
     for (const f of files){
-      const { text, note } = await fileToText(f);
+      const { text } = await fileToText(f);
       const isJson = /^[\s﻿]*[\[{]/.test(text);
       const res = await importData(isJson ? 'backup' : 'bible', text, 'merge');
-      first = first || res.first; names.push(f.name + (note ? ' (' + note + ')' : ''));
+      first = first || res.first; names.push(f.name);
     }
     S.book = first; S.chapter = 1; saveS();
     await reloadAll(); markDirty();
@@ -4353,31 +4004,19 @@ function makeIcon(size){
   return c.toDataURL('image/png');
 }
 function setupPWA(){
-  /* Khai báo cài đặt: ưu tiên tệp thật manifest.webmanifest nằm cạnh trang (Android/Chrome nhận “Cài đặt ứng dụng” ổn định hơn).
-     Chưa có tệp đó (hoặc chưa tải lên) thì tự tạo bằng mã như trước, app vẫn cài được. */
-  const addDynamicManifest = () => {
-    try { const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = makeIcon(180); document.head.appendChild(link); } catch(e){}
-    try {
-      const manifest = {
-        name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
-        start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
-        background_color:'#f7f3ea', theme_color:'#fffdf8',
-        icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
-      };
-      const m = document.createElement('link'); m.rel = 'manifest';
-      m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
-      document.head.appendChild(m);
-    } catch(e){}
-  };
-  const addStaticManifest = () => {
-    const m = document.createElement('link'); m.rel = 'manifest'; m.href = 'manifest.webmanifest'; document.head.appendChild(m);
-    const i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.href = 'icon-192.png'; document.head.appendChild(i);
-    const t = document.createElement('link'); t.rel = 'apple-touch-icon'; t.href = 'apple-touch-icon.png'; document.head.appendChild(t);
-  };
-  if (/^https?:$/.test(location.protocol)){
-    fetch('manifest.webmanifest', { method:'HEAD', cache:'no-store' })
-      .then(r => r.ok ? addStaticManifest() : addDynamicManifest()).catch(addDynamicManifest);
-  } else addDynamicManifest();
+  const icon180 = makeIcon(180);
+  const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = icon180; document.head.appendChild(link);
+  try {
+    const manifest = {
+      name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
+      start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
+      background_color:'#f7f3ea', theme_color:'#fffdf8',
+      icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
+    };
+    const m = document.createElement('link'); m.rel = 'manifest';
+    m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
+    document.head.appendChild(m);
+  } catch(e){}
   // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
   const persist = async () => {
     try {
@@ -4385,15 +4024,12 @@ function setupPWA(){
       if (!(await navigator.storage.persisted())) await navigator.storage.persist();
     } catch(e){}
   };
-  /* Chỉ xin giữ dữ liệu vĩnh viễn SAU khi app đã mở xong bộ nhớ: gọi cùng lúc lúc khởi động làm iPhone mở bộ nhớ chậm hơn */
-  { let pw = 0; const pt = setInterval(() => { pw += 500; if (window.ktReady || pw > 20000){ clearInterval(pt); persist(); } }, 500); }
+  persist();
   if ('serviceWorker' in navigator){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
       if (!had || reloaded) return; reloaded = true;
-      const go = () => { if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật'); };
-      /* Không tải lại trang khi app đang mở bộ nhớ lúc khởi động (dễ gây lỗi “database file on disk” trên iPhone): chờ app mở xong rồi mới làm mới */
-      let waited = 0; const t = setInterval(() => { waited += 300; if (window.ktReady || waited > 15000){ clearInterval(t); setTimeout(go, 1500); } }, 300);
+      if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật');
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
@@ -5086,9 +4722,6 @@ planSum();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
-  /* Bắt đầu mở bộ nhớ NGAY từ đầu (chạy song song với phần dựng giao diện bên dưới), đến chỗ cần thì chỉ việc chờ kết quả */
-  const dbP = openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; });
-  dbP.catch(() => {});
   applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
   $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
   setupPWA();
@@ -5102,29 +4735,8 @@ planSum();
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try {
-    try { db = await dbP; }
-    catch(idbErr){ console.warn('IndexedDB không mở được, chuyển sang lưu dự phòng:', idbErr); await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
-    await dropDemoBook(); await reloadAll(); await restoreResume();
-    window.ktReady = true;
-  }
-  catch(e){
-    $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ của app</b>${esc(e.message || e)}<br>
-      Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
-      3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
-      <span style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
-        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button></span>
-      <small style="display:block;margin-top:10px;color:var(--muted)">“Đặt lại” chỉ xóa nội dung Kinh Thánh đã tải trong máy (tự tải lại khi có mạng). Lịch sử đọc, dấu trang, ghi chú, kế hoạch vẫn được giữ.</small></div>`;
-    const rt = $('#dbRetry'), rs = $('#dbReset');
-    if (rt) rt.onclick = () => location.reload();
-    if (rs) rs.onclick = () => {
-      if (!confirm('Xóa nội dung Kinh Thánh đã tải trong máy để mở lại từ đầu? Lịch sử đọc, ghi chú, dấu trang được giữ nguyên.')) return;
-      let done = false; const go = () => { if (!done){ done = true; location.reload(); } };
-      try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); }
-      setTimeout(go, 3000);
-    };
-    return;
-  }
+  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreResume(); }
+  catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
