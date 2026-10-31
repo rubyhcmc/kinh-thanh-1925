@@ -76,6 +76,7 @@ main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:7
 /* lật trang khi vuốt */
 #bibleText.flip{background:var(--bg);box-shadow:0 0 28px rgba(0,0,0,.28);border-radius:4px;will-change:transform,opacity;backface-visibility:hidden}
 
+body.booting .navrow,body.booting #chapNav{pointer-events:none}   /* bản chụp đang hiện: chờ dữ liệu thật vài chục mili-giây rồi mới cho đổi chương */
 /* Chọn sách / chương / câu */
 .navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px;
   padding:6px 12px 7px;background:var(--bg);border-bottom:1px solid var(--line);transition:transform .25s ease}
@@ -922,7 +923,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.10.31-AI';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AI2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -957,11 +958,201 @@ function choose(title, msg, opts){
   });
 }
 
-/* ============ CÀI ĐẶT (localStorage) ============ */
+/* =========================================================
+ *  LỚP LƯU TRỮ — hai việc tách bạch
+ *  ① Nội dung Kinh Thánh: CHỈ nằm trong IndexedDB. Không dùng Cache Storage.
+ *     IndexedDB được mở NGẦM (async/await) ngay khi trang tải; mọi lệnh đọc/ghi tự xếp hàng chờ kho mở xong,
+ *     nên giao diện không bao giờ phải đứng chờ. Nếu iPhone chưa mở được kho, app tạm giữ trong RAM,
+ *     vẫn thử lại ngầm và tự chép vào IndexedDB ngay khi mở được.
+ *  ② Dữ liệu cá nhân (ghi chú, dấu trang, lịch sử đọc, kế hoạch, cài đặt…): LƯU CHÉO localStorage ⇄ IndexedDB.
+ *     Mỗi lần ghi, bản sao tự chép sang IndexedDB (kho 'userdata') kèm mốc thời gian. Mỗi lần mở app, hai bên tự đối chiếu:
+ *     bên nào bị iOS dọn mất hoặc cũ hơn sẽ được chữa lại từ bên còn lại. Người dùng không phải làm gì.
+ * ========================================================= */
+const IDB_VER = 2, IDB_GIVEUP_MS = 6000, LEGACY_CACHE = 'kt-store-v1';
+const IDB = { db:null, ever:false, err:null };
+const MEM = { data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, v:0 };
+const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+
+function openDB(ms){
+  return new Promise((res0, rej0) => {
+    /* Có iPhone lệnh mở bộ nhớ treo im lặng (không báo thành công cũng không báo lỗi) → mỗi lần thử có giới hạn thời gian;
+       nếu kết quả đến muộn sau khi đã bỏ cuộc thì đóng kết nối đó lại. */
+    let done = false, tm = 0;
+    const res = v => { if (done){ try { v.close(); } catch(e){} return; } done = true; clearTimeout(tm); res0(v); };
+    const rej = e => { if (done) return; done = true; clearTimeout(tm); rej0(e); };
+    if (ms) tm = setTimeout(() => rej(new Error('Bộ nhớ chưa phản hồi')), ms);
+    let r; try { r = indexedDB.open(DB_NAME, IDB_VER); } catch(e){ return rej(e); }
+    r.onblocked = () => rej(new Error('Bộ nhớ đang bị một cửa sổ khác giữ'));
+    r.onupgradeneeded = () => {
+      const d = r.result;   // giữ nguyên các kho cũ để không mất dữ liệu; v2 chỉ thêm kho 'userdata'
+      if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
+      if (!d.objectStoreNames.contains('books'))    d.createObjectStore('books',    { keyPath:'name' });
+      if (!d.objectStoreNames.contains('hymns'))    d.createObjectStore('hymns',    { keyPath:'id' });
+      if (!d.objectStoreNames.contains('readings')) d.createObjectStore('readings', { keyPath:'id' });
+      if (!d.objectStoreNames.contains('userdata')) d.createObjectStore('userdata', { keyPath:'k' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+/* Vòng mở ngầm: thử dày lúc đầu (mỗi ~0,12 giây), rồi thưa dần (0,5 giây, 3 giây); bỏ hẳn sau ~10 phút. Không bao giờ chặn giao diện. */
+let idbOpening = null;
+function idbOpenLoop(){
+  if (idbOpening) return idbOpening;
+  idbOpening = (async () => {
+    for (let i = 0; i < 220; i++){
+      try { const d = await openDB(1500); await idbAdopt(d); return d; }
+      catch(e){ IDB.err = e; await sleepMs(i < 25 ? 120 : i < 60 ? 500 : 3000); }
+    }
+    return null;
+  })().finally(() => { idbOpening = null; });
+  return idbOpening;
+}
+async function idbAdopt(d){
+  d.onversionchange = () => { try { d.close(); } catch(e){} if (IDB.db === d) IDB.db = null; };
+  d.onclose = () => { if (IDB.db === d) IDB.db = null; };
+  if (MEM.v){   // lúc kho chưa mở được đã có dữ liệu ghi tạm trong RAM → chép hết vào IndexedDB
+    for (let g = 0; g < 4; g++){
+      const v0 = MEM.v;
+      for (const st of Object.keys(MEM.data)){ const arr = [...MEM.data[st].values()]; if (arr.length) await putAll(d, st, arr); }
+      if (v0 === MEM.v) break;
+    }
+    MEM.v = 0; for (const st of Object.keys(MEM.data)) MEM.data[st].clear();
+  }
+  IDB.db = d; IDB.ever = true; IDB.err = null;
+  KV.flush().catch(() => {});
+  KV.late().catch(() => {});
+}
+/* Khởi động ngầm: idbReady xong khi kho mở được HOẶC sau 6 giây (khi đó app chạy tạm bằng RAM, vòng thử lại vẫn tiếp tục) */
+const idbReady = Promise.race([idbOpenLoop(), sleepMs(IDB_GIVEUP_MS).then(() => null)]);
+
+async function useDB(){
+  await idbReady;
+  if (IDB.db) return IDB.db;
+  if (IDB.ever) return idbOpenLoop();      // kết nối bị hệ thống đóng giữa chừng (iOS) → mở lại
+  return null;                             // chưa mở được lần nào → dùng RAM tạm
+}
+async function withDB(fn){
+  let d = await useDB();
+  if (!d) return fn(null);
+  try { return await fn(d); }
+  catch(e){
+    if (e && e.name === 'InvalidStateError'){ if (IDB.db === d) IDB.db = null; d = await useDB(); return fn(d); }
+    throw e;
+  }
+}
+function putAll(d, st, items){
+  return new Promise((res, rej) => {
+    const tx = d.transaction(st, 'readwrite'), os = tx.objectStore(st);
+    items.forEach(i => os.put(i));
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  });
+}
+const dbAll   = st => withDB(d => d ? reqP(d.transaction(st).objectStore(st).getAll()) : [...MEM.data[st].values()]);
+const dbGet   = (st, k) => withDB(d => d ? reqP(d.transaction(st).objectStore(st).get(k)) : MEM.data[st].get(k));
+const dbClear = st => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).clear()) : (MEM.data[st].clear(), MEM.v++));
+const dbDel   = (st, k) => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).delete(k)) : (MEM.data[st].delete(k), MEM.v++));
+const dbPut   = (st, items) => withDB(d => { if (d) return putAll(d, st, items); items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); MEM.v++; });
+/* kho 'userdata' (bản sao dữ liệu cá nhân): trả null nếu IndexedDB chưa sẵn sàng */
+const udAll = () => withDB(d => d ? reqP(d.transaction('userdata').objectStore('userdata').getAll()) : null);
+const udPut = recs => withDB(async d => { if (!d) return false; await putAll(d, 'userdata', recs); return true; });
+const udDel = keys => withDB(async d => {
+  if (!d) return false;
+  await new Promise((res, rej) => { const tx = d.transaction('userdata', 'readwrite'), os = tx.objectStore('userdata'); keys.forEach(k => os.delete(k)); tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error); });
+  return true;
+});
+
+/* ---- Dữ liệu cá nhân: localStorage làm bản chính (đọc đồng bộ, hiện ngay), IndexedDB làm bản sao tự động ---- */
+const KV = (() => {
+  const MT = 'kt.__mt';                                         // bảng “mốc sửa lần cuối” của từng khóa (nằm trong localStorage)
+  const SKIP = new Set([MT, 'kt.mem', 'kt.visitCount', 'kt.snap']);   // dữ liệu tạm / dẫn xuất: không cần sao chép
+  const mirrored = k => typeof k === 'string' && k.startsWith('kt.') && !SKIP.has(k);
+  const shadow = new Map();                                     // giữ tạm trong RAM nếu localStorage từ chối ghi (đầy / bị chặn)
+  const watchers = [], dirty = new Set();
+  let mt = {}; try { mt = JSON.parse(localStorage.getItem(MT) || '{}') || {}; } catch(e){ mt = {}; }
+  let lastT = 0, timer = 0, chain = Promise.resolve(), needLate = false;
+  const nowT = () => (lastT = Math.max(Date.now(), lastT + 1));
+  const saveMT = () => { try { localStorage.setItem(MT, JSON.stringify(mt)); } catch(e){} };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => flush().catch(() => {}), 350); };
+  const touch = k => { mt[k] = nowT(); saveMT(); dirty.add(k); schedule(); watchers.forEach(f => { try { f(k); } catch(e){} }); };
+
+  function get(k){ const v = lsGet(k); if (v !== null) return v; return shadow.has(k) ? shadow.get(k) : null; }
+  function set(k, v){
+    v = String(v);
+    try { localStorage.setItem(k, v); shadow.delete(k); }
+    catch(e){ if (!mirrored(k)) throw e; shadow.set(k, v); }    // khóa được sao chép: IndexedDB vẫn giữ được → không báo lỗi
+    if (mirrored(k)) touch(k);
+  }
+  function remove(k){
+    try { localStorage.removeItem(k); } catch(e){}
+    shadow.delete(k);
+    if (mirrored(k)) touch(k);                                  // ghi “bia mộ” để lần sau không bị khôi phục nhầm
+  }
+  function keys(prefix){
+    const out = new Set(), p = prefix || '';
+    try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(p)) out.add(k); } } catch(e){}
+    shadow.forEach((v, k) => { if (k.startsWith(p)) out.add(k); });
+    return [...out];
+  }
+  /* Chép các khóa vừa đổi sang IndexedDB (gộp nhiều lần ghi thành một giao dịch) */
+  function flush(){
+    clearTimeout(timer);
+    chain = chain.then(async () => {
+      if (!dirty.size) return true;
+      const ks = [...dirty]; dirty.clear();
+      try {
+        const ok = await udPut(ks.map(k => ({ k, v:get(k), t:mt[k] || nowT() })));
+        if (!ok) ks.forEach(k => dirty.add(k));                 // IndexedDB chưa sẵn sàng: giữ lại, lần mở sau tự đối chiếu
+        return ok;
+      } catch(e){ ks.forEach(k => dirty.add(k)); return false; }
+    });
+    return chain;
+  }
+  /* ĐỐI CHIẾU & CHỮA CHÉO — mỗi lần mở app. Trả về danh sách khóa vừa được khôi phục vào localStorage. */
+  async function reconcile(){
+    await idbReady;
+    const recs = await udAll();
+    if (recs === null){ needLate = true; return []; }
+    needLate = false;
+    const byK = new Map(recs.map(r => [r.k, r]));
+    const all = new Set([...byK.keys(), ...keys('kt.')]);
+    const toIDB = [], toLS = [], dead = [], now = Date.now(), TTL = 90 * 864e5;
+    for (const k of all){
+      if (!mirrored(k)) continue;
+      const rec = byK.get(k), lv = get(k), lt = mt[k] || 0;
+      const iv = rec && rec.v != null ? rec.v : null, it = rec ? (rec.t || 0) : 0;
+      if (lv === iv){ if (rec && iv === null && now - it > TTL) dead.push(k); continue; }
+      if (lt > it || (lt === it && lv !== null)){               // localStorage mới hơn (hoặc IndexedDB còn trống) → đẩy sang IndexedDB
+        const t = lt || nowT(); if (!lt) mt[k] = t;
+        toIDB.push({ k, v:lv, t });
+      } else toLS.push({ k, v:iv, t:it });                      // IndexedDB mới hơn (hoặc localStorage bị dọn mất) → khôi phục về localStorage
+    }
+    const restored = [];
+    for (const r of toLS){
+      try { r.v === null ? localStorage.removeItem(r.k) : localStorage.setItem(r.k, r.v); shadow.delete(r.k); }
+      catch(e){ if (r.v !== null) shadow.set(r.k, r.v); }
+      mt[r.k] = r.t; restored.push(r.k);
+    }
+    saveMT();
+    try { if (toIDB.length) await udPut(toIDB); if (dead.length) await udDel(dead); } catch(e){}
+    return restored;
+  }
+  /* Nếu lần đối chiếu đầu phải bỏ qua vì IndexedDB mở trễ → làm bù ngay khi kho mở được */
+  async function late(){
+    if (!needLate) return;
+    const r = await reconcile();
+    if (r.length && typeof ktRehydrate === 'function') ktRehydrate(r);
+  }
+  return { get, set, remove, keys, flush, reconcile, late, mirrored, watch:f => watchers.push(f) };
+})();
+
+/* ============ CÀI ĐẶT (localStorage ⇄ IndexedDB) ============ */
 const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
 const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
-try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
-const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
+try { Object.assign(S, JSON.parse(KV.get('kt.settings') || '{}')); } catch(e){}
+const saveS = () => { try { KV.set('kt.settings', JSON.stringify(S)); } catch(e){} };
 
 function applyTheme(){
   const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
@@ -1020,85 +1211,7 @@ $('#fontSel').onchange = e => { S.font = e.target.value; saveS(); applyFont(); }
 $('#fsSel').onchange = e => { S.fs = +e.target.value; saveS(); applyFs(); try { pgRefresh(); } catch(err){} };
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
-/* ============ INDEXEDDB ============ */
-let db;
-function openDB(ms){
-  return new Promise((res0, rej0) => {
-    /* Có iPhone lệnh mở bộ nhớ treo im lặng (không báo thành công cũng không báo lỗi) → mỗi lần thử có giới hạn thời gian;
-       nếu kết quả đến muộn sau khi đã bỏ cuộc thì đóng kết nối đó lại. */
-    let done = false, tm = 0;
-    const res = v => { if (done){ try { v.close(); } catch(e){} return; } done = true; clearTimeout(tm); res0(v); };
-    const rej = e => { if (done) return; done = true; clearTimeout(tm); rej0(e); };
-    if (ms) tm = setTimeout(() => rej(new Error('Bộ nhớ chưa phản hồi')), ms);
-    let r; try { r = indexedDB.open(DB_NAME, 1); } catch(e){ return rej(e); }
-    r.onblocked = () => rej(new Error('Bộ nhớ đang bị một cửa sổ khác giữ'));
-    r.onupgradeneeded = () => {
-      const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
-      if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
-      if (!d.objectStoreNames.contains('books'))    d.createObjectStore('books',    { keyPath:'name' });
-      if (!d.objectStoreNames.contains('hymns'))    d.createObjectStore('hymns',    { keyPath:'id' });
-      if (!d.objectStoreNames.contains('readings')) d.createObjectStore('readings', { keyPath:'id' });
-    };
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-/* iPhone (nhất là app thêm vào Màn hình chính) thỉnh thoảng báo “Unable to open database file on disk” ngay lúc vừa khởi động,
-   nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
-async function openDBRetry(onWait, limit){
-  /* Thử lại dày (mỗi ~0,12 giây trong 3 giây đầu, sau đó mỗi 0,5 giây, tổng tối đa ~12 giây) để vào được app ngay khi bộ nhớ sẵn sàng,
-     thay vì chờ theo nhịp tăng dần 0,25→0,5→1→2 giây như trước. Thông báo “Đang mở bộ nhớ…” chỉ hiện nếu quá 0,4 giây vẫn chưa mở được. */
-  const t0 = Date.now(); let last, i = 0, shown = false; limit = limit || 12000;
-  while (Date.now() - t0 < limit){
-    try { return await openDB(Math.max(300, Math.min(1500, limit - (Date.now() - t0)))); }
-    catch(e){
-      last = e; i++;
-      if (onWait && !shown && Date.now() - t0 > 400){ shown = true; try { onWait(); } catch(err){} }
-      await new Promise(r => setTimeout(r, i < 25 ? 120 : 500));
-    }
-  }
-  throw last;
-}
-const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-/* ===== CHẾ ĐỘ LƯU DỰ PHÒNG =====
-   Có iPhone không mở được IndexedDB trong app thêm vào Màn hình chính (lỗi “Unable to open database file on disk”, thử lại vẫn lỗi).
-   Khi đó app chuyển sang lưu trong bộ nhớ (RAM) và sao một bản vào Cache Storage (kho riêng, không dùng IndexedDB) để mở lại không cần tải lại.
-   Nội dung Kinh Thánh luôn tải lại được từ GitHub; lịch sử đọc, dấu trang, ghi chú nằm ở localStorage nên không bị ảnh hưởng. */
-const MEM = { on:false, data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, t:0 };
-const MEM_CACHE = 'kt-store-v1';
-async function memActivate(){
-  MEM.on = true; window.ktMemMode = true;
-  try {
-    if (!('caches' in window)) return;
-    const c = await caches.open(MEM_CACHE);
-    for (const st of Object.keys(MEM.data)){
-      const r = await c.match('./__kt_store__/' + st); if (!r) continue;
-      try { (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); } catch(e){}
-    }
-  } catch(e){}
-}
-function memSave(){
-  clearTimeout(MEM.t);
-  MEM.t = setTimeout(async () => {
-    try {
-      if (!('caches' in window)) return;
-      const c = await caches.open(MEM_CACHE);
-      for (const st of Object.keys(MEM.data)) await c.put('./__kt_store__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
-    } catch(e){}
-  }, 600);
-}
-const dbAll   = st => MEM.on ? Promise.resolve([...MEM.data[st].values()]) : reqP(db.transaction(st).objectStore(st).getAll());
-const dbGet   = (st, k) => MEM.on ? Promise.resolve(MEM.data[st].get(k)) : reqP(db.transaction(st).objectStore(st).get(k));
-const dbClear = st => MEM.on ? (MEM.data[st].clear(), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
-const dbDel   = (st, k) => MEM.on ? (MEM.data[st].delete(k), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
-function dbPut(st, items){
-  if (MEM.on){ items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); memSave(); return Promise.resolve(); }
-  return new Promise((res, rej) => {
-    const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
-    items.forEach(i => os.put(i));
-    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
-  });
-}
+/* (Lớp lưu trữ IndexedDB + lưu chéo localStorage nằm ở khối “LỚP LƯU TRỮ” phía trên.) */
 
 /* =========================================================
  *  KINH THÁNH: chọn Sách → Chương → Câu
@@ -1150,8 +1263,10 @@ function renderChapter(){
   $('#nextChap').disabled = idx === bibleMeta.length - 1 && S.chapter === curBook.chapters.length;
   ktTop();
   markBookmarks();
+  snapSave();
 }
 async function stepChapter(d){
+  if (curBook && curBook.snap) await bootDone;                  // đang hiện bản chụp: chờ IndexedDB nạp xong rồi mới đổi chương
   const idx = bibleMeta.findIndex(m => m.name === curBook.name);
   const c = S.chapter + d;
   if (c >= 1 && c <= curBook.chapters.length){ S.chapter = c; saveS(); return renderChapter(); }
@@ -1524,8 +1639,8 @@ $('#nextChap').onclick = () => stepChapter(1);
  * ========================================================= */
 const BM_KEY = 'kt.marks', BM_MAX = 100;
 let BM = [];
-try { BM = JSON.parse(localStorage.getItem(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
-const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); } catch(e){} };
+try { BM = JSON.parse(KV.get(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
+const saveBM = () => { try { KV.set(BM_KEY, JSON.stringify(BM)); } catch(e){} };
 
 /* =========================================================
  *  ĐỌC TIẾP NỐI (kt.resume): chỗ đọc dở của lịch đọc.
@@ -1536,9 +1651,9 @@ const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); }
  * ========================================================= */
 const RS_KEY = 'kt.resume';
 let RESUME = null;
-try { RESUME = JSON.parse(localStorage.getItem(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
+try { RESUME = JSON.parse(KV.get(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
 if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null;
-const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stringify(RESUME)) : localStorage.removeItem(RS_KEY); } catch(e){} };
+const saveResume = () => { try { RESUME ? KV.set(RS_KEY, JSON.stringify(RESUME)) : KV.remove(RS_KEY); } catch(e){} };
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
@@ -1546,8 +1661,8 @@ function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() };
    - Đang ở đúng chương nối tiếp: câu đang đọc được cập nhật theo khi cuộn / lật trang (sau ~1,5 giây dừng tay, và khi thoát app).
    - Tìm kiếm, nhảy sang sách/chương khác chỉ để xem: KHÔNG làm đổi chỗ đọc tiếp nối. */
 const RS_OFF = 'kt.resumeOff';
-const rsIsOff = () => { try { return localStorage.getItem(RS_OFF) === '1'; } catch(e){ return false; } };
-function rsSetOff(on){ try { on ? localStorage.setItem(RS_OFF, '1') : localStorage.removeItem(RS_OFF); } catch(e){} }
+const rsIsOff = () => { try { return KV.get(RS_OFF) === '1'; } catch(e){ return false; } };
+function rsSetOff(on){ try { on ? KV.set(RS_OFF, '1') : KV.remove(RS_OFF); } catch(e){} }
 let rsT = 0, rsHold = 0;
 function rsTrackNow(){
   clearTimeout(rsT);
@@ -1653,12 +1768,12 @@ $('#btnMarks').onclick = openMarks;
 $('#btnLessons').onclick = openLessons;
 
 /* Bài học cá nhân: cửa sổ viết ghi chú cho một câu (lưu trong máy: kt.lessons) */
-let LS = []; try { LS = JSON.parse(localStorage.getItem('kt.lessons') || '[]'); } catch(e){}
-const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
+let LS = []; try { LS = JSON.parse(KV.get('kt.lessons') || '[]'); } catch(e){}
+const saveLS = () => { try { KV.set('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
 function lsBadge(){ const b = $('#lsBadge'); if (!b) return; b.hidden = !LS.length; b.textContent = LS.length > 99 ? '99+' : LS.length; }
 lsBadge();
 /* Hành trình đọc: ghi lại chương đã đọc mỗi ngày (kt.reads) */
-let RD = {}; try { RD = JSON.parse(localStorage.getItem('kt.reads') || '{}'); } catch(e){}
+let RD = {}; try { RD = JSON.parse(KV.get('kt.reads') || '{}'); } catch(e){}
 const dayKey = (t = Date.now()) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 /* ĐẾM CHƯƠNG ĐÃ ĐỌC — chỉ tính khi đọc xong CHÍNH THỨC chương đó. Một chương được tính khi đủ cả ba điều kiện:
    1) Đã đọc tới cuối chương (cuộn tới câu cuối; chế độ Trang giấy: tới trang cuối).
@@ -1689,7 +1804,7 @@ function rdEngaged(){
 }
 function chapterCompleted(b, c){                                    // đọc xong chính thức → ghi vào Hành trình + dời “Đọc tiếp nối”
   const k = dayKey(), id = b + '|' + c, a = RD[k] || (RD[k] = []);
-  if (!a.includes(id)){ a.push(id); try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){} }
+  if (!a.includes(id)){ a.push(id); try { KV.set('kt.reads', JSON.stringify(RD)); } catch(e){} }
   try { resumeAdvance(b, c); } catch(e){}
 }
 { const _rcRead = renderChapter;
@@ -2299,10 +2414,10 @@ const isDemoBook = b => b && b.name === 'Sách Mẫu' && b.chapters && b.chapter
 const GH_KEY = 'kt.gh', SY_KEY = 'kt.sync', GH_API = 'https://api.github.com';
 let GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true };
 let SY = { sha:'', dirty:false, at:0, store:'' };
-try { Object.assign(GH, JSON.parse(localStorage.getItem(GH_KEY) || '{}')); } catch(e){}
-try { Object.assign(SY, JSON.parse(localStorage.getItem(SY_KEY) || '{}')); } catch(e){}
-const saveGH = () => { try { localStorage.setItem(GH_KEY, JSON.stringify(GH)); } catch(e){} };
-const saveSY = () => { try { localStorage.setItem(SY_KEY, JSON.stringify(SY)); } catch(e){} };
+try { Object.assign(GH, JSON.parse(KV.get(GH_KEY) || '{}')); } catch(e){}
+try { Object.assign(SY, JSON.parse(KV.get(SY_KEY) || '{}')); } catch(e){}
+const saveGH = () => { try { KV.set(GH_KEY, JSON.stringify(GH)); } catch(e){} };
+const saveSY = () => { try { KV.set(SY_KEY, JSON.stringify(SY)); } catch(e){} };
 const ghOn = () => !!GH.repo;
 const ghCanPush = () => !!(GH.repo && GH.token);
 
@@ -2608,7 +2723,7 @@ async function ghConnect(){
       } else { GH = old; throw e; }
     }
     GH = { repo, token, branch:branch || info.default_branch || 'main', path, auto:$('#ghAuto').checked };
-    saveGH(); try { localStorage.removeItem('kt.nodefault'); } catch(e){}
+    saveGH(); try { KV.remove('kt.nodefault'); } catch(e){}
     const canWrite = !token || (info.permissions && info.permissions.push);
     if (token && !canWrite){ GH.token = ''; saveGH(); ghSay('⚠ Token không có quyền ghi vào kho này nên máy chỉ ở chế độ đọc.', false); }
     else ghSay('✔ Đã kết nối kho ' + repo + (token ? ' (đọc & ghi).' : ' (chỉ đọc).'), true);
@@ -2623,7 +2738,7 @@ $('#ghDisconnect').onclick = () => {
   if (!ghOn()) return;
   if (!confirm('Ngắt kết nối GitHub? Dữ liệu trong máy vẫn được giữ nguyên.')) return;
   GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0, store:'github' };
-  try { localStorage.setItem('kt.nodefault', '1'); } catch(e){}
+  try { KV.set('kt.nodefault', '1'); } catch(e){}
   saveGH(); saveSY(); fillGhFields(); setSync('off'); ghSay('Đã ngắt kết nối.', true);
 };
 $('#ghAuto').onchange = () => { GH.auto = $('#ghAuto').checked; saveGH(); if (GH.auto && SY.dirty) markDirty(); };
@@ -2649,9 +2764,9 @@ function show(id, on = true){ $(id).hidden = !on; }
 /* Phần "Giới thiệu" trong Cài đặt: Admin chỉnh sửa được (Quản lý dữ liệu → Giới thiệu ứng dụng) */
 const ABOUT_DEF = { name:'Kinh Thánh', sub:'', text:'', feat:[] };   // mặc định để trống – Admin tự nhập
 let ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] };
-try { const a = JSON.parse(localStorage.getItem('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
+try { const a = JSON.parse(KV.get('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
 if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
-const saveAbout = () => { try { localStorage.setItem('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
+const saveAbout = () => { try { KV.set('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
 /* Định dạng nội dung giới thiệu: mỗi dòng = một đoạn · "# Tiêu đề" · "- ý gạch đầu dòng" · **chữ đậm** */
 function aboutMd(t){
   const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -2731,7 +2846,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (window.ktMemMode ? 'dự phòng (Cache)' : 'chính') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'tạm trong RAM, đang thử mở lại') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -2788,14 +2903,14 @@ async function checkPw(p){
   p = String(p ?? ''); if (!p) return { ok:false };
   const h = await hashPw(p);
   if (RECOVERY_CODE_HASH && ctEq(h, RECOVERY_CODE_HASH)) return { ok:true, via:'recovery' };
-  let st = null; try { st = localStorage.getItem(PW_KEY); } catch(e){}
+  let st = null; try { st = KV.get(PW_KEY); } catch(e){}
   if (!st) return { ok:ctEq(h, ADMIN_PASSWORD_HASH) };
   if (st[0] === 'b') return { ok:ctEq(hashLegacy(p), st) };
   return { ok:ctEq(h, st) };
 }
 /* Lớp 3: chống dò mật khẩu – sai 5 lần thì khóa 5 phút */
-const lockState = () => { try { return JSON.parse(localStorage.getItem(LOCK_KEY) || '{}') || {}; } catch(e){ return {}; } };
-const lockSave = st => { try { localStorage.setItem(LOCK_KEY, JSON.stringify(st)); } catch(e){} };
+const lockState = () => { try { return JSON.parse(KV.get(LOCK_KEY) || '{}') || {}; } catch(e){ return {}; } };
+const lockSave = st => { try { KV.set(LOCK_KEY, JSON.stringify(st)); } catch(e){} };
 const lockLeft = () => Math.max(0, (lockState().until || 0) - Date.now());
 async function authTry(p){
   const left = lockLeft(); if (left > 0) return { ok:false, locked:true, left };
@@ -2848,7 +2963,7 @@ $('#pwChange').onclick = async () => {
   if (n.length < 6) return pwSay('Mật khẩu mới cần ít nhất 6 ký tự.');
   if (n !== n2) return pwSay('Hai lần nhập mật khẩu mới chưa khớp.');
   if (n === o) return pwSay('Mật khẩu mới phải khác mật khẩu hiện tại.');
-  try { localStorage.setItem(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
+  try { KV.set(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
   $('#pwOld').value = $('#pwNew').value = $('#pwNew2').value = '';
   $('#pwShow').checked = false; ['#pwOld', '#pwNew', '#pwNew2'].forEach(i => $(i).type = 'password');
   pwSay('✔ Đã đổi mật khẩu và áp dụng ngay. Lần đăng nhập sau hãy dùng mật khẩu mới.', true); toast('✔ Đã đổi mật khẩu quản lý');
@@ -2861,7 +2976,7 @@ $('#hashMake').onclick = async () => {                       // sinh chuỗi bă
 };
 $('#pwReset').onclick = () => {
   if (!confirm('Đưa mật khẩu về mật khẩu ban đầu trong mã nguồn?')) return;
-  try { localStorage.removeItem(PW_KEY); } catch(e){}
+  try { KV.remove(PW_KEY); } catch(e){}
   pwSay('Đã về mật khẩu ban đầu.', true);
 };
 $('#logout').onclick = () => { sessionStorage.removeItem('kt.admin'); show('#admin', false); show('#editor', false); toast('Đã đăng xuất'); };
@@ -3342,7 +3457,7 @@ function edRefresh(){
   const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
   ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
   ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
-  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) localStorage.setItem(draftKey(), ed.Text.value); } catch(e){}
+  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) KV.set(draftKey(), ed.Text.value); } catch(e){}
 }
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
@@ -3370,7 +3485,7 @@ async function edAuto(){
     const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
     await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined);
     edLoaded = text;
-    try { localStorage.removeItem(draftKey()); } catch(e){}
+    try { KV.remove(draftKey()); } catch(e){}
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch(e){ ed.Auto.textContent = ''; toast('Lỗi tự lưu: ' + e.message); }
 }
@@ -3386,7 +3501,7 @@ async function edLoad(){
   edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
   let txt = edLoaded;
   try {
-    const d = localStorage.getItem(draftKey());
+    const d = KV.get(draftKey());
     if (d && d !== edLoaded){ txt = d; toast('Đã khôi phục bản nháp chưa lưu'); }
   } catch(e){}
   ed.Text.value = txt; edRefresh();
@@ -3560,7 +3675,7 @@ async function edRenameBook(){
     if (S.book === old){ S.book = nn; saveS(); }
     BM.forEach(b => { if (b.book === old) b.book = nn; }); saveBM();
     if (RESUME && RESUME.book === old){ RESUME.book = nn; saveResume(); }
-    try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${old}|`)).forEach(k => { localStorage.setItem(k.replace(`kt.draft.${old}|`, `kt.draft.${nn}|`), localStorage.getItem(k)); localStorage.removeItem(k); }); } catch(e){}
+    try { KV.keys().filter(k => k.startsWith(`kt.draft.${old}|`)).forEach(k => { KV.set(k.replace(`kt.draft.${old}|`, `kt.draft.${nn}|`), KV.get(k)); KV.remove(k); }); } catch(e){}
     ed.Book.value = nn;
     await initBible(); await refreshStats(); markDirty(); edBookList(); await edLoad();
     toast(`✔ Đã đổi tên "${old}" thành "${nn}"`);
@@ -3575,7 +3690,7 @@ async function edDeleteBook(){
     await dbDel('books', name); await dbDel('bookMeta', name);
     if (S.book === name){ S.book = null; S.chapter = 1; saveS(); }
     BM = BM.filter(b => b.book !== name); saveBM();
-    try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => localStorage.removeItem(k)); } catch(e){}
+    try { KV.keys().filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => KV.remove(k)); } catch(e){}
     edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Chap.value = 1;
     await initBible(); await refreshStats(); markDirty(); edBookList(); edRefresh();
     toast(`Đã xóa sách "${name}"`);
@@ -3659,7 +3774,7 @@ async function edSave(goNext){
   if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
   try {
     await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value);
-    try { localStorage.removeItem(draftKey()); } catch(e){}
+    try { KV.remove(draftKey()); } catch(e){}
     edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
     toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
     if (goNext){ ed.Chap.value = ch + 1; await edLoad(); ed.Text.focus(); } else edRefresh();
@@ -3687,7 +3802,7 @@ $('#edDel').onclick = async () => {
     const meta = (await dbAll('bookMeta')).find(m => m.name === name);
     if (meta){ meta.chapterCount = rec.chapters.length; await dbPut('bookMeta', [meta]); }
   }
-  try { localStorage.removeItem(draftKey()); } catch(e){}
+  try { KV.remove(draftKey()); } catch(e){}
   await initBible(); await refreshStats(); markDirty(); await edLoad(); toast('Đã xóa chương');
 };
 // Tránh mất chữ khi đóng/khóa màn hình: lưu ngay khi app bị ẩn
@@ -4801,7 +4916,7 @@ async function dtImport(file){
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
   const mm = new Map(BM.map(x => [`${x.book}|${x.ch}|${x.n}`, x])); M.forEach(x => { const k = `${x.book}|${x.ch}|${x.n}`; if (!mm.has(k)) mm.set(k, x); });
   BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
-  try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
+  try { KV.set('kt.reads', JSON.stringify(RD)); } catch(e){}
   saveLS(); saveBM(); markBookmarks();
   toast('✔ Đã khôi phục dữ liệu');
 }
@@ -4812,7 +4927,7 @@ async function dtReset(){
   const b = await choose('Xác nhận lần cuối', 'Thao tác này không thể hoàn tác. Bạn nên sao lưu trước khi xóa.\n\nXóa toàn bộ lịch sử đọc ngay bây giờ?', [{ t:'Xóa lịch sử đọc', cls:'danger' }, { t:'Sao lưu trước' }, { t:'Hủy, giữ lại' }]);
   if (b === 1) return dtExport();
   if (b !== 0) return;
-  RD = {}; try { localStorage.removeItem('kt.reads'); } catch(e){}
+  RD = {}; try { KV.remove('kt.reads'); } catch(e){}
   toast('Đã làm mới hành trình đọc');
 }
 $('#dtExport').onclick = dtExport;
@@ -4844,7 +4959,7 @@ function showOnboard(){
   if ($('#obOverlay')) return;
   const o = document.createElement('div'); o.className = 'overlay'; o.id = 'obOverlay'; o.style.zIndex = 75;
   let i = 0;
-  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); };
+  const done = () => { try { KV.set('kt.onboard', '1'); } catch(e){} o.remove(); };
   const draw = () => {
     const s = OB[i], last = i === OB.length - 1;
     const sizes = s.size ? `<div class="obsizes">${[[20, 'Vừa'], [24, 'Lớn'], [28, 'Rất lớn']].map(([n, l]) => `<button class="btn${S.fs === n ? ' primary' : ''}" data-fs="${n}" style="font-size:${n - 4}px">${l}</button>`).join('')}</div><div class="obprev">Hôm nay bạn đã đọc Lời CHÚA chưa?</div>` : '';
@@ -4937,12 +5052,12 @@ const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const planOK = q => !!q && isDate(q.start) && (PLANS.some(x => x.id === q.id) || (q.id === 'custom' && Number.isInteger(q.days) && q.days >= 1 && q.days <= 5000));
 const planNorm = q => q.id === 'custom' ? { id:'custom', start:q.start, days:q.days } : { id:q.id, start:q.start };
 const planDef = q => q.id === 'custom' ? { id:'custom', name:'Tự thiết kế', days:q.days } : PLANS.find(x => x.id === q.id);   // thông tin kế hoạch đang dùng
-let PCUST = null; try { PCUST = JSON.parse(localStorage.getItem('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
-let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
+let PCUST = null; try { PCUST = JSON.parse(KV.get('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
+let PLAN = null; try { PLAN = JSON.parse(KV.get('kt.plan') || 'null'); } catch(e){}
 if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };   // kế hoạch 90 ngày cũ → chuyển thành kế hoạch tự thiết kế 90 ngày
 if (!planOK(PLAN)) PLAN = null;
 const savePlan = () => {
-  try { PLAN ? localStorage.setItem('kt.plan', JSON.stringify(PLAN)) : localStorage.removeItem('kt.plan'); } catch(e){}
+  try { PLAN ? KV.set('kt.plan', JSON.stringify(PLAN)) : KV.remove('kt.plan'); } catch(e){}
   planSum();
   if (PLAN && !RESUME){ const f = plSeq()[0]; if (f) setResume(f.book, f.ch, 0); }      // bắt đầu kế hoạch: chỗ đọc tiếp nối = đầu Kinh Thánh, từ đó tự nối tiếp theo từng chương
 };
@@ -4982,13 +5097,13 @@ async function ctCount(hit){
   }
   return null;
 }
-const ctCache = () => { try { return +localStorage.getItem('kt.visitCount') || 0; } catch(e){ return 0; } };
+const ctCache = () => { try { return +KV.get('kt.visitCount') || 0; } catch(e){ return 0; } };
 async function ctJoin(){                                             // tính 1 lượt truy cập cho mỗi phiên mở app
   let done = false; try { done = sessionStorage.getItem('kt.visited') === '1'; } catch(e){}
   if (done) return;
   try { sessionStorage.setItem('kt.visited', '1'); } catch(e){}
   const v = await ctCount(true);
-  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} }
+  if (v != null){ try { KV.set('kt.visitCount', String(v)); } catch(e){} }
 }
 async function ctRender(box){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -5005,7 +5120,7 @@ async function ctRender(box){
   };
   const cached = ctCache(); draw(cached);
   const v = await ctCount(false);
-  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
+  if (v != null){ try { KV.set('kt.visitCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
 }
 function openPlan(opts){
   opts = opts || {};
@@ -5064,7 +5179,7 @@ function openPlan(opts){
   const startCustom = () => {
     if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
     const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${BIBLE_CHAPTERS}`); }
-    PCUST = { mode:cust.mode, val:cust.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
+    PCUST = { mode:cust.mode, val:cust.val }; try { KV.set('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
     PLAN = { id:'custom', start:dayKey(), days:d }; savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
     ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
   };
@@ -5090,14 +5205,122 @@ function openPlan(opts){
 }
 planSum();
 
+/* ============ KHỞI ĐỘNG NHANH: hiện chữ ngay, nạp IndexedDB ngầm ============
+   Bản chụp (kt.snap, nằm trong localStorage) giữ đúng chương mà lần mở sau sẽ hiện. Mở app → vẽ chương đó NGAY (đồng bộ),
+   trong lúc IndexedDB mở ngầm; xong thì đổi sang dữ liệu thật mà không vẽ lại nếu nội dung giống hệt. */
+const SNAP_KEY = 'kt.snap';
+let bootRes; const bootDone = new Promise(r => { bootRes = r; });
+const ktBootEnd = () => { document.body.classList.remove('booting'); bootRes(); };
+
+function startTarget(){                                // chương mà app sẽ mở lúc khởi động (cùng thứ tự ưu tiên với restoreResume)
+  if (RESUME && RESUME.book && RESUME.ch >= 1) return { book:RESUME.book, ch:RESUME.ch, n:RESUME.n || 0, kind:'resume' };
+  const b = BM[0]; if (b && b.book && b.ch >= 1) return { book:b.book, ch:b.ch, n:b.n, kind:'mark' };
+  return S.book ? { book:S.book, ch:S.chapter, n:0, kind:'last' } : null;
+}
+let snapT = 0, snapLast = '';
+function snapSave(){                                   // ghi bản chụp (chạy ngầm, gộp nhiều lần gọi)
+  clearTimeout(snapT);
+  snapT = setTimeout(async () => {
+    try {
+      if (!window.ktReady || !bibleMeta.length || document.body.classList.contains('booting')) return;
+      const t = startTarget(); if (!t) return;
+      const book = curBook && curBook.name === t.book && !curBook.snap ? curBook : await dbGet('books', t.book);
+      const v = book && book.chapters[t.ch - 1]; if (!v || !v.length) return;
+      const s = JSON.stringify({ b:t.book, c:t.ch, n:book.chapters.length, v, m:bibleMeta });
+      if (s !== snapLast){ localStorage.setItem(SNAP_KEY, s); snapLast = s; }
+    } catch(e){}
+  }, 600);
+}
+KV.watch(k => { if (k === 'kt.resume' || k === 'kt.marks' || k === 'kt.settings') snapSave(); });
+addEventListener('pagehide', () => { try { snapSave(); } catch(e){} });
+
+function snapPaint(){                                  // đồng bộ: trả true nếu đã vẽ được chữ từ bản chụp
+  let s = null; try { s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); } catch(e){}
+  if (!s || !Array.isArray(s.m) || !s.m.length || !Array.isArray(s.v) || !s.v.length || !(s.n >= 1) || !(s.c >= 1 && s.c <= s.n)) return false;
+  const t = startTarget(); if (!t || t.book !== s.b || t.ch !== s.c || !s.m.some(m => m.name === s.b)) return false;
+  try {
+    bibleMeta = s.m;
+    const chapters = Array.from({ length:s.n }, () => []); chapters[s.c - 1] = s.v;
+    curBook = { name:s.b, chapters, snap:true };
+    S.book = s.b; S.chapter = s.c;
+    $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+    $('#selBook').value = s.b;
+    $('#selChap').innerHTML = Array.from({ length:s.n }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    document.body.classList.add('booting');
+    renderChapter();
+    snapLast = localStorage.getItem(SNAP_KEY) || '';
+    if (t.kind === 'resume'){
+      rsHold = Date.now() + 2500;
+      if (t.n > 1) setTimeout(() => scrollToVerse(t.n), 80);
+      setTimeout(() => toast(`📌 Nối tiếp: ${t.book} ${S.chapter}${t.n > 1 ? ':' + t.n : ''}`), 400);
+    } else if (t.kind === 'mark') setTimeout(() => scrollToVerse(t.n), 60);
+    return true;
+  } catch(e){
+    curBook = null; bibleMeta = []; document.body.classList.remove('booting');
+    return false;
+  }
+}
+async function snapAdopt(){                            // IndexedDB đã sẵn sàng: thay bản chụp bằng dữ liệu thật
+  await loadBibleMeta(); bs.idx = null; bsFillScope();
+  if (!bibleMeta.length){ ktBootEnd(); await reloadAll(); return restoreResume(); }
+  $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+  if (curBook && curBook.snap){
+    const name = curBook.name, ch = S.chapter, old = curBook.chapters[ch - 1] || [];
+    const real = await dbGet('books', name);
+    if (!real || !real.chapters[ch - 1]){ ktBootEnd(); await reloadAll(); return restoreResume(); }
+    const same = real.chapters.length === curBook.chapters.length && JSON.stringify(real.chapters[ch - 1]) === JSON.stringify(old);
+    curBook = real;
+    if (!same){
+      $('#selChap').innerHTML = Array.from({ length:real.chapters.length }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+      renderChapter();
+    } else { try { window.ktFlipDirty && window.ktFlipDirty(); } catch(e){} }
+  }
+  $('#selBook').value = curBook ? curBook.name : '';
+  ktBootEnd();
+  await refreshStats();
+}
+/* Dữ liệu từ kho dự phòng cũ (Cache Storage 'kt-store-v1'): chuyển MỘT LẦN sang IndexedDB rồi xóa kho đó.
+   Từ nay Kinh Thánh không còn nằm trong Cache Storage. */
+async function legacyImport(){
+  try {
+    if (!('caches' in window)) return;
+    const has = await Promise.race([caches.has(LEGACY_CACHE), sleepMs(1500).then(() => false)]);
+    if (!has) return;
+    if (!(await dbAll('bookMeta')).length){
+      const c = await caches.open(LEGACY_CACHE);
+      for (const st of Object.keys(MEM.data)){
+        const r = await c.match('./__kt_store__/' + st); if (!r) continue;
+        const arr = await r.json(); if (Array.isArray(arr) && arr.length) await dbPut(st, arr);
+      }
+    }
+    if (IDB.db) await caches.delete(LEGACY_CACHE);     // chỉ xóa khi dữ liệu đã nằm an toàn trong IndexedDB
+  } catch(e){}
+}
+/* Khôi phục xong từ bản sao IndexedDB → nạp lại các biến trong bộ nhớ và làm mới giao diện (không cần tải lại trang) */
+function ktRehydrate(keys){
+  const has = k => keys.includes(k);
+  const J = (k, d) => { try { const v = JSON.parse(KV.get(k) || 'null'); return v == null ? d : v; } catch(e){ return d; } };
+  if (has('kt.settings')){ Object.assign(S, J('kt.settings', {})); try { applyTheme(); applyFont(); applyFs(); applyView(); } catch(e){} }
+  if (has('kt.marks')){ BM = J('kt.marks', []); if (!Array.isArray(BM)) BM = []; }
+  if (has('kt.resume')){ RESUME = J('kt.resume', null); if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null; }
+  if (has('kt.lessons')){ LS = J('kt.lessons', []); if (!Array.isArray(LS)) LS = []; lsBadge(); }
+  if (has('kt.reads')){ RD = J('kt.reads', {}); if (!RD || typeof RD !== 'object' || Array.isArray(RD)) RD = {}; }
+  if (has('kt.planCustom')) PCUST = J('kt.planCustom', null);
+  if (has('kt.plan')){
+    PLAN = J('kt.plan', null);
+    if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };
+    if (!planOK(PLAN)) PLAN = null;
+    try { planSum(); } catch(e){}
+  }
+  if (has('kt.gh')) Object.assign(GH, J('kt.gh', {}));
+  if (has('kt.sync')) Object.assign(SY, J('kt.sync', {}));
+  if (has('kt.about')){ const a = J('kt.about', null); if (a && typeof a === 'object') ABOUT = { ...ABOUT_DEF, ...a }; if (!Array.isArray(ABOUT.feat)) ABOUT.feat = []; }
+  try { markBookmarks(); } catch(e){}
+}
+
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
-  /* Bắt đầu mở bộ nhớ NGAY từ đầu (chạy song song với phần dựng giao diện bên dưới), đến chỗ cần thì chỉ việc chờ kết quả */
-  const MEMFLAG = 'kt.mem';                                 // đã từng phải dùng kho dự phòng trên máy này → lần sau chỉ chờ bộ nhớ chính rất ngắn
-  let flagged = false; try { flagged = !!localStorage.getItem(MEMFLAG); } catch(e){}
-  /* Máy đã từng trục trặc với bộ nhớ chính (cờ kt.mem) → KHÔNG chờ nó nữa: vào thẳng kho Cache Storage (đã lưu sẵn nội dung từ các lần trước) nên mở app là có chữ ngay */
-  const dbP = flagged ? Promise.reject(new Error('dùng kho dự phòng đã lưu')) : openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }, 3500);
-  dbP.catch(() => {});
+  try { localStorage.removeItem('kt.mem'); } catch(e){}              // cờ cũ của kho dự phòng Cache Storage (đã bỏ)
   applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
   $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
   setupPWA();
@@ -5109,20 +5332,31 @@ planSum();
   } catch(e){}
   try {   // thiết bị mới chưa cấu hình: tự nối với kho mặc định (chỉ đọc) để có dữ liệu ngay
     const dr = guessRepo();
-    if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
+    if (!GH.repo && dr && !KV.get('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
+
+  /* ① HIỆN CHỮ NGAY từ bản chụp (đồng bộ, không chờ IndexedDB) */
+  const painted = snapPaint();
+  /* Chưa có bản chụp (lần đầu / vừa đổi chỗ đọc): chỉ khi IndexedDB chậm hơn 1,2 giây mới hiện một dòng nhỏ báo đang mở sách */
+  const hint = painted ? 0 : setTimeout(() => { if (!window.ktReady && !curBook) $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở sách…</b></div>'; }, 1200);
+
   try {
-    try { db = await dbP; try { localStorage.removeItem(MEMFLAG); } catch(e){} }
-    catch(idbErr){
-      console.warn('IndexedDB không mở được, chuyển sang kho dự phòng (Cache Storage):', idbErr);
-      await memActivate();
-      if (!flagged) setTimeout(() => toast('Máy này mở bộ nhớ chính chậm: app dùng kho dự phòng, vẫn lưu lâu dài'), 1500);
-      try { localStorage.setItem(MEMFLAG, String(Date.now())); } catch(e){}
-    }
-    await dropDemoBook(); await reloadAll(); await restoreResume();
+    /* ② NGẦM: IndexedDB đã được mở từ lúc tải trang; ở đây chỉ chờ kết quả */
+    const d = await idbReady;
+    if (!d) setTimeout(() => toast('Bộ nhớ chính của máy chưa mở được: app tạm giữ trong RAM và tự thử lại ngầm'), 1500);
+    const restored = await KV.reconcile();                             // ③ chữa chéo localStorage ⇄ IndexedDB
+    if (restored.length) ktRehydrate(restored);
+    await legacyImport();
+    await dropDemoBook();
+    if (painted && !restored.length) await snapAdopt();
+    else { ktBootEnd(); await reloadAll(); await restoreResume(); }
+    if (!bibleMeta.length && SY.sha && !SY.dirty){ SY.sha = ''; SY.at = 0; saveSY(); }   // kho Kinh Thánh trống mà tưởng đã đồng bộ → để lần đồng bộ tới tải lại
+    clearTimeout(hint);
     window.ktReady = true;
+    snapSave();
   }
   catch(e){
+    clearTimeout(hint); ktBootEnd();
     $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ của app</b>${esc(e.message || e)}<br>
       Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
       3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
@@ -5134,15 +5368,14 @@ planSum();
     if (rs) rs.onclick = () => {
       if (!confirm('Xóa nội dung Kinh Thánh đã tải trong máy để mở lại từ đầu? Lịch sử đọc, ghi chú, dấu trang được giữ nguyên.')) return;
       let done = false; const go = () => { if (!done){ done = true; location.reload(); } };
-      try { localStorage.removeItem('kt.mem'); } catch(e){}
-      try { caches.delete(MEM_CACHE); } catch(e){}
+      try { caches.delete(LEGACY_CACHE); } catch(e){}
       try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); }
       setTimeout(go, 3000);
     };
     return;
   }
   updateSyncUI();
-  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
+  if (!KV.get('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
