@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-Y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-Z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3934,8 +3934,9 @@ async function exportBook(name){
     const jsonStr = JSON.stringify(payload), raw = new TextEncoder().encode(jsonStr), packed = await pdfDeflate(raw);
     const parts = buildPdfParts({ images:r.images, w:r.w, h:r.h, W:PG.W, H:PG.H, marks:lay.marks, title:book.name + ' - Kinh Thánh',
       data:packed || raw, flate:!!packed, rawSize:raw.length });
-    const slug = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sach';
-    const base = `KinhThanh-${slug}-${new Date().toISOString().slice(0, 10)}`;
+    // Tên file = tên sách không dấu, mỗi từ viết hoa chữ đầu, nối bằng gạch ngang: Sáng Thế Ký → Sang-The-Ky.pdf
+    const base = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
     const pdf = new File(parts, base + '.pdf', { type:'application/pdf' });
     const json = new File([jsonStr], base + '.json', { type:'application/json' });
     pr.remove(); exportResult(name, pdf, json, lay.pages.length);
