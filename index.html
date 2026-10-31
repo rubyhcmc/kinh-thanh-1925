@@ -908,7 +908,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-R';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-S';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1127,8 +1127,11 @@ function curVerseNo(){
     const v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
     return v.dataset.n;
   }
-  const top = ($('.top') ? $('.top').getBoundingClientRect().bottom : 0) + 4;
-  const v = vs.find(x => x.getBoundingClientRect().bottom > top) || vs[vs.length - 1];
+  const hb = $('.top') ? $('.top').getBoundingClientRect().bottom : 0;
+  /* Câu đang đọc = câu đầu tiên có DÒNG ĐẦU nằm trọn dưới thanh đầu trang.
+     (Trước đây tính theo đáy của câu nên đuôi câu trước vẫn lấp ló dưới thanh đầu trang bị tính nhầm → nhập câu 13 lại hiện 12.) */
+  let v = vs.find(x => { const r = x.getClientRects()[0]; return r && r.top >= hb - 2; });
+  if (!v) v = vs.find(x => x.getBoundingClientRect().bottom > hb + 4) || vs[vs.length - 1];
   return v ? v.dataset.n : '';
 }
 let svT = 0;
