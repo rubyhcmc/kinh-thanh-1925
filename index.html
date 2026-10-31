@@ -64,9 +64,6 @@ body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
-/* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến ô Sách/Chương/Câu bị vẽ mờ → ở chế độ này bỏ ép lớp, thanh vẫn cố định (position:fixed). Safari giữ nguyên như cũ. */
-html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
-html.sa .top select,html.sa .top input{-webkit-transform:none;transform:none;will-change:auto}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -76,11 +73,6 @@ main{position:fixed;top:var(--hh);bottom:0;left:0;right:0;width:100%;max-width:7
 /* lật trang khi vuốt */
 #bibleText.flip{background:var(--bg);box-shadow:0 0 28px rgba(0,0,0,.28);border-radius:4px;will-change:transform,opacity;backface-visibility:hidden}
 
-.dlbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:20px auto 8px;max-width:260px}
-.dlbar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:3px;animation:dlmv 1.2s ease-in-out infinite}
-.dlbar i.det{animation:none;margin-left:0}
-@keyframes dlmv{0%{margin-left:-35%}100%{margin-left:100%}}
-body.booting .navrow,body.booting #chapNav{pointer-events:none}   /* bản chụp đang hiện: chờ dữ liệu thật vài chục mili-giây rồi mới cho đổi chương */
 /* Chọn sách / chương / câu */
 .navrow{position:sticky;top:var(--hh);z-index:10;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px;
   padding:6px 12px 7px;background:var(--bg);border-bottom:1px solid var(--line);transition:transform .25s ease}
@@ -743,7 +735,7 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <textarea id="impText" placeholder="Dán JSON hoặc văn bản vào đây…" spellcheck="false"></textarea>
       <div class="btns">
-        <input type="file" id="impFile" accept=".json,.pdf,.docx,.txt,.md,text/plain,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden multiple>
+        <input type="file" id="impFile" accept=".json,.pdf,.txt,.md,text/plain,application/json,application/pdf" hidden multiple>
         <button class="btn" id="pickFile">📂 Chọn tệp…</button>
         <button class="btn" id="fillSample">Chèn mẫu định dạng</button>
         <button class="btn primary" id="doImport" style="margin-left:auto">Nhập vào máy</button>
@@ -761,14 +753,14 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>4. Xuất trọn bộ 1 sách (PDF + Word + JSON) &amp; khôi phục</h4>
-      <p class="hint">Khi hoàn thành một sách, xuất thành tệp PDF dàn trang như sách in và tệp Word (.docx) khổ A5 dàn trang chuẩn, có thể mở sửa/in bằng Word. Cả PDF và Word đều kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF, Word (hoặc tệp JSON đi kèm) để khôi phục. Sửa chữ trong Word rồi nhập lại cũng được: app khôi phục theo nội dung đã sửa.</p>
+      <h4>4. Xuất trọn bộ 1 sách (PDF + JSON) &amp; khôi phục</h4>
+      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục.</p>
       <select id="exBook" aria-label="Chọn sách cần xuất"></select>
       <div class="btns">
-        <button class="btn primary" id="exGo">📕 Xuất PDF + Word + JSON</button>
-        <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/Word/JSON</button>
+        <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
+        <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
       </div>
-      <input type="file" id="exFile" accept=".pdf,.docx,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/json" hidden multiple>
+      <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
       <div class="log" id="exLog"></div>
     </div>
 
@@ -923,11 +915,9 @@ const ADMIN_PASSWORD_HASH = 'a8a1a53ed0c0e80337363bcaf0d9194dd6b8c56c99bba02cc1b
 const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506bf203988ef4c77';   // mã khôi phục (băm); để '' là tắt
 /* Chặn mọi kiểu zoom trên iOS: chụm hai ngón, chạm đúp, gesture của Safari */
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
-/* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
+document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-/* Nhận biết app đang chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
-try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AI4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-Z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -962,246 +952,11 @@ function choose(title, msg, opts){
   });
 }
 
-/* =========================================================
- *  LỚP LƯU TRỮ — hai việc tách bạch
- *  ① Nội dung Kinh Thánh: CHỈ nằm trong IndexedDB. Không dùng Cache Storage.
- *     IndexedDB được mở NGẦM (async/await) ngay khi trang tải; mọi lệnh đọc/ghi tự xếp hàng chờ kho mở xong,
- *     nên giao diện không bao giờ phải đứng chờ. Nếu iPhone chưa mở được kho, app tạm giữ trong RAM,
- *     vẫn thử lại ngầm và tự chép vào IndexedDB ngay khi mở được.
- *  ② Dữ liệu cá nhân (ghi chú, dấu trang, lịch sử đọc, kế hoạch, cài đặt…): LƯU CHÉO localStorage ⇄ IndexedDB.
- *     Mỗi lần ghi, bản sao tự chép sang IndexedDB (kho 'userdata') kèm mốc thời gian. Mỗi lần mở app, hai bên tự đối chiếu:
- *     bên nào bị iOS dọn mất hoặc cũ hơn sẽ được chữa lại từ bên còn lại. Người dùng không phải làm gì.
- * ========================================================= */
-const IDB_VER = 2, LEGACY_CACHE = 'kt-store-v1';
-/* Máy CHƯA từng tải dữ liệu (lần mở đầu): kho chắc chắn đang trống → chỉ chờ 2,5 giây rồi chạy tạm bằng RAM để tải & hiện chữ ngay,
-   kho mở được lúc nào thì dữ liệu tự chép vào lúc đó. Máy đã có dữ liệu: chờ lâu hơn (8 giây) vì dữ liệu thật nằm trong kho. */
-const IDB_GIVEUP_MS = (() => { try { const s = JSON.parse(localStorage.getItem('kt.sync') || '{}'); return s && s.sha && !localStorage.getItem('kt.idbBad') ? 8000 : 2500; } catch(e){ return 6000; } })();   // máy từng có kho hỏng → không chờ lâu
-const IDB = { db:null, ever:false, err:null };
-const MEM = { data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, v:0 };
-const sleepMs = ms => new Promise(r => setTimeout(r, ms));
-const OP_READ_MS = 10000, OP_WRITE_MS = 30000, FALLBACK_CACHE = 'kt-fallback-v1';
-const timed = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('Bộ nhớ không phản hồi'), { name:'IdbTimeout' })), ms))]);
-/* Thăm dò kho: một số iPhone mở được IndexedDB nhưng giao dịch đầu tiên treo mãi. Thử ghi/xóa một bản ghi nhỏ, quá 4 giây coi như kho hỏng. */
-function idbProbe(d){
-  return new Promise((res, rej) => {
-    const tx = d.transaction('userdata', 'readwrite'), os = tx.objectStore('userdata');
-    os.put({ k:'kt.__probe', v:'1', t:Date.now() }); os.delete('kt.__probe');
-    tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error || new Error('Kho không ghi được'));
-  });
-}
-/* KHO DỰ PHÒNG — CHỈ dùng khi IndexedDB của máy này hỏng (không mở được / treo). Máy bình thường không bao giờ chạm vào nó.
-   Dữ liệu giữ trong RAM và sao một bản vào Cache Storage riêng ('kt-fallback-v1') để lần mở sau vẫn có chữ, vẫn đọc được khi không có mạng. */
-let memT = 0;
-const memHasData = () => Object.keys(MEM.data).some(st => MEM.data[st].size > 0);
-function memSave(){
-  clearTimeout(memT);
-  memT = setTimeout(async () => {
-    try {
-      if (IDB.db || !('caches' in self)) return;
-      const c = await caches.open(FALLBACK_CACHE);
-      for (const st of Object.keys(MEM.data)) await c.put('./__kt_fb__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
-      IDB.fb = Date.now();
-    } catch(e){}
-  }, 800);
-}
-let memLoaded = false;
-async function memLoad(){
-  if (memLoaded) return; memLoaded = true;
-  try {
-    if (!('caches' in self)) return;
-    const c = await caches.open(FALLBACK_CACHE);
-    for (const st of Object.keys(MEM.data)){
-      const r = await c.match('./__kt_fb__/' + st); if (!r) continue;
-      (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i));
-    }
-  } catch(e){}
-}
-const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-
-function openDB(ms){
-  return new Promise((res0, rej0) => {
-    /* Có iPhone lệnh mở bộ nhớ treo im lặng (không báo thành công cũng không báo lỗi) → mỗi lần thử có giới hạn thời gian;
-       nếu kết quả đến muộn sau khi đã bỏ cuộc thì đóng kết nối đó lại. */
-    let done = false, tm = 0;
-    const res = v => { if (done){ try { v.close(); } catch(e){} return; } done = true; clearTimeout(tm); res0(v); };
-    const rej = e => { if (done) return; done = true; clearTimeout(tm); rej0(e); };
-    if (ms) tm = setTimeout(() => rej(new Error('Bộ nhớ chưa phản hồi')), ms);
-    let r; try { r = indexedDB.open(DB_NAME, IDB_VER); } catch(e){ return rej(e); }
-    r.onblocked = () => rej(new Error('Bộ nhớ đang bị một cửa sổ khác giữ'));
-    r.onupgradeneeded = () => {
-      const d = r.result;   // giữ nguyên các kho cũ để không mất dữ liệu; v2 chỉ thêm kho 'userdata'
-      if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
-      if (!d.objectStoreNames.contains('books'))    d.createObjectStore('books',    { keyPath:'name' });
-      if (!d.objectStoreNames.contains('hymns'))    d.createObjectStore('hymns',    { keyPath:'id' });
-      if (!d.objectStoreNames.contains('readings')) d.createObjectStore('readings', { keyPath:'id' });
-      if (!d.objectStoreNames.contains('userdata')) d.createObjectStore('userdata', { keyPath:'k' });
-    };
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-/* Vòng mở ngầm: thử dày lúc đầu (mỗi ~0,12 giây), rồi thưa dần (0,5 giây, 3 giây); bỏ hẳn sau ~10 phút. Không bao giờ chặn giao diện. */
-let idbOpening = null;
-function idbOpenLoop(){
-  if (idbOpening) return idbOpening;
-  idbOpening = (async () => {
-    for (let i = 0; i < 220; i++){
-      try { const d = await openDB(1500); try { await timed(idbProbe(d), 4000); } catch(e){ try { d.close(); } catch(_){} throw e; } await idbAdopt(d); return d; }
-      catch(e){ IDB.err = e; await sleepMs(i < 25 ? 120 : i < 60 ? 500 : 3000); }
-    }
-    return null;
-  })().finally(() => { idbOpening = null; });
-  return idbOpening;
-}
-async function idbAdopt(d){
-  d.onversionchange = () => { try { d.close(); } catch(e){} if (IDB.db === d) IDB.db = null; };
-  d.onclose = () => { if (IDB.db === d) IDB.db = null; };
-  if (memHasData()){   // lúc kho chưa dùng được đã có dữ liệu trong RAM / kho dự phòng → chép hết vào IndexedDB rồi dọn kho dự phòng
-    for (let g = 0; g < 4; g++){
-      const v0 = MEM.v;
-      for (const st of Object.keys(MEM.data)){ const arr = [...MEM.data[st].values()]; if (arr.length) await putAll(d, st, arr); }
-      if (v0 === MEM.v) break;
-    }
-    MEM.v = 0; for (const st of Object.keys(MEM.data)) MEM.data[st].clear();
-    try { caches.delete(FALLBACK_CACHE); } catch(e){}
-  }
-  IDB.db = d; IDB.ever = true; IDB.bad = false; IDB.err = null;
-  try { localStorage.removeItem('kt.idbBad'); } catch(e){}
-  KV.flush().catch(() => {});
-  KV.late().catch(() => {});
-}
-/* Khởi động ngầm: idbReady xong khi kho mở được HOẶC sau 6 giây (khi đó app chạy tạm bằng RAM, vòng thử lại vẫn tiếp tục) */
-const idbReady = Promise.race([idbOpenLoop(), sleepMs(IDB_GIVEUP_MS).then(() => null)]).then(d => { try { if (!d) localStorage.setItem('kt.idbBad', String(Date.now())); } catch(e){} return d; });
-
-async function useDB(){
-  await idbReady;
-  if (IDB.db) return IDB.db;
-  if (IDB.ever && !IDB.bad) return idbOpenLoop();      // kết nối bị hệ thống đóng giữa chừng (iOS) → mở lại
-  await memLoad();                                      // kho không dùng được → RAM + kho dự phòng
-  return null;
-}
-async function withDB(fn, ms){
-  let d = await useDB();
-  if (!d) return fn(null);
-  try { return await timed(Promise.resolve(fn(d)), ms || OP_WRITE_MS); }
-  catch(e){
-    if (e && e.name === 'IdbTimeout'){ IDB.bad = true; IDB.err = e; if (IDB.db === d) IDB.db = null; try { d.close(); } catch(_){} await memLoad(); return fn(null); }
-    if (e && e.name === 'InvalidStateError'){ if (IDB.db === d) IDB.db = null; d = await useDB(); return fn(d); }
-    throw e;
-  }
-}
-function putAll(d, st, items){
-  return new Promise((res, rej) => {
-    const tx = d.transaction(st, 'readwrite'), os = tx.objectStore(st);
-    items.forEach(i => os.put(i));
-    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
-  });
-}
-const dbAll   = st => withDB(d => d ? reqP(d.transaction(st).objectStore(st).getAll()) : [...MEM.data[st].values()], OP_READ_MS);
-const dbGet   = (st, k) => withDB(d => d ? reqP(d.transaction(st).objectStore(st).get(k)) : MEM.data[st].get(k), OP_READ_MS);
-const dbClear = st => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).clear()) : (MEM.data[st].clear(), MEM.v++, memSave()));
-const dbDel   = (st, k) => withDB(d => d ? reqP(d.transaction(st, 'readwrite').objectStore(st).delete(k)) : (MEM.data[st].delete(k), MEM.v++, memSave()));
-const dbPut   = (st, items) => withDB(d => { if (d) return putAll(d, st, items); items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); MEM.v++; memSave(); });
-/* kho 'userdata' (bản sao dữ liệu cá nhân): trả null nếu IndexedDB chưa sẵn sàng */
-const udAll = () => withDB(d => d ? reqP(d.transaction('userdata').objectStore('userdata').getAll()) : null, OP_READ_MS);
-const udPut = recs => withDB(async d => { if (!d) return false; await putAll(d, 'userdata', recs); return true; });
-const udDel = keys => withDB(async d => {
-  if (!d) return false;
-  await new Promise((res, rej) => { const tx = d.transaction('userdata', 'readwrite'), os = tx.objectStore('userdata'); keys.forEach(k => os.delete(k)); tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error); });
-  return true;
-});
-
-/* ---- Dữ liệu cá nhân: localStorage làm bản chính (đọc đồng bộ, hiện ngay), IndexedDB làm bản sao tự động ---- */
-const KV = (() => {
-  const MT = 'kt.__mt';                                         // bảng “mốc sửa lần cuối” của từng khóa (nằm trong localStorage)
-  const SKIP = new Set([MT, 'kt.mem', 'kt.visitCount', 'kt.snap', 'kt.__probe', 'kt.idbBad']);   // dữ liệu tạm / dẫn xuất: không cần sao chép
-  const mirrored = k => typeof k === 'string' && k.startsWith('kt.') && !SKIP.has(k);
-  const shadow = new Map();                                     // giữ tạm trong RAM nếu localStorage từ chối ghi (đầy / bị chặn)
-  const watchers = [], dirty = new Set();
-  let mt = {}; try { mt = JSON.parse(localStorage.getItem(MT) || '{}') || {}; } catch(e){ mt = {}; }
-  let lastT = 0, timer = 0, chain = Promise.resolve(), needLate = false;
-  const nowT = () => (lastT = Math.max(Date.now(), lastT + 1));
-  const saveMT = () => { try { localStorage.setItem(MT, JSON.stringify(mt)); } catch(e){} };
-  const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => flush().catch(() => {}), 350); };
-  const touch = k => { mt[k] = nowT(); saveMT(); dirty.add(k); schedule(); watchers.forEach(f => { try { f(k); } catch(e){} }); };
-
-  function get(k){ const v = lsGet(k); if (v !== null) return v; return shadow.has(k) ? shadow.get(k) : null; }
-  function set(k, v){
-    v = String(v);
-    try { localStorage.setItem(k, v); shadow.delete(k); }
-    catch(e){ if (!mirrored(k)) throw e; shadow.set(k, v); }    // khóa được sao chép: IndexedDB vẫn giữ được → không báo lỗi
-    if (mirrored(k)) touch(k);
-  }
-  function remove(k){
-    try { localStorage.removeItem(k); } catch(e){}
-    shadow.delete(k);
-    if (mirrored(k)) touch(k);                                  // ghi “bia mộ” để lần sau không bị khôi phục nhầm
-  }
-  function keys(prefix){
-    const out = new Set(), p = prefix || '';
-    try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(p)) out.add(k); } } catch(e){}
-    shadow.forEach((v, k) => { if (k.startsWith(p)) out.add(k); });
-    return [...out];
-  }
-  /* Chép các khóa vừa đổi sang IndexedDB (gộp nhiều lần ghi thành một giao dịch) */
-  function flush(){
-    clearTimeout(timer);
-    chain = chain.then(async () => {
-      if (!dirty.size) return true;
-      const ks = [...dirty]; dirty.clear();
-      try {
-        const ok = await udPut(ks.map(k => ({ k, v:get(k), t:mt[k] || nowT() })));
-        if (!ok) ks.forEach(k => dirty.add(k));                 // IndexedDB chưa sẵn sàng: giữ lại, lần mở sau tự đối chiếu
-        return ok;
-      } catch(e){ ks.forEach(k => dirty.add(k)); return false; }
-    });
-    return chain;
-  }
-  /* ĐỐI CHIẾU & CHỮA CHÉO — mỗi lần mở app. Trả về danh sách khóa vừa được khôi phục vào localStorage. */
-  async function reconcile(){
-    await idbReady;
-    if (!IDB.db){ needLate = true; return []; }
-    const recs = await udAll();
-    if (recs === null){ needLate = true; return []; }
-    needLate = false;
-    const byK = new Map(recs.map(r => [r.k, r]));
-    const all = new Set([...byK.keys(), ...keys('kt.')]);
-    const toIDB = [], toLS = [], dead = [], now = Date.now(), TTL = 90 * 864e5;
-    for (const k of all){
-      if (!mirrored(k)) continue;
-      const rec = byK.get(k), lv = get(k), lt = mt[k] || 0;
-      const iv = rec && rec.v != null ? rec.v : null, it = rec ? (rec.t || 0) : 0;
-      if (lv === iv){ if (rec && iv === null && now - it > TTL) dead.push(k); continue; }
-      if (lt > it || (lt === it && lv !== null)){               // localStorage mới hơn (hoặc IndexedDB còn trống) → đẩy sang IndexedDB
-        const t = lt || nowT(); if (!lt) mt[k] = t;
-        toIDB.push({ k, v:lv, t });
-      } else toLS.push({ k, v:iv, t:it });                      // IndexedDB mới hơn (hoặc localStorage bị dọn mất) → khôi phục về localStorage
-    }
-    const restored = [];
-    for (const r of toLS){
-      try { r.v === null ? localStorage.removeItem(r.k) : localStorage.setItem(r.k, r.v); shadow.delete(r.k); }
-      catch(e){ if (r.v !== null) shadow.set(r.k, r.v); }
-      mt[r.k] = r.t; restored.push(r.k);
-    }
-    saveMT();
-    try { if (toIDB.length) await udPut(toIDB); if (dead.length) await udDel(dead); } catch(e){}
-    return restored;
-  }
-  /* Nếu lần đối chiếu đầu phải bỏ qua vì IndexedDB mở trễ → làm bù ngay khi kho mở được */
-  async function late(){
-    if (!needLate) return;
-    const r = await reconcile();
-    if (r.length && typeof ktRehydrate === 'function') ktRehydrate(r);
-  }
-  return { get, set, remove, keys, flush, reconcile, late, mirrored, watch:f => watchers.push(f) };
-})();
-
-/* ============ CÀI ĐẶT (localStorage ⇄ IndexedDB) ============ */
+/* ============ CÀI ĐẶT (localStorage) ============ */
 const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
 const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
-try { Object.assign(S, JSON.parse(KV.get('kt.settings') || '{}')); } catch(e){}
-const saveS = () => { try { KV.set('kt.settings', JSON.stringify(S)); } catch(e){} };
+try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
+const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
 
 function applyTheme(){
   const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
@@ -1260,7 +1015,34 @@ $('#fontSel').onchange = e => { S.font = e.target.value; saveS(); applyFont(); }
 $('#fsSel').onchange = e => { S.fs = +e.target.value; saveS(); applyFs(); try { pgRefresh(); } catch(err){} };
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
-/* (Lớp lưu trữ IndexedDB + lưu chéo localStorage nằm ở khối “LỚP LƯU TRỮ” phía trên.) */
+/* ============ INDEXEDDB ============ */
+let db;
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
+      if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
+      if (!d.objectStoreNames.contains('books'))    d.createObjectStore('books',    { keyPath:'name' });
+      if (!d.objectStoreNames.contains('hymns'))    d.createObjectStore('hymns',    { keyPath:'id' });
+      if (!d.objectStoreNames.contains('readings')) d.createObjectStore('readings', { keyPath:'id' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
+const dbGet   = (st, k) => reqP(db.transaction(st).objectStore(st).get(k));
+const dbClear = st => reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
+const dbDel   = (st, k) => reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
+function dbPut(st, items){
+  return new Promise((res, rej) => {
+    const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
+    items.forEach(i => os.put(i));
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  });
+}
 
 /* =========================================================
  *  KINH THÁNH: chọn Sách → Chương → Câu
@@ -1275,13 +1057,11 @@ async function loadBibleMeta(){
 }
 function renderBibleEmpty(){
   $('#bibleText').className = 'reader';
-  $('#bibleText').innerHTML = syncOn()
-    ? `<div class="empty"><b>Tải Kinh Thánh về máy</b>${navigator.onLine ? 'Lần mở đầu tiên app tải toàn bộ Kinh Thánh về máy. Chỉ làm một lần – sau đó đọc được cả khi không có mạng.' : 'Chưa có Kinh Thánh trong máy. Hãy bật mạng để tải về lần đầu (chỉ một lần); sau đó dùng được cả khi không có mạng.'}${navigator.onLine ? '<div class="dlbar"><i id="dlFill"></i></div><div id="dlInfo" style="font-size:13px;color:var(--muted)"></div>' : ''}</div>`
-    : `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
+  $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
   $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = ''; syncNav();
   $('#chapNav').hidden = true;
   $('#bibleText').insertAdjacentHTML('beforeend', '<div class="log" id="emptySync" style="text-align:center;padding:0 20px 30px"></div>');
-  updateSyncUI(); dlPaint();
+  updateSyncUI();
 }
 async function initBible(){
   await loadBibleMeta(); bs.idx = null; bsFillScope();
@@ -1314,10 +1094,8 @@ function renderChapter(){
   $('#nextChap').disabled = idx === bibleMeta.length - 1 && S.chapter === curBook.chapters.length;
   ktTop();
   markBookmarks();
-  snapSave();
 }
 async function stepChapter(d){
-  if (curBook && curBook.snap) await bootDone;                  // đang hiện bản chụp: chờ IndexedDB nạp xong rồi mới đổi chương
   const idx = bibleMeta.findIndex(m => m.name === curBook.name);
   const c = S.chapter + d;
   if (c >= 1 && c <= curBook.chapters.length){ S.chapter = c; saveS(); return renderChapter(); }
@@ -1690,8 +1468,8 @@ $('#nextChap').onclick = () => stepChapter(1);
  * ========================================================= */
 const BM_KEY = 'kt.marks', BM_MAX = 100;
 let BM = [];
-try { BM = JSON.parse(KV.get(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
-const saveBM = () => { try { KV.set(BM_KEY, JSON.stringify(BM)); } catch(e){} };
+try { BM = JSON.parse(localStorage.getItem(BM_KEY) || '[]'); if (!Array.isArray(BM)) BM = []; } catch(e){ BM = []; }
+const saveBM = () => { try { localStorage.setItem(BM_KEY, JSON.stringify(BM)); } catch(e){} };
 
 /* =========================================================
  *  ĐỌC TIẾP NỐI (kt.resume): chỗ đọc dở của lịch đọc.
@@ -1702,9 +1480,9 @@ const saveBM = () => { try { KV.set(BM_KEY, JSON.stringify(BM)); } catch(e){} };
  * ========================================================= */
 const RS_KEY = 'kt.resume';
 let RESUME = null;
-try { RESUME = JSON.parse(KV.get(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
+try { RESUME = JSON.parse(localStorage.getItem(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
 if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null;
-const saveResume = () => { try { RESUME ? KV.set(RS_KEY, JSON.stringify(RESUME)) : KV.remove(RS_KEY); } catch(e){} };
+const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stringify(RESUME)) : localStorage.removeItem(RS_KEY); } catch(e){} };
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
@@ -1712,8 +1490,8 @@ function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() };
    - Đang ở đúng chương nối tiếp: câu đang đọc được cập nhật theo khi cuộn / lật trang (sau ~1,5 giây dừng tay, và khi thoát app).
    - Tìm kiếm, nhảy sang sách/chương khác chỉ để xem: KHÔNG làm đổi chỗ đọc tiếp nối. */
 const RS_OFF = 'kt.resumeOff';
-const rsIsOff = () => { try { return KV.get(RS_OFF) === '1'; } catch(e){ return false; } };
-function rsSetOff(on){ try { on ? KV.set(RS_OFF, '1') : KV.remove(RS_OFF); } catch(e){} }
+const rsIsOff = () => { try { return localStorage.getItem(RS_OFF) === '1'; } catch(e){ return false; } };
+function rsSetOff(on){ try { on ? localStorage.setItem(RS_OFF, '1') : localStorage.removeItem(RS_OFF); } catch(e){} }
 let rsT = 0, rsHold = 0;
 function rsTrackNow(){
   clearTimeout(rsT);
@@ -1819,12 +1597,12 @@ $('#btnMarks').onclick = openMarks;
 $('#btnLessons').onclick = openLessons;
 
 /* Bài học cá nhân: cửa sổ viết ghi chú cho một câu (lưu trong máy: kt.lessons) */
-let LS = []; try { LS = JSON.parse(KV.get('kt.lessons') || '[]'); } catch(e){}
-const saveLS = () => { try { KV.set('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
+let LS = []; try { LS = JSON.parse(localStorage.getItem('kt.lessons') || '[]'); } catch(e){}
+const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
 function lsBadge(){ const b = $('#lsBadge'); if (!b) return; b.hidden = !LS.length; b.textContent = LS.length > 99 ? '99+' : LS.length; }
 lsBadge();
 /* Hành trình đọc: ghi lại chương đã đọc mỗi ngày (kt.reads) */
-let RD = {}; try { RD = JSON.parse(KV.get('kt.reads') || '{}'); } catch(e){}
+let RD = {}; try { RD = JSON.parse(localStorage.getItem('kt.reads') || '{}'); } catch(e){}
 const dayKey = (t = Date.now()) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 /* ĐẾM CHƯƠNG ĐÃ ĐỌC — chỉ tính khi đọc xong CHÍNH THỨC chương đó. Một chương được tính khi đủ cả ba điều kiện:
    1) Đã đọc tới cuối chương (cuộn tới câu cuối; chế độ Trang giấy: tới trang cuối).
@@ -1855,7 +1633,7 @@ function rdEngaged(){
 }
 function chapterCompleted(b, c){                                    // đọc xong chính thức → ghi vào Hành trình + dời “Đọc tiếp nối”
   const k = dayKey(), id = b + '|' + c, a = RD[k] || (RD[k] = []);
-  if (!a.includes(id)){ a.push(id); try { KV.set('kt.reads', JSON.stringify(RD)); } catch(e){} }
+  if (!a.includes(id)){ a.push(id); try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){} }
   try { resumeAdvance(b, c); } catch(e){}
 }
 { const _rcRead = renderChapter;
@@ -2465,10 +2243,10 @@ const isDemoBook = b => b && b.name === 'Sách Mẫu' && b.chapters && b.chapter
 const GH_KEY = 'kt.gh', SY_KEY = 'kt.sync', GH_API = 'https://api.github.com';
 let GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true };
 let SY = { sha:'', dirty:false, at:0, store:'' };
-try { Object.assign(GH, JSON.parse(KV.get(GH_KEY) || '{}')); } catch(e){}
-try { Object.assign(SY, JSON.parse(KV.get(SY_KEY) || '{}')); } catch(e){}
-const saveGH = () => { try { KV.set(GH_KEY, JSON.stringify(GH)); } catch(e){} };
-const saveSY = () => { try { KV.set(SY_KEY, JSON.stringify(SY)); } catch(e){} };
+try { Object.assign(GH, JSON.parse(localStorage.getItem(GH_KEY) || '{}')); } catch(e){}
+try { Object.assign(SY, JSON.parse(localStorage.getItem(SY_KEY) || '{}')); } catch(e){}
+const saveGH = () => { try { localStorage.setItem(GH_KEY, JSON.stringify(GH)); } catch(e){} };
+const saveSY = () => { try { localStorage.setItem(SY_KEY, JSON.stringify(SY)); } catch(e){} };
 const ghOn = () => !!GH.repo;
 const ghCanPush = () => !!(GH.repo && GH.token);
 
@@ -2556,51 +2334,7 @@ const syncCanWrite = () => { const a = Store.cur(); return !!(a && a.configured(
 
 /* --- Adapter 1: GitHub (các hàm ghReq / ghRemote… ở trên chỉ phục vụ adapter này) --- */
 /* Máy chỉ đọc (không token): tải thẳng tệp công khai, không dùng API nên không bị giới hạn lượt */
-/* Nếu app đang chạy trên GitHub Pages của CHÍNH kho dữ liệu (vd rubyhcmc.github.io/kinh-thanh-1925/ ↔ kho rubyhcmc/kinh-thanh-1925),
-   tệp dữ liệu nằm ngay cạnh trang → tải cùng nguồn, không phụ thuộc raw.githubusercontent.com (dễ bị chặn, khác tên miền). */
-function ownPagesRepo(){
-  try {
-    const m = location.hostname.match(/^([^.]+)\.github\.io$/i); if (!m) return '';
-    const seg = location.pathname.split('/').filter(Boolean)[0] || '';
-    return (seg && !/\.html?$/i.test(seg) ? m[1] + '/' + decodeURIComponent(seg) : m[1] + '/' + m[1] + '.github.io').toLowerCase();
-  } catch(e){ return ''; }
-}
-/* ===== TẢI LẦN ĐẦU: có thanh tiến độ, và BẮT ĐẦU NGAY khi mở app (song song với việc mở kho), không chờ kho mở xong ===== */
-const DL = { got:0, total:0 }, EARLY = { p:null };
-async function readTextProgress(res){
-  const total = res.headers.get('content-encoding') ? 0 : (+res.headers.get('content-length') || 0);   // có nén → Content-Length không khớp số byte nhận được
-  DL.got = 0; DL.total = total;
-  if (!res.body || !res.body.getReader) return res.text();
-  const rd = res.body.getReader(), dec = new TextDecoder(); let out = '';
-  for (;;){ const { done, value } = await rd.read(); if (done) break; DL.got += value.length; out += dec.decode(value, { stream:true }); dlPaint(); }
-  return out + dec.decode();
-}
-function dlPaint(){
-  const i = $('#dlInfo'), f = $('#dlFill'); if (!i) return;
-  const pct = DL.total && DL.got <= DL.total ? Math.round(DL.got / DL.total * 100) : 0;
-  i.textContent = DL.got ? `Đã tải ${(DL.got / 1048576).toFixed(1).replace('.', ',')} MB${pct ? ' (' + pct + '%)' : ''}` : 'Đang kết nối…';
-  if (f){ if (pct){ f.className = 'det'; f.style.width = pct + '%'; } else { f.className = ''; f.style.width = ''; } }
-}
-function earlyStart(){
-  if (EARLY.p || !navigator.onLine) return;
-  EARLY.p = rawFetchNet(); EARLY.p.catch(() => {});
-}
-async function sameOriginFetch(){
-  if (!GH.repo || GH.branch || GH.repo.toLowerCase() !== ownPagesRepo()) return null;      // chỉ khi đúng kho này và dùng nhánh mặc định
-  try {
-    const url = new URL(ghFile(), location.href).href + '?_=' + Date.now();
-    const res = await fetch(url, { cache:'no-store' });
-    if (!res.ok) return null;
-    const text = await readTextProgress(res);
-    return /^\s*[\[{]/.test(text.replace(/^\uFEFF/, '')) ? text : null;                      // không phải JSON (trang lỗi, bản cũ…) → bỏ, dùng đường dự phòng
-  } catch(e){ return null; }
-}
 async function rawFetch(){
-  if (EARLY.p){ const p = EARLY.p; EARLY.p = null; try { return await p; } catch(e){} }   // dùng luôn lượt tải đã chạy từ lúc mở app
-  return rawFetchNet();
-}
-async function rawFetchNet(){
-  const own = await sameOriginFetch(); if (own !== null) return own;
   const ref = GH.branch ? encodeURIComponent(GH.branch) : 'HEAD';
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
   let res;
@@ -2608,7 +2342,7 @@ async function rawFetchNet(){
   catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
   if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
   if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
-  return readTextProgress(res);
+  return res.text();
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
 const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
@@ -2656,13 +2390,12 @@ Store.active = 'myserver';
 
 /* --- Bộ máy đồng bộ (dùng chung cho mọi adapter) --- */
 async function applyRemote(A, r){
-  const j = r.payload || {}, books = normBible(j.bible || j), wasEmpty = !bibleMeta.length;
+  const j = r.payload || {}, books = normBible(j.bible || j);
   if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
   await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
   const y = SCR.scrollTop, kb = curBook && curBook.name, kc = S.chapter, kn = parseInt(curVerseNo(), 10) || 0;
   await reloadAll(); SCR.scrollTop = y;
-  if (wasEmpty) ktAnnounceOffline();
   if (kn > 1 && curBook && curBook.name === kb && S.chapter === kc){          // tải dữ liệu mới về vẫn giữ đúng câu đang đọc
     const el = $('#v' + kn); if (el && pgOn()) pgScrollTo(el);
   }
@@ -2709,7 +2442,7 @@ function updateSyncUI(){
   l.textContent = on ? `${A.describe()}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${A.canWrite() ? 'đọc & ghi (có quyền ghi)' : 'chỉ đọc'}` : 'Chưa kết nối nơi lưu trữ.';
   l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
   const es = $('#emptySync');
-  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button><br><button class="btn" id="diagOpen" style="margin-top:10px;font-size:13px">🔍 Kiểm tra bộ nhớ máy</button>` : '';
+  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
   const sh = $('#ghShare'); sh.hidden = !(on && A.shareUrl);
   if (on && A.shareUrl) $('#ghShareUrl').value = A.shareUrl();
 }
@@ -2799,7 +2532,7 @@ async function ghConnect(){
       } else { GH = old; throw e; }
     }
     GH = { repo, token, branch:branch || info.default_branch || 'main', path, auto:$('#ghAuto').checked };
-    saveGH(); try { KV.remove('kt.nodefault'); } catch(e){}
+    saveGH(); try { localStorage.removeItem('kt.nodefault'); } catch(e){}
     const canWrite = !token || (info.permissions && info.permissions.push);
     if (token && !canWrite){ GH.token = ''; saveGH(); ghSay('⚠ Token không có quyền ghi vào kho này nên máy chỉ ở chế độ đọc.', false); }
     else ghSay('✔ Đã kết nối kho ' + repo + (token ? ' (đọc & ghi).' : ' (chỉ đọc).'), true);
@@ -2814,7 +2547,7 @@ $('#ghDisconnect').onclick = () => {
   if (!ghOn()) return;
   if (!confirm('Ngắt kết nối GitHub? Dữ liệu trong máy vẫn được giữ nguyên.')) return;
   GH = { repo:'', token:'', branch:'', path:DEFAULT_FILE, auto:true }; SY = { sha:'', dirty:false, at:0, store:'github' };
-  try { KV.set('kt.nodefault', '1'); } catch(e){}
+  try { localStorage.setItem('kt.nodefault', '1'); } catch(e){}
   saveGH(); saveSY(); fillGhFields(); setSync('off'); ghSay('Đã ngắt kết nối.', true);
 };
 $('#ghAuto').onchange = () => { GH.auto = $('#ghAuto').checked; saveGH(); if (GH.auto && SY.dirty) markDirty(); };
@@ -2840,9 +2573,9 @@ function show(id, on = true){ $(id).hidden = !on; }
 /* Phần "Giới thiệu" trong Cài đặt: Admin chỉnh sửa được (Quản lý dữ liệu → Giới thiệu ứng dụng) */
 const ABOUT_DEF = { name:'Kinh Thánh', sub:'', text:'', feat:[] };   // mặc định để trống – Admin tự nhập
 let ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] };
-try { const a = JSON.parse(KV.get('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
+try { const a = JSON.parse(localStorage.getItem('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
 if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
-const saveAbout = () => { try { KV.set('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
+const saveAbout = () => { try { localStorage.setItem('kt.about', JSON.stringify(ABOUT)); } catch(e){} };
 /* Định dạng nội dung giới thiệu: mỗi dòng = một đoạn · "# Tiêu đề" · "- ý gạch đầu dòng" · **chữ đậm** */
 function aboutMd(t){
   const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -2922,7 +2655,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + ' · Kho lưu: ' + (IDB.db ? 'IndexedDB' : 'dự phòng (IndexedDB của máy không dùng được)') + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); ktOffline().then(r => { $('#verTag').textContent += ' · Offline: ' + (r.ok ? '✔ sẵn sàng' : '✘ ' + (!r.data ? 'chưa có dữ liệu' : !r.sw ? 'trang chưa được cài' : 'trang chưa được lưu')); }); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -2979,14 +2712,14 @@ async function checkPw(p){
   p = String(p ?? ''); if (!p) return { ok:false };
   const h = await hashPw(p);
   if (RECOVERY_CODE_HASH && ctEq(h, RECOVERY_CODE_HASH)) return { ok:true, via:'recovery' };
-  let st = null; try { st = KV.get(PW_KEY); } catch(e){}
+  let st = null; try { st = localStorage.getItem(PW_KEY); } catch(e){}
   if (!st) return { ok:ctEq(h, ADMIN_PASSWORD_HASH) };
   if (st[0] === 'b') return { ok:ctEq(hashLegacy(p), st) };
   return { ok:ctEq(h, st) };
 }
 /* Lớp 3: chống dò mật khẩu – sai 5 lần thì khóa 5 phút */
-const lockState = () => { try { return JSON.parse(KV.get(LOCK_KEY) || '{}') || {}; } catch(e){ return {}; } };
-const lockSave = st => { try { KV.set(LOCK_KEY, JSON.stringify(st)); } catch(e){} };
+const lockState = () => { try { return JSON.parse(localStorage.getItem(LOCK_KEY) || '{}') || {}; } catch(e){ return {}; } };
+const lockSave = st => { try { localStorage.setItem(LOCK_KEY, JSON.stringify(st)); } catch(e){} };
 const lockLeft = () => Math.max(0, (lockState().until || 0) - Date.now());
 async function authTry(p){
   const left = lockLeft(); if (left > 0) return { ok:false, locked:true, left };
@@ -3039,7 +2772,7 @@ $('#pwChange').onclick = async () => {
   if (n.length < 6) return pwSay('Mật khẩu mới cần ít nhất 6 ký tự.');
   if (n !== n2) return pwSay('Hai lần nhập mật khẩu mới chưa khớp.');
   if (n === o) return pwSay('Mật khẩu mới phải khác mật khẩu hiện tại.');
-  try { KV.set(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
+  try { localStorage.setItem(PW_KEY, await hashPw(n)); } catch(e){ return pwSay('Không lưu được: ' + e.message); }
   $('#pwOld').value = $('#pwNew').value = $('#pwNew2').value = '';
   $('#pwShow').checked = false; ['#pwOld', '#pwNew', '#pwNew2'].forEach(i => $(i).type = 'password');
   pwSay('✔ Đã đổi mật khẩu và áp dụng ngay. Lần đăng nhập sau hãy dùng mật khẩu mới.', true); toast('✔ Đã đổi mật khẩu quản lý');
@@ -3052,7 +2785,7 @@ $('#hashMake').onclick = async () => {                       // sinh chuỗi bă
 };
 $('#pwReset').onclick = () => {
   if (!confirm('Đưa mật khẩu về mật khẩu ban đầu trong mã nguồn?')) return;
-  try { KV.remove(PW_KEY); } catch(e){}
+  try { localStorage.removeItem(PW_KEY); } catch(e){}
   pwSay('Đã về mật khẩu ban đầu.', true);
 };
 $('#logout').onclick = () => { sessionStorage.removeItem('kt.admin'); show('#admin', false); show('#editor', false); toast('Đã đăng xuất'); };
@@ -3533,7 +3266,7 @@ function edRefresh(){
   const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
   ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
   ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
-  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) KV.set(draftKey(), ed.Text.value); } catch(e){}
+  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) localStorage.setItem(draftKey(), ed.Text.value); } catch(e){}
 }
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
@@ -3561,7 +3294,7 @@ async function edAuto(){
     const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
     await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined);
     edLoaded = text;
-    try { KV.remove(draftKey()); } catch(e){}
+    try { localStorage.removeItem(draftKey()); } catch(e){}
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch(e){ ed.Auto.textContent = ''; toast('Lỗi tự lưu: ' + e.message); }
 }
@@ -3577,7 +3310,7 @@ async function edLoad(){
   edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
   let txt = edLoaded;
   try {
-    const d = KV.get(draftKey());
+    const d = localStorage.getItem(draftKey());
     if (d && d !== edLoaded){ txt = d; toast('Đã khôi phục bản nháp chưa lưu'); }
   } catch(e){}
   ed.Text.value = txt; edRefresh();
@@ -3751,7 +3484,7 @@ async function edRenameBook(){
     if (S.book === old){ S.book = nn; saveS(); }
     BM.forEach(b => { if (b.book === old) b.book = nn; }); saveBM();
     if (RESUME && RESUME.book === old){ RESUME.book = nn; saveResume(); }
-    try { KV.keys().filter(k => k.startsWith(`kt.draft.${old}|`)).forEach(k => { KV.set(k.replace(`kt.draft.${old}|`, `kt.draft.${nn}|`), KV.get(k)); KV.remove(k); }); } catch(e){}
+    try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${old}|`)).forEach(k => { localStorage.setItem(k.replace(`kt.draft.${old}|`, `kt.draft.${nn}|`), localStorage.getItem(k)); localStorage.removeItem(k); }); } catch(e){}
     ed.Book.value = nn;
     await initBible(); await refreshStats(); markDirty(); edBookList(); await edLoad();
     toast(`✔ Đã đổi tên "${old}" thành "${nn}"`);
@@ -3766,7 +3499,7 @@ async function edDeleteBook(){
     await dbDel('books', name); await dbDel('bookMeta', name);
     if (S.book === name){ S.book = null; S.chapter = 1; saveS(); }
     BM = BM.filter(b => b.book !== name); saveBM();
-    try { KV.keys().filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => KV.remove(k)); } catch(e){}
+    try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => localStorage.removeItem(k)); } catch(e){}
     edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Chap.value = 1;
     await initBible(); await refreshStats(); markDirty(); edBookList(); edRefresh();
     toast(`Đã xóa sách "${name}"`);
@@ -3850,7 +3583,7 @@ async function edSave(goNext){
   if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
   try {
     await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value);
-    try { KV.remove(draftKey()); } catch(e){}
+    try { localStorage.removeItem(draftKey()); } catch(e){}
     edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
     toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
     if (goNext){ ed.Chap.value = ch + 1; await edLoad(); ed.Text.focus(); } else edRefresh();
@@ -3878,7 +3611,7 @@ $('#edDel').onclick = async () => {
     const meta = (await dbAll('bookMeta')).find(m => m.name === name);
     if (meta){ meta.chapterCount = rec.chapters.length; await dbPut('bookMeta', [meta]); }
   }
-  try { KV.remove(draftKey()); } catch(e){}
+  try { localStorage.removeItem(draftKey()); } catch(e){}
   await initBible(); await refreshStats(); markDirty(); await edLoad(); toast('Đã xóa chương');
 };
 // Tránh mất chữ khi đóng/khóa màn hình: lưu ngay khi app bị ẩn
@@ -4122,283 +3855,8 @@ async function pdfToJson(buf){
   return new TextDecoder('utf-8').decode(data);
 }
 async function fileToText(f){
-  if (/\.docx$/i.test(f.name) || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'){
-    const r = await docxToJson(await f.arrayBuffer()); return { text:r.text, pdf:true, note:r.note };
-  }
   if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') return { text:await pdfToJson(await f.arrayBuffer()), pdf:true };
   return { text:await f.text() };
-}
-
-/* =========================================================
- *  XUẤT SÁCH → WORD (.docx) dàn trang như sách in + KHÔI PHỤC từ Word
- *  - Khổ A5 (như bản PDF), phông Times New Roman 11pt, căn đều hai bên.
- *  - Bìa riêng; đầu trang là tên sách, chân trang là số trang (đánh số từ 1 sau bìa).
- *  - Mỗi chương có tiêu đề (hiện trong ngăn Điều hướng của Word), số câu in nhỏ nâng lên,
- *    tiêu đề đoạn căn giữa, thơ thụt lề theo cấp, chú thích gom cuối chương.
- *  - Dữ liệu gốc (JSON) được nhúng kín trong tệp (customXml) → nhập lại là khôi phục đúng nguyên bản.
- *    Nếu bạn sửa chữ trong Word rồi nhập lại, app nhận ra và khôi phục theo nội dung đã sửa
- *    (đọc từ các kiểu đoạn KT-…, vì vậy khi sửa chỉ nên sửa chữ, đừng đổi kiểu đoạn/số câu).
- * ========================================================= */
-const DX_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const DX_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-const DX_NS = `xmlns:w="${DX_W}" xmlns:r="${DX_R}"`;
-const DX_URN = 'urn:kinhthanh-data';
-const DX_BROWN = '8A5A1F', DX_GREY = '6B6150';
-const DX_PAGE = '<w:pgSz w:w="8391" w:h="11906"/><w:pgMar w:top="1247" w:right="1134" w:bottom="1247" w:left="1134" w:header="624" w:footer="624" w:gutter="0"/>';
-const dxN = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
-const dxSig = chs => crc32(new TextEncoder().encode(JSON.stringify(chs.map(c => (c || []).map(v => [v.n, dxN(v.t), dxN(v.h), (v.fn || []).map(dxN)]))))).toString(16);
-
-/* --- Zip có nén (deflate-raw); trình duyệt không hỗ trợ nén thì tự lưu không nén --- */
-async function dxRawDeflate(bytes){
-  if (typeof CompressionStream === 'undefined') return null;
-  try { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); }
-  catch(e){ return null; }
-}
-async function dxRawInflate(bytes){
-  if (typeof DecompressionStream === 'undefined') throw new Error('Trình duyệt chưa hỗ trợ giải nén tệp Word. Hãy dùng tệp JSON đi kèm.');
-  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
-}
-async function zipPack(files){                                        // files: [{name, data:Uint8Array}] → Uint8Array
-  const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
-  for (const f of files){
-    const nm = enc.encode(f.name), crc = crc32(f.data), raw = f.data.length;
-    let data = f.data, method = 0;
-    const z = raw > 256 ? await dxRawDeflate(f.data) : null;
-    if (z && z.length < raw){ data = z; method = 8; }
-    const sz = data.length;
-    const lh = new DataView(new ArrayBuffer(30));
-    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
-    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, raw, true);
-    lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
-    loc.push(new Uint8Array(lh.buffer), nm, data);
-    const ch = new DataView(new ArrayBuffer(46));
-    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, method, true);
-    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, raw, true);
-    ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
-    cen.push(new Uint8Array(ch.buffer), nm);
-    off += 30 + nm.length + sz;
-  }
-  const cenSize = cen.reduce((a, u) => a + u.length, 0);
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
-  end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
-  const all = [...loc, ...cen, new Uint8Array(end.buffer)], out = new Uint8Array(all.reduce((a, u) => a + u.length, 0));
-  let p = 0; all.forEach(u => { out.set(u, p); p += u.length; });
-  return out;
-}
-function unzipIndex(buf){                                             // đọc danh mục zip → { tên: {method, data} }
-  const u = new Uint8Array(buf), dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
-  let e = u.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
-  if (e < 0) throw new Error('Tệp này không phải file Word (.docx) hợp lệ.');
-  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
-  const out = {}, dec = new TextDecoder();
-  for (let i = 0; i < n; i++){
-    if (p + 46 > u.length || dv.getUint32(p, true) !== 0x02014b50) break;
-    const method = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
-    const name = dec.decode(u.subarray(p + 46, p + 46 + nl));
-    p += 46 + nl + xl + cl;
-    const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
-    out[name] = { method, data:u.subarray(ds, ds + csz) };
-  }
-  return out;
-}
-async function unzipText(ent){
-  if (!ent) return null;
-  const b = ent.method === 0 ? ent.data : ent.method === 8 ? await dxRawInflate(ent.data) : null;
-  if (!b) throw new Error('Tệp Word dùng kiểu nén không hỗ trợ.');
-  return new TextDecoder('utf-8').decode(b);
-}
-
-/* --- Dựng nội dung Word --- */
-const dxRun = (t, o) => {
-  o = o || {};
-  const rp = (o.cs ? `<w:rStyle w:val="${o.cs}"/>` : '') + (o.b ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') + (o.color ? `<w:color w:val="${o.color}"/>` : '') + (o.sz ? `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>` : '');
-  return `<w:r>${rp ? `<w:rPr>${rp}</w:rPr>` : ''}<w:t xml:space="preserve">${wx(t)}</w:t></w:r>`;
-};
-const DX_BR = '<w:r><w:br/></w:r>';
-const dxLines = (txt, o) => String(txt).split('\n').map((l, i) => (i ? DX_BR : '') + dxRun(l, o)).join('');
-const dxP = (style, inner, ppr) => `<w:p><w:pPr><w:pStyle w:val="${style}"/>${ppr || ''}</w:pPr>${inner}</w:p>`;
-function dxTextRuns(s){                                               // văn bản câu → các run (chú thích [n] nâng lên, ghi chú [ … ] nghiêng)
-  return pdfRuns(s).map(r => r.k === 'fn' ? dxRun('[' + r.s + ']', { cs:'KTFn' }) : r.k === 'note' ? dxRun(r.s, { cs:'KTNote' }) : dxRun(r.s)).join('');
-}
-function dxHeading(h){
-  const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
-  const isRef = l => /^\([^()]*\)$/.test(l), multi = ls.filter(l => !isRef(l)).length > 1; let k = 0, out = '';
-  ls.forEach((l, i) => {
-    if (i) out += DX_BR;
-    if (isRef(l)){ out += dxRun(l, { i:true, sz:18, color:DX_GREY }); return; }
-    const big = !multi || k === 0; k++;
-    const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    if (m && m[1]) out += dxRun(m[1], { b:true, sz:big ? 24 : 21 }) + dxRun(' ' + m[2], { i:true, sz:18, color:DX_GREY });
-    else out += dxRun(l, { b:true, sz:big ? 24 : 21 });
-  });
-  return dxP('KTHead', out);
-}
-function dxBody(book){
-  let cover = '', main = '';
-  cover += dxP('KTCover', dxRun('KINH THÁNH'));
-  cover += dxP('KTTitle', dxLines(book.name));
-  if (book.sub) cover += dxP('KTSub', dxLines(book.sub));
-  const nch = book.chapters.filter(c => c && c.length).length, nv = book.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
-  cover += dxP('KTInfo', dxRun(`${nch} chương · ${nv} câu · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`));
-  cover += dxP('KTInfo', dxRun('Tệp này có kèm dữ liệu khôi phục. Khi cần: Aa → Quản lý dữ liệu → "Khôi phục từ PDF/Word/JSON" rồi chọn tệp .docx này. Nếu sửa chữ trong Word, chỉ nên sửa nội dung, đừng đổi kiểu đoạn hoặc số câu.'),
-    `<w:sectPr>${DX_PAGE}</w:sectPr>`);                               // kết thúc phần bìa (không đầu/chân trang)
-  book.chapters.forEach((vs, ci) => {
-    if (!vs || !vs.length) return;
-    main += dxP('KTChap', dxRun(book.name.toUpperCase(), { b:true, sz:22, color:DX_BROWN }) + DX_BR + dxRun(String(ci + 1), { b:true, sz:44, color:DX_BROWN }));
-    let prose = null, afterPoem = false;                              // prose = các run của đoạn văn đang gom
-    const flush = () => { if (prose){ main += dxP('KTBody', prose, afterPoem ? '<w:spacing w:before="120"/>' : ''); prose = null; afterPoem = false; } };
-    vs.forEach(v => {
-      const poem = Array.isArray(v.q) && v.q.length;
-      if (v.h){ flush(); main += dxHeading(v.h); }
-      if (poem){
-        flush();
-        String(v.t).split('\n').forEach((ln, k) => {
-          main += dxP(+v.q[k] === 2 ? 'KTPoem2' : 'KTPoem1', (k === 0 ? dxRun(String(v.n), { cs:'KTVerse' }) : '') + dxTextRuns(ln));
-        });
-        afterPoem = true;
-      } else {
-        if (prose === null) prose = '';
-        else if (v.p){ flush(); prose = ''; }
-        else prose += dxRun(' ');
-        prose += dxRun(String(v.n), { cs:'KTVerse' }) + dxTextRuns(String(v.t).replace(/\s*\n\s*/g, ' '));
-      }
-    });
-    flush();
-    vs.flatMap(v => v.fn || []).forEach((f, i) => {
-      main += dxP('KTFoot', dxLines(f), i === 0 ? '<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="B9AE9A"/></w:pBdr><w:spacing w:before="240"/>' : '');
-    });
-  });
-  return { cover, main };
-}
-const DX_STYLES = (() => {
-  const ps = (id, name, o) => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr>${o.ppr || ''}</w:pPr>${o.rpr ? `<w:rPr>${o.rpr}</w:rPr>` : ''}</w:style>`;
-  const cs = (id, name, rpr) => `<w:style w:type="character" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="DefaultParagraphFont"/><w:qFormat/><w:rPr>${rpr}</w:rPr></w:style>`;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${DX_W}">`
-    + `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="vi-VN" w:eastAsia="vi-VN" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>`
-    + `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>`
-    + `<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/></w:style>`
-    + ps('KTBody', 'KT Body', { ppr:'<w:widowControl/><w:spacing w:after="100" w:line="340" w:lineRule="auto"/><w:jc w:val="both"/>' })
-    + ps('KTPoem1', 'KT Poem 1', { ppr:'<w:widowControl/><w:spacing w:after="20" w:line="340" w:lineRule="auto"/><w:ind w:left="240" w:hanging="240"/>' })
-    + ps('KTPoem2', 'KT Poem 2', { ppr:'<w:widowControl/><w:spacing w:after="20" w:line="340" w:lineRule="auto"/><w:ind w:left="560" w:hanging="240"/>' })
-    + ps('KTChap', 'KT Chapter', { ppr:'<w:keepNext/><w:keepLines/><w:spacing w:before="400" w:after="160" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/>' })
-    + ps('KTHead', 'KT Heading', { ppr:'<w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="100" w:line="260" w:lineRule="auto"/><w:jc w:val="center"/>' })
-    + ps('KTFoot', 'KT Footnote', { ppr:'<w:spacing w:after="30" w:line="260" w:lineRule="auto"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="17"/><w:szCs w:val="17"/>` })
-    + ps('KTCover', 'KT Cover', { ppr:'<w:spacing w:before="2800" w:after="160"/><w:jc w:val="center"/>', rpr:`<w:b/><w:color w:val="${DX_BROWN}"/><w:sz w:val="20"/><w:szCs w:val="20"/>` })
-    + ps('KTTitle', 'KT Title', { ppr:'<w:spacing w:before="0" w:after="200" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/>', rpr:'<w:b/><w:sz w:val="56"/><w:szCs w:val="56"/>' })
-    + ps('KTSub', 'KT Subtitle', { ppr:'<w:spacing w:after="200"/><w:jc w:val="center"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="24"/><w:szCs w:val="24"/>` })
-    + ps('KTInfo', 'KT Info', { ppr:'<w:spacing w:before="160" w:after="60" w:line="260" w:lineRule="auto"/><w:jc w:val="center"/>', rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + ps('KTHeader', 'KT Header', { ppr:`<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="3" w:color="C9BFA9"/></w:pBdr><w:jc w:val="center"/>`, rpr:`<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + ps('KTFooter', 'KT Footer', { ppr:'<w:jc w:val="center"/>', rpr:`<w:color w:val="${DX_GREY}"/><w:sz w:val="18"/><w:szCs w:val="18"/>` })
-    + cs('KTVerse', 'KT Verse Number', `<w:b/><w:color w:val="${DX_BROWN}"/><w:vertAlign w:val="superscript"/>`)
-    + cs('KTFn', 'KT Footnote Mark', `<w:i/><w:color w:val="${DX_BROWN}"/><w:vertAlign w:val="superscript"/>`)
-    + cs('KTNote', 'KT Inline Note', `<w:i/><w:color w:val="${DX_GREY}"/><w:sz w:val="19"/><w:szCs w:val="19"/>`)
-    + `</w:styles>`;
-})();
-async function buildBookDocx(book, payload, fname){
-  const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', enc = new TextEncoder();
-  const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-  const b = dxBody(book);
-  const docXml = `${XML}<w:document ${DX_NS}><w:body>${b.cover}${b.main}<w:sectPr><w:headerReference w:type="default" r:id="rId3"/><w:footerReference w:type="default" r:id="rId4"/>${DX_PAGE}<w:pgNumType w:start="1"/></w:sectPr></w:body></w:document>`;
-  const sig = dxSig(dxParse(docXml).chapters);                        // dấu vân tay nội dung văn bản → phát hiện file Word đã bị sửa
-  const stamp = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-  const files = [
-    ['[Content_Types].xml', `${XML}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/customXml/itemProps1.xml" ContentType="application/vnd.openxmlformats-officedocument.customXmlProperties+xml"/></Types>`],
-    ['_rels/.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`],
-    ['docProps/core.xml', `${XML}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${wx(book.name)} - Kinh Thánh</dc:title><dc:creator>Kinh Thánh</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${stamp}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${stamp}</dcterms:modified></cp:coreProperties>`],
-    ['word/document.xml', docXml],
-    ['word/_rels/document.xml.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/styles" Target="styles.xml"/><Relationship Id="rId2" Type="${REL}/settings" Target="settings.xml"/><Relationship Id="rId3" Type="${REL}/header" Target="header1.xml"/><Relationship Id="rId4" Type="${REL}/footer" Target="footer1.xml"/><Relationship Id="rId5" Type="${REL}/customXml" Target="../customXml/item1.xml"/></Relationships>`],
-    ['word/styles.xml', DX_STYLES],
-    ['word/settings.xml', `${XML}<w:settings xmlns:w="${DX_W}"><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`],
-    ['word/header1.xml', `${XML}<w:hdr ${DX_NS}>${dxP('KTHeader', dxRun(book.name))}</w:hdr>`],
-    ['word/footer1.xml', `${XML}<w:ftr ${DX_NS}>${dxP('KTFooter', '<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>')}</w:ftr>`],
-    ['customXml/item1.xml', `${XML}<kinhthanh xmlns="${DX_URN}" app="kinhthanh" version="1" sig="${sig}"><data>${wx(JSON.stringify(payload))}</data></kinhthanh>`],
-    ['customXml/_rels/item1.xml.rels', `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/customXmlProps" Target="itemProps1.xml"/></Relationships>`],
-    ['customXml/itemProps1.xml', `${XML}<ds:datastoreItem ds:itemID="{4B1E5A7C-0A3D-4C55-9E1F-6B7D2C8A9F01}" xmlns:ds="http://schemas.openxmlformats.org/officeDocument/2006/customXml"><ds:schemaRefs><ds:schemaRef ds:uri="${DX_URN}"/></ds:schemaRefs></ds:datastoreItem>`]
-  ].map(([name, s]) => ({ name, data:enc.encode(s) }));
-  return new File([await zipPack(files)], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-/* --- Đọc ngược file Word → dữ liệu sách --- */
-function dxParse(xml){
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length) throw new Error('Nội dung file Word bị hỏng.');
-  const W = DX_W, body = doc.getElementsByTagNameNS(W, 'body')[0];
-  if (!body) throw new Error('File Word không có nội dung.');
-  const attr = (el, n) => el ? el.getAttributeNS(W, n) : '';
-  const runsOf = p => [...p.getElementsByTagNameNS(W, 'r')].map(r => {
-    const rp = [...r.children].find(c => c.localName === 'rPr');
-    const sub = n => rp ? [...rp.children].find(c => c.localName === n) : null;
-    let t = ''; for (const c of r.children){ if (c.localName === 't') t += c.textContent; else if (c.localName === 'br' || c.localName === 'cr') t += '\n'; else if (c.localName === 'tab') t += ' '; }
-    return { t, cs:attr(sub('rStyle'), 'val'), sup:attr(sub('vertAlign'), 'val') === 'superscript' };
-  });
-  const isVerse = r => r.cs === 'KTVerse' || (r.sup && /^\s*\d{1,3}\s*$/.test(r.t));
-  let name = '', chs = [], cur = null, pendH = null, lastV = null, prevProse = false, curNo = 0; const fnBy = {};
-  for (const p of [...body.children].filter(c => c.localName === 'p')){
-    const ps = [...p.children].find(c => c.localName === 'pPr'), st = attr(ps && [...ps.children].find(c => c.localName === 'pStyle'), 'val');
-    const runs = runsOf(p), text = runs.map(r => r.t).join('');
-    if (st === 'KTTitle'){ if (!name) name = dxN(text); continue; }
-    if (st === 'KTChap'){
-      const ls = text.split('\n').map(s => s.trim()).filter(Boolean), num = parseInt(ls[ls.length - 1], 10);
-      if (!(num >= 1)) continue;
-      curNo = num; cur = chs[num - 1] = chs[num - 1] || []; pendH = null; lastV = null; prevProse = false; continue;
-    }
-    if (!cur) continue;
-    if (st === 'KTHead'){ pendH = text.split('\n').map(dxN).filter(Boolean).join('\n'); prevProse = false; continue; }
-    if (st === 'KTFoot'){ (fnBy[curNo] = fnBy[curNo] || []).push(text.split('\n').map(dxN).filter(Boolean).join('\n')); continue; }
-    const poemLv = st === 'KTPoem1' ? 1 : st === 'KTPoem2' ? 2 : 0;
-    if (!poemLv && st !== 'KTBody') continue;
-    let started = false;
-    runs.forEach(r => {
-      if (isVerse(r)){
-        const v = { n:parseInt(r.t, 10), t:'' };
-        if (pendH){ v.h = pendH; pendH = null; }
-        if (poemLv) v.q = [poemLv];
-        else if (!started && prevProse && !v.h) v.p = true;
-        cur.push(v); lastV = v; started = true;
-      } else if (lastV){
-        if (!started && poemLv){ lastV.t += '\n'; (lastV.q = lastV.q || []).push(poemLv); started = true; }   // dòng thơ nối tiếp của cùng một câu
-        lastV.t += r.t;
-      }
-    });
-    if (!started && lastV && poemLv === 0 && text.trim()) lastV.t += ' ';
-    prevProse = !poemLv;
-  }
-  chs = Array.from(chs, c => c || []);
-  chs.forEach((vs, i) => {
-    vs.forEach(v => { v.t = String(v.t).split('\n').map(dxN).join('\n').trim(); });
-    const fns = (fnBy[i + 1] || []).slice(), used = fns.map(() => false);
-    vs.forEach(v => {
-      (v.t.match(/\[\d{1,3}\]/g) || []).forEach(mk => {
-        const k = fns.findIndex((f, j) => !used[j] && f.startsWith(mk));
-        if (k >= 0){ used[k] = true; (v.fn = v.fn || []).push(fns[k]); }
-      });
-    });
-    const left = fns.filter((f, j) => !used[j]);
-    if (left.length && vs.length){ const lv = vs[vs.length - 1]; lv.fn = (lv.fn || []).concat(left); }
-  });
-  return { name, chapters:chs };
-}
-async function docxToJson(buf){
-  const z = unzipIndex(buf);
-  const docXml = await unzipText(z['word/document.xml']);
-  if (!docXml) throw new Error('Tệp Word không hợp lệ (thiếu nội dung).');
-  let emb = null;
-  for (const n of Object.keys(z)){
-    if (!/^customXml\/item\d*\.xml$/.test(n)) continue;
-    const x = await unzipText(z[n]);
-    if (!x || x.indexOf(DX_URN) < 0) continue;
-    const d = new DOMParser().parseFromString(x, 'application/xml'), root = d.documentElement, dn = d.getElementsByTagName('data')[0];
-    if (dn && dn.textContent.trim()){ emb = { sig:root.getAttribute('sig') || '', json:dn.textContent }; break; }
-  }
-  let parsed = null; try { parsed = dxParse(docXml); } catch(e){}
-  const hasText = !!(parsed && parsed.name && parsed.chapters.some(c => c && c.length));
-  if (emb && (!hasText || dxSig(parsed.chapters) === emb.sig)) return { text:emb.json, note:'dữ liệu gốc nhúng trong file Word' };
-  if (!hasText) throw new Error('File Word này không phải do ứng dụng xuất ra nên không đọc được cấu trúc sách. Hãy dùng tệp JSON hoặc PDF.');
-  let abbr = '', sub = '';
-  if (emb){ try { const b0 = JSON.parse(emb.json).bible.books[0]; if (b0 && b0.name === parsed.name){ abbr = b0.abbr || ''; sub = b0.sub || ''; } } catch(e){} }
-  const payload = { app:'kinhthanh', version:1, kind:'book', updatedAt:new Date().toISOString(), bible:{ books:[{ name:parsed.name, abbr, sub, chapters:parsed.chapters }] } };
-  return { text:JSON.stringify(payload), note:'file Word đã được chỉnh sửa nên khôi phục theo nội dung trong văn bản' };
 }
 
 /* --- Giao diện xuất --- */
@@ -4432,16 +3890,15 @@ async function saveFiles(files){
     if (i < files.length - 1) await new Promise(r => setTimeout(r, 700));
   }
 }
-function exportResult(name, pdf, json, pages, docx){
+function exportResult(name, pdf, json, pages){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet"><h3>Đã xuất xong: ${esc(name)}</h3>
-    <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)})${docx ? `, Word (${mb(docx)})` : ''} và JSON (${mb(json)}). Hãy cất ${docx ? 'cả ba' : 'cả hai'} nơi an toàn.</p>
-    <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/Word/JSON" rồi chọn một trong các tệp.</p>
+    <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)}) và JSON (${mb(json)}). Hãy cất cả hai nơi an toàn.</p>
+    <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn một trong hai tệp.</p>
     <div class="btns" style="flex-direction:column">
-      <button class="btn primary" data-k="both">⬇️ Tải cả ${docx ? 'ba' : 'hai'} tệp</button>
+      <button class="btn primary" data-k="both">⬇️ Tải cả hai tệp</button>
       <button class="btn" data-k="pdf">📕 Chỉ tải PDF</button>
-      ${docx ? '<button class="btn" data-k="docx">📘 Chỉ tải Word (.docx)</button>' : ''}
       <button class="btn" data-k="json">🧾 Chỉ tải JSON</button>
       <button class="btn" data-k="x">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
@@ -4449,7 +3906,7 @@ function exportResult(name, pdf, json, pages, docx){
     if (!b){ if (e.target === o) o.remove(); return; }
     const k = b.dataset.k;
     if (k === 'x') return o.remove();
-    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : k === 'docx' ? [docx] : [pdf, docx, json].filter(Boolean));
+    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
   });
   document.body.appendChild(o);
 }
@@ -4464,7 +3921,7 @@ async function exportBook(name){
   if (empty && !confirm(`Sách còn ${empty} chương trống (sẽ bị bỏ qua trong PDF). Vẫn xuất?`)) return;
   exBusy = true;
   const pr = document.createElement('div'); pr.className = 'overlay'; pr.style.zIndex = 90;
-  pr.innerHTML = '<div class="sheet"><h3>Đang tạo PDF và Word…</h3><p id="exProg" style="margin:0">Đang dàn trang…</p></div>';
+  pr.innerHTML = '<div class="sheet"><h3>Đang tạo PDF…</h3><p id="exProg" style="margin:0">Đang dàn trang…</p></div>';
   document.body.appendChild(pr);
   const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
   try {
@@ -4482,10 +3939,7 @@ async function exportBook(name){
       .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
     const pdf = new File(parts, base + '.pdf', { type:'application/pdf' });
     const json = new File([jsonStr], base + '.json', { type:'application/json' });
-    say('Đang tạo file Word…');
-    let docx = null;
-    try { docx = await buildBookDocx(book, payload, base + '.docx'); } catch(err){ console.error(err); toast('Không tạo được file Word: ' + (err.message || err)); }
-    pr.remove(); exportResult(name, pdf, json, lay.pages.length, docx);
+    pr.remove(); exportResult(name, pdf, json, lay.pages.length);
   } catch(e){ pr.remove(); console.error(e); toast('Lỗi xuất sách: ' + (e.message || e)); }
   finally { exBusy = false; }
 }
@@ -4498,10 +3952,10 @@ $('#exFile').onchange = async e => {
   try {
     let first = null; const names = [];
     for (const f of files){
-      const { text, note } = await fileToText(f);
+      const { text } = await fileToText(f);
       const isJson = /^[\s﻿]*[\[{]/.test(text);
       const res = await importData(isJson ? 'backup' : 'bible', text, 'merge');
-      first = first || res.first; names.push(f.name + (note ? ' (' + note + ')' : ''));
+      first = first || res.first; names.push(f.name);
     }
     S.book = first; S.chapter = 1; saveS();
     await reloadAll(); markDirty();
@@ -4550,31 +4004,19 @@ function makeIcon(size){
   return c.toDataURL('image/png');
 }
 function setupPWA(){
-  /* Khai báo cài đặt: ưu tiên tệp thật manifest.webmanifest nằm cạnh trang (Android/Chrome nhận “Cài đặt ứng dụng” ổn định hơn).
-     Chưa có tệp đó (hoặc chưa tải lên) thì tự tạo bằng mã như trước, app vẫn cài được. */
-  const addDynamicManifest = () => {
-    try { const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = makeIcon(180); document.head.appendChild(link); } catch(e){}
-    try {
-      const manifest = {
-        name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
-        start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
-        background_color:'#f7f3ea', theme_color:'#fffdf8',
-        icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
-      };
-      const m = document.createElement('link'); m.rel = 'manifest';
-      m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
-      document.head.appendChild(m);
-    } catch(e){}
-  };
-  const addStaticManifest = () => {
-    const m = document.createElement('link'); m.rel = 'manifest'; m.href = 'manifest.webmanifest'; document.head.appendChild(m);
-    const i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.href = 'icon-192.png'; document.head.appendChild(i);
-    const t = document.createElement('link'); t.rel = 'apple-touch-icon'; t.href = 'apple-touch-icon.png'; document.head.appendChild(t);
-  };
-  if (/^https?:$/.test(location.protocol)){
-    fetch('manifest.webmanifest', { method:'HEAD', cache:'no-store' })
-      .then(r => r.ok ? addStaticManifest() : addDynamicManifest()).catch(addDynamicManifest);
-  } else addDynamicManifest();
+  const icon180 = makeIcon(180);
+  const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = icon180; document.head.appendChild(link);
+  try {
+    const manifest = {
+      name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
+      start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
+      background_color:'#f7f3ea', theme_color:'#fffdf8',
+      icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
+    };
+    const m = document.createElement('link'); m.rel = 'manifest';
+    m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' }));
+    document.head.appendChild(m);
+  } catch(e){}
   // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
   const persist = async () => {
     try {
@@ -4582,21 +4024,18 @@ function setupPWA(){
       if (!(await navigator.storage.persisted())) await navigator.storage.persist();
     } catch(e){}
   };
-  /* Chỉ xin giữ dữ liệu vĩnh viễn SAU khi app đã mở xong bộ nhớ: gọi cùng lúc lúc khởi động làm iPhone mở bộ nhớ chậm hơn */
-  { let pw = 0; const pt = setInterval(() => { pw += 500; if (window.ktReady || pw > 20000){ clearInterval(pt); persist(); } }, 500); }
+  persist();
   if ('serviceWorker' in navigator){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
       if (!had || reloaded) return; reloaded = true;
-      const go = () => { if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật'); };
-      /* Không tải lại trang khi app đang mở bộ nhớ lúc khởi động (dễ gây lỗi “database file on disk” trên iPhone): chờ app mở xong rồi mới làm mới */
-      let waited = 0; const t = setInterval(() => { waited += 300; if (window.ktReady || waited > 15000){ clearInterval(t); setTimeout(go, 1500); } }, 300);
+      if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật');
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
       navigator.serviceWorker.ready.then(persist);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
-    }).catch(e => { window.ktSwErr = String((e && e.message) || e); });
+    }).catch(() => {});
   }
 }
 function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
@@ -4992,7 +4431,7 @@ async function dtImport(file){
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
   const mm = new Map(BM.map(x => [`${x.book}|${x.ch}|${x.n}`, x])); M.forEach(x => { const k = `${x.book}|${x.ch}|${x.n}`; if (!mm.has(k)) mm.set(k, x); });
   BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
-  try { KV.set('kt.reads', JSON.stringify(RD)); } catch(e){}
+  try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
   saveLS(); saveBM(); markBookmarks();
   toast('✔ Đã khôi phục dữ liệu');
 }
@@ -5003,7 +4442,7 @@ async function dtReset(){
   const b = await choose('Xác nhận lần cuối', 'Thao tác này không thể hoàn tác. Bạn nên sao lưu trước khi xóa.\n\nXóa toàn bộ lịch sử đọc ngay bây giờ?', [{ t:'Xóa lịch sử đọc', cls:'danger' }, { t:'Sao lưu trước' }, { t:'Hủy, giữ lại' }]);
   if (b === 1) return dtExport();
   if (b !== 0) return;
-  RD = {}; try { KV.remove('kt.reads'); } catch(e){}
+  RD = {}; try { localStorage.removeItem('kt.reads'); } catch(e){}
   toast('Đã làm mới hành trình đọc');
 }
 $('#dtExport').onclick = dtExport;
@@ -5035,7 +4474,7 @@ function showOnboard(){
   if ($('#obOverlay')) return;
   const o = document.createElement('div'); o.className = 'overlay'; o.id = 'obOverlay'; o.style.zIndex = 75;
   let i = 0;
-  const done = () => { try { KV.set('kt.onboard', '1'); } catch(e){} o.remove(); };
+  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); };
   const draw = () => {
     const s = OB[i], last = i === OB.length - 1;
     const sizes = s.size ? `<div class="obsizes">${[[20, 'Vừa'], [24, 'Lớn'], [28, 'Rất lớn']].map(([n, l]) => `<button class="btn${S.fs === n ? ' primary' : ''}" data-fs="${n}" style="font-size:${n - 4}px">${l}</button>`).join('')}</div><div class="obprev">Hôm nay bạn đã đọc Lời CHÚA chưa?</div>` : '';
@@ -5128,12 +4567,12 @@ const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const planOK = q => !!q && isDate(q.start) && (PLANS.some(x => x.id === q.id) || (q.id === 'custom' && Number.isInteger(q.days) && q.days >= 1 && q.days <= 5000));
 const planNorm = q => q.id === 'custom' ? { id:'custom', start:q.start, days:q.days } : { id:q.id, start:q.start };
 const planDef = q => q.id === 'custom' ? { id:'custom', name:'Tự thiết kế', days:q.days } : PLANS.find(x => x.id === q.id);   // thông tin kế hoạch đang dùng
-let PCUST = null; try { PCUST = JSON.parse(KV.get('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
-let PLAN = null; try { PLAN = JSON.parse(KV.get('kt.plan') || 'null'); } catch(e){}
+let PCUST = null; try { PCUST = JSON.parse(localStorage.getItem('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
+let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
 if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };   // kế hoạch 90 ngày cũ → chuyển thành kế hoạch tự thiết kế 90 ngày
 if (!planOK(PLAN)) PLAN = null;
 const savePlan = () => {
-  try { PLAN ? KV.set('kt.plan', JSON.stringify(PLAN)) : KV.remove('kt.plan'); } catch(e){}
+  try { PLAN ? localStorage.setItem('kt.plan', JSON.stringify(PLAN)) : localStorage.removeItem('kt.plan'); } catch(e){}
   planSum();
   if (PLAN && !RESUME){ const f = plSeq()[0]; if (f) setResume(f.book, f.ch, 0); }      // bắt đầu kế hoạch: chỗ đọc tiếp nối = đầu Kinh Thánh, từ đó tự nối tiếp theo từng chương
 };
@@ -5173,13 +4612,13 @@ async function ctCount(hit){
   }
   return null;
 }
-const ctCache = () => { try { return +KV.get('kt.visitCount') || 0; } catch(e){ return 0; } };
+const ctCache = () => { try { return +localStorage.getItem('kt.visitCount') || 0; } catch(e){ return 0; } };
 async function ctJoin(){                                             // tính 1 lượt truy cập cho mỗi phiên mở app
   let done = false; try { done = sessionStorage.getItem('kt.visited') === '1'; } catch(e){}
   if (done) return;
   try { sessionStorage.setItem('kt.visited', '1'); } catch(e){}
   const v = await ctCount(true);
-  if (v != null){ try { KV.set('kt.visitCount', String(v)); } catch(e){} }
+  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} }
 }
 async function ctRender(box){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -5196,7 +4635,7 @@ async function ctRender(box){
   };
   const cached = ctCache(); draw(cached);
   const v = await ctCount(false);
-  if (v != null){ try { KV.set('kt.visitCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
+  if (v != null){ try { localStorage.setItem('kt.visitCount', String(v)); } catch(e){} if (box.isConnected) draw(v, cached); }
 }
 function openPlan(opts){
   opts = opts || {};
@@ -5255,7 +4694,7 @@ function openPlan(opts){
   const startCustom = () => {
     if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
     const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${BIBLE_CHAPTERS}`); }
-    PCUST = { mode:cust.mode, val:cust.val }; try { KV.set('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
+    PCUST = { mode:cust.mode, val:cust.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
     PLAN = { id:'custom', start:dayKey(), days:d }; savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
     ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
   };
@@ -5281,185 +4720,8 @@ function openPlan(opts){
 }
 planSum();
 
-/* ============ KHỞI ĐỘNG NHANH: hiện chữ ngay, nạp IndexedDB ngầm ============
-   Bản chụp (kt.snap, nằm trong localStorage) giữ đúng chương mà lần mở sau sẽ hiện. Mở app → vẽ chương đó NGAY (đồng bộ),
-   trong lúc IndexedDB mở ngầm; xong thì đổi sang dữ liệu thật mà không vẽ lại nếu nội dung giống hệt. */
-const SNAP_KEY = 'kt.snap';
-let bootRes; const bootDone = new Promise(r => { bootRes = r; });
-const ktBootEnd = () => { document.body.classList.remove('booting'); bootRes(); };
-
-function startTarget(){                                // chương mà app sẽ mở lúc khởi động (cùng thứ tự ưu tiên với restoreResume)
-  if (RESUME && RESUME.book && RESUME.ch >= 1) return { book:RESUME.book, ch:RESUME.ch, n:RESUME.n || 0, kind:'resume' };
-  const b = BM[0]; if (b && b.book && b.ch >= 1) return { book:b.book, ch:b.ch, n:b.n, kind:'mark' };
-  return S.book ? { book:S.book, ch:S.chapter, n:0, kind:'last' } : null;
-}
-let snapT = 0, snapLast = '';
-function snapSave(){                                   // ghi bản chụp (chạy ngầm, gộp nhiều lần gọi)
-  clearTimeout(snapT);
-  snapT = setTimeout(async () => {
-    try {
-      if (!window.ktReady || !bibleMeta.length || document.body.classList.contains('booting')) return;
-      const t = startTarget(); if (!t) return;
-      const book = curBook && curBook.name === t.book && !curBook.snap ? curBook : await dbGet('books', t.book);
-      const v = book && book.chapters[t.ch - 1]; if (!v || !v.length) return;
-      const s = JSON.stringify({ b:t.book, c:t.ch, n:book.chapters.length, v, m:bibleMeta });
-      if (s !== snapLast){ localStorage.setItem(SNAP_KEY, s); snapLast = s; }
-    } catch(e){}
-  }, 600);
-}
-KV.watch(k => { if (k === 'kt.resume' || k === 'kt.marks' || k === 'kt.settings') snapSave(); });
-addEventListener('pagehide', () => { try { snapSave(); } catch(e){} });
-
-function snapPaint(){                                  // đồng bộ: trả true nếu đã vẽ được chữ từ bản chụp
-  let s = null; try { s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); } catch(e){}
-  if (!s || !Array.isArray(s.m) || !s.m.length || !Array.isArray(s.v) || !s.v.length || !(s.n >= 1) || !(s.c >= 1 && s.c <= s.n)) return false;
-  const t = startTarget(); if (!t || t.book !== s.b || t.ch !== s.c || !s.m.some(m => m.name === s.b)) return false;
-  try {
-    bibleMeta = s.m;
-    const chapters = Array.from({ length:s.n }, () => []); chapters[s.c - 1] = s.v;
-    curBook = { name:s.b, chapters, snap:true };
-    S.book = s.b; S.chapter = s.c;
-    $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
-    $('#selBook').value = s.b;
-    $('#selChap').innerHTML = Array.from({ length:s.n }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
-    document.body.classList.add('booting');
-    renderChapter();
-    snapLast = localStorage.getItem(SNAP_KEY) || '';
-    if (t.kind === 'resume'){
-      rsHold = Date.now() + 2500;
-      if (t.n > 1) setTimeout(() => scrollToVerse(t.n), 80);
-      setTimeout(() => toast(`📌 Nối tiếp: ${t.book} ${S.chapter}${t.n > 1 ? ':' + t.n : ''}`), 400);
-    } else if (t.kind === 'mark') setTimeout(() => scrollToVerse(t.n), 60);
-    return true;
-  } catch(e){
-    curBook = null; bibleMeta = []; document.body.classList.remove('booting');
-    return false;
-  }
-}
-async function snapAdopt(){                            // IndexedDB đã sẵn sàng: thay bản chụp bằng dữ liệu thật
-  await loadBibleMeta(); bs.idx = null; bsFillScope();
-  if (!bibleMeta.length){ ktBootEnd(); await reloadAll(); return restoreResume(); }
-  $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
-  if (curBook && curBook.snap){
-    const name = curBook.name, ch = S.chapter, old = curBook.chapters[ch - 1] || [];
-    const real = await dbGet('books', name);
-    if (!real || !real.chapters[ch - 1]){ ktBootEnd(); await reloadAll(); return restoreResume(); }
-    const same = real.chapters.length === curBook.chapters.length && JSON.stringify(real.chapters[ch - 1]) === JSON.stringify(old);
-    curBook = real;
-    if (!same){
-      $('#selChap').innerHTML = Array.from({ length:real.chapters.length }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
-      renderChapter();
-    } else { try { window.ktFlipDirty && window.ktFlipDirty(); } catch(e){} }
-  }
-  $('#selBook').value = curBook ? curBook.name : '';
-  ktBootEnd();
-  await refreshStats();
-}
-/* Dữ liệu từ kho dự phòng cũ (Cache Storage 'kt-store-v1'): chuyển MỘT LẦN sang IndexedDB rồi xóa kho đó.
-   Từ nay Kinh Thánh không còn nằm trong Cache Storage. */
-async function legacyImport(){
-  try {
-    if (!('caches' in window)) return;
-    const has = await Promise.race([caches.has(LEGACY_CACHE), sleepMs(1500).then(() => false)]);
-    if (!has) return;
-    if (!(await dbAll('bookMeta')).length){
-      const c = await caches.open(LEGACY_CACHE);
-      for (const st of Object.keys(MEM.data)){
-        const r = await c.match('./__kt_store__/' + st); if (!r) continue;
-        const arr = await r.json(); if (Array.isArray(arr) && arr.length) await dbPut(st, arr);
-      }
-    }
-    if (IDB.db) await caches.delete(LEGACY_CACHE);     // chỉ xóa khi dữ liệu đã nằm an toàn trong IndexedDB
-  } catch(e){}
-}
-/* ===== CHẨN ĐOÁN: bảng “Kiểm tra bộ nhớ máy” (để biết chính xác máy nào hỏng ở đâu) ===== */
-async function ktDiag(){
-  const L = [], add = (k, v) => L.push(k + ': ' + v);
-  add('Phiên bản', APP_VERSION);
-  add('Chế độ', (navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? 'app Màn hình chính' : 'trang web trong Safari');
-  add('Mạng', navigator.onLine ? 'có' : 'không');
-  add('IndexedDB', IDB.db ? 'dùng được' : 'KHÔNG dùng được' + (IDB.err ? ' – ' + (IDB.err.name || '') + ' ' + (IDB.err.message || IDB.err) : ''));
-  add('Kho lưu đang dùng', IDB.db ? 'IndexedDB' : 'dự phòng (RAM + Cache Storage)');
-  add('Kinh Thánh trong máy', bibleMeta.length + ' sách' + (DL.got ? ' · lần tải gần nhất ' + (DL.got / 1048576).toFixed(1) + ' MB' : ''));
-  try {
-    if ('serviceWorker' in navigator){
-      const reg = await navigator.serviceWorker.getRegistration();
-      add('Service worker', reg ? (reg.active ? 'đang chạy' : reg.installing ? 'đang cài…' : reg.waiting ? 'đang chờ' : 'có đăng ký') : 'CHƯA đăng ký');
-      add('Service worker điều khiển trang', navigator.serviceWorker.controller ? 'có' : 'chưa');
-    } else add('Service worker', 'trình duyệt không hỗ trợ');
-  } catch(e){ add('Service worker', 'lỗi ' + (e.message || e)); }
-  if (window.ktSwErr) add('Lỗi đăng ký service worker', window.ktSwErr);
-  try {
-    const ks = await Promise.race([caches.keys(), sleepMs(3000).then(() => ['(không phản hồi)'])]);
-    add('Cache Storage', ks.join(', ') || '(trống)');
-    const hit = await Promise.race([caches.match(location.origin + location.pathname), sleepMs(3000).then(() => null)]);
-    add('Trang đã lưu để mở offline', hit ? 'có' : 'CHƯA');
-  } catch(e){ add('Cache Storage', 'lỗi ' + (e.message || e)); }
-  try {
-    if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); add('Dung lượng', ((e.usage || 0) / 1048576).toFixed(1) + ' / ' + ((e.quota || 0) / 1048576).toFixed(0) + ' MB'); }
-    if (navigator.storage && navigator.storage.persisted) add('Được giữ vĩnh viễn', (await navigator.storage.persisted()) ? 'có' : 'chưa');
-  } catch(e){}
-  add('Đồng bộ', syncState + (syncMsg ? ' – ' + syncMsg : ''));
-  return L.join('\n');
-}
-function ktDiagShow(){
-  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
-  o.innerHTML = `<div class="sheet"><h3>Kiểm tra bộ nhớ máy</h3><pre id="diagTxt" style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;margin:0 0 12px;user-select:text">Đang kiểm tra…</pre><div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
-  o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-close]')) o.remove(); });
-  document.body.appendChild(o);
-  ktDiag().then(s => { const p = o.querySelector('#diagTxt'); if (p) p.textContent = s; });
-}
-document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#diagOpen, #diagBtn')) ktDiagShow(); });
-/* ===== SẴN SÀNG OFFLINE? = dữ liệu đã nằm trong IndexedDB + service worker đang chạy + trang đã được lưu ===== */
-async function ktOffline(){
-  const r = { data:false, sw:false, shell:false, ok:false };
-  try {
-    r.data = bibleMeta.length > 0 && (!!IDB.db || !!(await caches.match('./__kt_fb__/books')));   // IndexedDB, hoặc (máy có kho hỏng) kho dự phòng
-    if ('serviceWorker' in navigator){
-      const reg = await navigator.serviceWorker.getRegistration();
-      r.sw = !!(reg && reg.active);
-      r.shell = !!((await caches.match(location.origin + location.pathname)) || (await caches.match(new URL('./index.html', location.href).href)));
-      if (r.sw && !r.shell){ try { reg.active.postMessage('cache-shell'); } catch(e){} }   // nhờ service worker lưu lại trang
-    }
-  } catch(e){}
-  r.ok = r.data && r.sw && r.shell;
-  return r;
-}
-async function ktAnnounceOffline(){
-  try {
-    let r = await ktOffline();
-    for (let i = 0; i < 6 && !r.ok; i++){ await sleepMs(1500); r = await ktOffline(); }
-    if (r.ok){ if (!KV.get('kt.offlineOk')){ KV.set('kt.offlineOk', '1'); toast('✔ Đã tải xong – từ nay đọc được cả khi không có mạng'); } return; }
-    KV.remove('kt.offlineOk');
-    if (!r.data) toast('Kinh Thánh chưa lưu được vào máy – hãy mở lại app khi có mạng');
-    else toast('Chưa bật được chế độ không cần mạng cho trang – hãy mở lại app khi có mạng');
-  } catch(e){}
-}
-/* Khôi phục xong từ bản sao IndexedDB → nạp lại các biến trong bộ nhớ và làm mới giao diện (không cần tải lại trang) */
-function ktRehydrate(keys){
-  const has = k => keys.includes(k);
-  const J = (k, d) => { try { const v = JSON.parse(KV.get(k) || 'null'); return v == null ? d : v; } catch(e){ return d; } };
-  if (has('kt.settings')){ Object.assign(S, J('kt.settings', {})); try { applyTheme(); applyFont(); applyFs(); applyView(); } catch(e){} }
-  if (has('kt.marks')){ BM = J('kt.marks', []); if (!Array.isArray(BM)) BM = []; }
-  if (has('kt.resume')){ RESUME = J('kt.resume', null); if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null; }
-  if (has('kt.lessons')){ LS = J('kt.lessons', []); if (!Array.isArray(LS)) LS = []; lsBadge(); }
-  if (has('kt.reads')){ RD = J('kt.reads', {}); if (!RD || typeof RD !== 'object' || Array.isArray(RD)) RD = {}; }
-  if (has('kt.planCustom')) PCUST = J('kt.planCustom', null);
-  if (has('kt.plan')){
-    PLAN = J('kt.plan', null);
-    if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };
-    if (!planOK(PLAN)) PLAN = null;
-    try { planSum(); } catch(e){}
-  }
-  if (has('kt.gh')) Object.assign(GH, J('kt.gh', {}));
-  if (has('kt.sync')) Object.assign(SY, J('kt.sync', {}));
-  if (has('kt.about')){ const a = J('kt.about', null); if (a && typeof a === 'object') ABOUT = { ...ABOUT_DEF, ...a }; if (!Array.isArray(ABOUT.feat)) ABOUT.feat = []; }
-  try { markBookmarks(); } catch(e){}
-}
-
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
-  try { localStorage.removeItem('kt.mem'); } catch(e){}              // cờ cũ của kho dự phòng Cache Storage (đã bỏ)
   applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
   $$('#wakeSeg button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === S.wake));
   setupPWA();
@@ -5471,58 +4733,12 @@ function ktRehydrate(keys){
   } catch(e){}
   try {   // thiết bị mới chưa cấu hình: tự nối với kho mặc định (chỉ đọc) để có dữ liệu ngay
     const dr = guessRepo();
-    if (!GH.repo && dr && !KV.get('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
+    if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-
-  /* ① HIỆN CHỮ NGAY từ bản chụp (đồng bộ, không chờ IndexedDB) */
-  const painted = snapPaint();
-  /* Máy chưa từng tải dữ liệu: hiện NGAY màn hình tải (có tiến độ) và bắt đầu tải luôn, không chờ IndexedDB */
-  const brandNew = !painted && !SY.sha && !S.book;
-  if (brandNew){ try { if (syncOn() && !syncCanWrite()) earlyStart(); renderBibleEmpty(); } catch(e){} }
-  /* Máy đã có dữ liệu nhưng chưa có bản chụp: nếu kho mở chậm hơn 1,2 giây thì báo rõ lý do thay vì để màn hình trống */
-  const hint = (painted || brandNew) ? 0 : setInterval(() => {
-    if (window.ktReady || curBook){ clearInterval(hint); return; }
-    $('#bibleText').innerHTML = `<div class="empty"><b>Đang mở sách…</b>${IDB.db ? '' : `<small style="display:block;margin-top:8px;color:var(--muted)">Bộ nhớ của máy phản hồi chậm${IDB.err ? ' (' + esc(IDB.err.message || IDB.err) + ')' : ''}. Vui lòng chờ…</small>`}<br><button class="btn" id="diagOpen" style="margin-top:14px;font-size:13px">🔍 Kiểm tra bộ nhớ máy</button></div>`;
-  }, 1200);
-
-  try {
-    /* ② NGẦM: IndexedDB đã được mở từ lúc tải trang; ở đây chỉ chờ kết quả */
-    const d = await idbReady;
-    if (!d) setTimeout(() => toast('Kho dữ liệu của máy mở chậm – app vẫn dùng được và sẽ tự lưu vào máy ngay khi kho sẵn sàng'), 1500);
-    const restored = await KV.reconcile();                             // ③ chữa chéo localStorage ⇄ IndexedDB
-    if (restored.length) ktRehydrate(restored);
-    await legacyImport();
-    await dropDemoBook();
-    if (painted && !restored.length) await snapAdopt();
-    else { ktBootEnd(); await reloadAll(); await restoreResume(); }
-    if (!bibleMeta.length && SY.sha && !SY.dirty){ SY.sha = ''; SY.at = 0; saveSY(); }   // kho Kinh Thánh trống mà tưởng đã đồng bộ → để lần đồng bộ tới tải lại
-    clearTimeout(hint);
-    window.ktReady = true;
-    snapSave();
-    if (bibleMeta.length) ktAnnounceOffline();
-  }
-  catch(e){
-    clearTimeout(hint); ktBootEnd();
-    $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ của app</b>${esc(e.message || e)}<br>
-      Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
-      3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
-      <span style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
-        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button></span>
-      <small style="display:block;margin-top:10px;color:var(--muted)">“Đặt lại” chỉ xóa nội dung Kinh Thánh đã tải trong máy (tự tải lại khi có mạng). Lịch sử đọc, dấu trang, ghi chú, kế hoạch vẫn được giữ.</small></div>`;
-    const rt = $('#dbRetry'), rs = $('#dbReset');
-    if (rt) rt.onclick = () => location.reload();
-    if (rs) rs.onclick = () => {
-      if (!confirm('Xóa nội dung Kinh Thánh đã tải trong máy để mở lại từ đầu? Lịch sử đọc, ghi chú, dấu trang được giữ nguyên.')) return;
-      let done = false; const go = () => { if (!done){ done = true; location.reload(); } };
-      try { caches.delete(LEGACY_CACHE); } catch(e){}
-      try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); }
-      setTimeout(go, 3000);
-    };
-    return;
-  }
-  try { if (!$('#diagBtn')) $('#verTag').insertAdjacentHTML('afterend', '<button class="btn" id="diagBtn" style="margin-top:8px">🔍 Kiểm tra bộ nhớ máy</button>'); } catch(e){}
+  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreResume(); }
+  catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
   updateSyncUI();
-  if (!KV.get('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
+  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
