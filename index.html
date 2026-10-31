@@ -917,7 +917,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AC';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-AD';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1043,11 +1043,39 @@ async function openDBRetry(onWait){
   throw last;
 }
 const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
-const dbGet   = (st, k) => reqP(db.transaction(st).objectStore(st).get(k));
-const dbClear = st => reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
-const dbDel   = (st, k) => reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
+/* ===== CHẾ ĐỘ LƯU DỰ PHÒNG =====
+   Có iPhone không mở được IndexedDB trong app thêm vào Màn hình chính (lỗi “Unable to open database file on disk”, thử lại vẫn lỗi).
+   Khi đó app chuyển sang lưu trong bộ nhớ (RAM) và sao một bản vào Cache Storage (kho riêng, không dùng IndexedDB) để mở lại không cần tải lại.
+   Nội dung Kinh Thánh luôn tải lại được từ GitHub; lịch sử đọc, dấu trang, ghi chú nằm ở localStorage nên không bị ảnh hưởng. */
+const MEM = { on:false, data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, t:0 };
+const MEM_CACHE = 'kt-store-v1';
+async function memActivate(){
+  MEM.on = true; window.ktMemMode = true;
+  try {
+    if (!('caches' in window)) return;
+    const c = await caches.open(MEM_CACHE);
+    for (const st of Object.keys(MEM.data)){
+      const r = await c.match('./__kt_store__/' + st); if (!r) continue;
+      try { (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); } catch(e){}
+    }
+  } catch(e){}
+}
+function memSave(){
+  clearTimeout(MEM.t);
+  MEM.t = setTimeout(async () => {
+    try {
+      if (!('caches' in window)) return;
+      const c = await caches.open(MEM_CACHE);
+      for (const st of Object.keys(MEM.data)) await c.put('./__kt_store__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
+    } catch(e){}
+  }, 600);
+}
+const dbAll   = st => MEM.on ? Promise.resolve([...MEM.data[st].values()]) : reqP(db.transaction(st).objectStore(st).getAll());
+const dbGet   = (st, k) => MEM.on ? Promise.resolve(MEM.data[st].get(k)) : reqP(db.transaction(st).objectStore(st).get(k));
+const dbClear = st => MEM.on ? (MEM.data[st].clear(), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
+const dbDel   = (st, k) => MEM.on ? (MEM.data[st].delete(k), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
 function dbPut(st, items){
+  if (MEM.on){ items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); memSave(); return Promise.resolve(); }
   return new Promise((res, rej) => {
     const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
     items.forEach(i => os.put(i));
@@ -2686,7 +2714,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : '') + (window.ktMemMode ? ' · lưu tạm' : ''); $('#updMsg').textContent = ''; show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -4781,7 +4809,8 @@ planSum();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
   try {
-    db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; });
+    try { db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }); }
+    catch(idbErr){ console.warn('IndexedDB không mở được, chuyển sang lưu dự phòng:', idbErr); await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500); }
     await dropDemoBook(); await reloadAll(); await restoreResume();
     window.ktReady = true;
   }
