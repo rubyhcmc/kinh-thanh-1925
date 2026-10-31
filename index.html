@@ -908,7 +908,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive:false });
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-Q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.10.31-R';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -954,6 +954,7 @@ function applyTheme(){
   document.documentElement.toggleAttribute('data-paper', !!S.paper);
   document.body.classList.toggle('pg', PAPER_PAGED && !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
   try { pgRefresh(); } catch(e){}
+  try { window.ktFlipDirty && window.ktFlipDirty(); } catch(e){}      // đổi chế độ → dựng lại bản sao lật trang chính cho khớp
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   $('meta[name=theme-color]').content = S.paper ? '#f4f3ee' : (dark ? '#1c1b19' : '#fffdf8');
@@ -4023,9 +4024,18 @@ function pgFirstVisible(){
   const v = vs.find(x => x.getBoundingClientRect().left >= b.left - 2) || vs[vs.length - 1];   // câu đầu tiên bắt đầu từ trang này trở đi
   return v ? v.dataset.n : null;
 }
+/* Thoát chế độ Trang giấy: gỡ SẠCH mọi kiểu inline mà việc chia trang đã gắn lên khung chữ (giãn dòng, chiều cao, đệm trên/dưới, dịch ngang).
+   Nếu để sót, trang chính bị lệch bố cục so với bản nhân đôi dùng khi lật → giật cho tới khi thoát hẳn app. */
+function pgResetArt(art){
+  art = art || $('#bibleText'); if (!art) return;
+  const st = art.style;
+  st.transform = st.lineHeight = st.height = st.paddingTop = st.paddingBottom = st.transition = st.willChange = '';
+  if (!art.getAttribute('style')) art.removeAttribute('style');
+  document.body.classList.remove('pgchrome');
+}
 function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
   const art = $('#bibleText'); if (!art) return;
-  if (!pgOn()){ art.style.transform = ''; pgPrepClear(true); return; }
+  if (!pgOn()){ pgResetArt(art); pgPrepClear(true); return; }
   pgPrepClear(true);
   const W = pgW(), widthSame = pg.lastW === W; pg.lastW = W;
   pgCount();
@@ -4040,7 +4050,7 @@ function pgRefresh(keepVerse){                                     // dựng l�
     pg.key = key; if (!same && !pg.toEnd) pg.page = 0;
     pgPrepClear(true);
     _rcPg.apply(this, arguments);
-    if (!pgOn()){ pg.toEnd = false; return; }
+    if (!pgOn()){ pg.toEnd = false; pgResetArt(); return; }
     pg.useFit = true; try { pgRefresh(keep); } finally { pg.useFit = false; }
     if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => pgRefresh(keep));
   }; }
