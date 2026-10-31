@@ -1,11 +1,11 @@
 /* Service worker: ưu tiên bản MỚI NHẤT từ mạng, nhưng KHÔNG bắt người dùng chờ mạng chậm, và luôn mở được khi mất mạng.
    - Cài đặt (install): trang chính PHẢI lưu được thì bản này mới được cài. Nếu lưu lỗi (mạng chập chờn) thì bản cũ (và kho lưu cũ) giữ nguyên,
      lần mở sau trình duyệt tự thử lại. Nhờ vậy không bao giờ có chuyện “đã cài mà kho lưu trống”.
-   - Mở trang (navigate): chờ mạng tối đa 2,5 giây; quá hạn hoặc mất mạng thì mở ngay bản đã lưu; bản mới vẫn tải ngầm cho lần sau.
+   - Mở trang (navigate): có bản đã lưu thì mở NGAY (không chờ mạng); bản mới tải ngầm và dùng từ lần mở sau.
    - Tệp dữ liệu .json KHÔNG đi qua đây: Kinh Thánh nằm trong IndexedDB của app, không nằm trong Cache Storage.
    - Kho 'kt-store-v1' (kho dự phòng cũ) và 'kt-fallback-v1' (kho dự phòng dùng khi IndexedDB của máy hỏng) KHÔNG bị xóa ở đây: do app tự quản.
    - Khóa lưu sẵn bỏ phần “?…”: mở trang với tham số khác nhau (?kho=…) vẫn dùng chung một bản lưu. */
-const CACHE = 'kt-20261101-c';
+const CACHE = 'kt-20261101-d';
 const LEGACY_STORE = 'kt-store-v1', FALLBACK_STORE = 'kt-fallback-v1';
 const NAV_WAIT_MS = 2500;
 const ESSENTIAL = ['./', './index.html'];
@@ -42,11 +42,11 @@ self.addEventListener('fetch', e => {
   });
   const fallback = () => caches.match(key).then(m => m || (r.mode === 'navigate' ? caches.match('./index.html') : undefined));
   if (r.mode === 'navigate'){
-    e.waitUntil(net.catch(() => {}));
+    e.waitUntil(net.catch(() => {}));                    // luôn tải bản mới ngầm để lần mở sau dùng
     e.respondWith((async () => {
       const cached = await fallback();
-      if (!cached) return net.catch(() => Response.error());
-      return Promise.race([net.catch(() => cached), new Promise(res => setTimeout(() => res(cached), NAV_WAIT_MS))]);
+      if (cached) return cached;                         // có bản đã lưu → mở NGAY, không chờ mạng (nhanh, và chạy offline)
+      return net.catch(() => Response.error());          // lần đầu tiên chưa có gì → bắt buộc chờ mạng
     })());
     return;
   }
