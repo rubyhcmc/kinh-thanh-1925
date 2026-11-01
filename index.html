@@ -548,6 +548,17 @@ html[data-paper] .reader.print{text-align:justify}
 .ctrule{width:56px;height:1px;border:0;margin:16px auto 14px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7}
 .cthi{margin:0;font:700 17px/1.4 var(--serif);color:var(--fg)}
 .ctmsg{margin:8px auto 0;max-width:290px;font:italic 14px/1.65 var(--serif);color:var(--muted)}
+.phsheet{max-width:440px;text-align:center;padding:26px 22px calc(20px + env(safe-area-inset-bottom))}
+.phico{font-size:50px;line-height:1.15;margin:0 0 6px}
+.pht{font:700 25px/1.3 var(--serif)!important;margin:0 0 10px!important}
+.phd{font-size:19px;line-height:1.65;margin:0 0 16px;color:var(--fg)}
+.phin{width:100%;height:66px;font-size:30px;letter-spacing:.05em;text-align:center;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg)}
+.phin:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pherr{min-height:26px;margin:8px 0 6px;font-size:16px;line-height:1.4;color:var(--danger)}
+.phbtn{display:block;width:100%;min-height:58px;margin:0 0 10px;padding:0 14px;font-size:19px;border-radius:14px}
+.phno{border-color:transparent;background:none;color:var(--muted);font-weight:600}
+.gdProfile{font-size:16px;line-height:1.85;text-align:left}
+.gdProfile b{font-weight:700}
 </style>
 </head>
 <body>
@@ -607,6 +618,18 @@ html[data-paper] .reader.print{text-align:justify}
     <div class="sgrab"></div>
     <div class="shead"><h3>Cài đặt</h3><button class="sdone" id="closeSettings">Xong</button></div>
 
+    <div class="slabel">Sao lưu &amp; khôi phục</div>
+    <div class="sgroup">
+      <div class="srow col" style="gap:12px">
+        <div class="gdProfile"><div class="gdPhoneTxt"></div><div class="gdMailTxt" hidden></div><div class="gdLastTxt"></div></div>
+        <button class="btn primary phbtn gdBackup">☁️ Sao lưu ngay</button>
+        <button class="btn phbtn gdRestore">🔄 Khôi phục dữ liệu</button>
+        <button class="sbtn gdChange" style="align-self:center">Đổi số điện thoại</button>
+        <div class="srow" style="padding:4px 0 0"><div class="stxt"><b>Tự động sao lưu</b><span>Chạy ngầm khi có mạng, không cần bấm</span></div><div class="seg gdAutoSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div></div>
+        <div class="bmhint gdMsg" style="margin:0"></div>
+      </div>
+    </div>
+
     <div class="slabel">Giao diện đọc</div>
     <div class="sgroup">
       <div class="srow"><div class="stxt"><b>Chế độ màu</b><span>Sáng, tối hoặc theo thiết bị</span></div>
@@ -644,9 +667,6 @@ html[data-paper] .reader.print{text-align:justify}
         <button class="sbtn" id="dtImport">Nhập file</button><input type="file" id="dtFile" accept=".json,application/json" hidden></div>
       <div class="srow"><div class="stxt"><b>Làm mới hành trình</b><span>Xóa lịch sử đọc, giữ nguyên ghi chú</span></div>
         <button class="sbtn warn" id="dtReset">Làm mới</button></div>
-      <div class="srow col"><div class="stxt"><div><b>Google Drive</b><span>Sao lưu ghi chú &amp; hành trình lên Drive của bạn, khôi phục khi đổi máy hoặc xóa trình duyệt</span></div></div>
-        <div style="display:flex;gap:8px"><button class="sbtn gdBackup" style="flex:1">☁️ Sao lưu</button><button class="sbtn gdRestore" style="flex:1">🔄 Khôi phục</button></div>
-        <div class="bmhint gdMsg" style="margin:0"></div></div>
     </div>
 
     <div class="slabel">Giới thiệu</div>
@@ -831,8 +851,8 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>Đồng bộ Google Drive (sao lưu hành trình &amp; ghi chú)</h4>
-      <p class="hint">Người dùng sao lưu lịch sử đọc, ghi chú, dấu trang, kế hoạch vào Google Drive riêng của họ (thư mục ẩn của app, không lẫn với file khác) và khôi phục khi xóa trình duyệt hoặc đổi điện thoại.</p>
+      <h4>Sao lưu theo số điện thoại (Google Drive)</h4>
+      <p class="hint">Mỗi người dùng nhập số điện thoại của họ làm “tên hồ sơ”; ghi chú và hành trình đọc được lưu vào Google Drive riêng của họ (thư mục ẩn của app) và khôi phục bằng đúng số đó khi đổi máy hoặc xóa nhầm dữ liệu. Quản trị viên chỉ cần nhập Client ID một lần ở đây.</p>
       <label class="lbl" for="gcId">Google OAuth Client ID</label>
       <input type="text" id="gcId" placeholder="xxxxxxxx-xxxx.apps.googleusercontent.com" autocomplete="off" autocapitalize="off" spellcheck="false">
       <div class="btns"><button class="btn primary" id="gcSave">Lưu Cấu Hình</button></div>
@@ -840,6 +860,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
         <button class="btn gdBackup" id="gdBackupA">☁️ Sao lưu</button>
         <button class="btn gdRestore" id="gdRestoreA">🔄 Khôi phục</button>
       </div>
+      <div class="row" style="margin:10px 0 0"><div class="stxt"><b>Tự động sao lưu &amp; đồng bộ</b><span>Chạy ngầm trên máy người dùng khi có mạng</span></div><div class="seg gdAutoSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div></div>
       <div class="log" id="gcLog"></div>
       <details>
         <summary>Cách lấy Client ID</summary>
@@ -972,7 +993,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB7';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB9';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4663,7 +4684,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, resume:RESUME };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, profile:gdProfInfo(), reads:RD, lessons:LS, marks:BM, plan:PLAN, resume:RESUME };
 }
 function dtDownload(name){
   const blob = new Blob([JSON.stringify(dtPayload(), null, 2)], { type:'application/json' });
@@ -4689,13 +4710,13 @@ function dtExport(){
   document.body.appendChild(o); setTimeout(() => { nm.focus(); nm.select(); }, 60);
 }
 const dtKeyL = x => `${x.book}|${x.ch}|${compressRange(x.ns || [x.n])}`;
-async function dtImport(file){
+async function dtImport(file, auto){
   let j; try { j = JSON.parse(await file.text()); } catch(e){ return toast('File không đọc được (không phải JSON hợp lệ)'); }
   if (!j || j.app !== 'kinhthanh' || j.kind !== 'user-data') return toast('Đây không phải file sao lưu của app này');
   const reads = j.reads && typeof j.reads === 'object' && !Array.isArray(j.reads) ? j.reads : {}, lessons = Array.isArray(j.lessons) ? j.lessons : [], marks = Array.isArray(j.marks) ? j.marks : [];
   const days = Object.keys(reads).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(reads[k]));
   const L = lessons.filter(x => x && x.book && x.ch >= 1 && typeof x.text === 'string'), M = marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1);
-  const i = await choose('Khôi phục dữ liệu', `File có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
+  const i = auto ? 0 : await choose('Khôi phục dữ liệu', `File có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
     [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   if (i === 1){ RD = {}; LS = []; BM = []; }
@@ -4708,7 +4729,7 @@ async function dtImport(file){
   BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
   try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
   saveLS(); saveBM(); markBookmarks();
-  toast('✔ Đã khôi phục dữ liệu');
+  toast(auto ? '☁️ Đã đồng bộ dữ liệu từ Google Drive' : '✔ Đã khôi phục dữ liệu');
 }
 async function dtReset(){
   const n = Object.keys(RD).length;
@@ -4726,30 +4747,61 @@ $('#dtFile').onchange = e => { const f = e.target.files[0]; e.target.value = '';
 $('#dtReset').onclick = dtReset;
 
 /* =========================================================
- *  GOOGLE DRIVE: sao lưu / khôi phục dữ liệu cá nhân (hành trình, ghi chú, dấu trang, kế hoạch)
- *  - Đăng nhập bằng Google Identity Services (OAuth token client), chỉ xin phạm vi drive.appdata:
- *    app chỉ thấy thư mục ẩn của chính nó, không đọc được file khác trong Drive.
- *  - Nội dung sao lưu = đúng dtPayload() như nút "Xuất file"; khôi phục đi qua dtImport() (có hộp chọn Gộp / Thay thế).
+ *  HỒ SƠ THEO SỐ ĐIỆN THOẠI + SAO LƯU GOOGLE DRIVE
+ *  - Mỗi người dùng nhập SỐ ĐIỆN THOẠI một lần: số này là "tên hồ sơ". App đổi số thành mã (băm SHA-256) rồi lưu dữ liệu cá nhân
+ *    (hành trình đọc, ghi chú, dấu trang, kế hoạch, chỗ đọc tiếp) vào file kt-user-<mã>.json trong thư mục ẩn của app
+ *    trên Google Drive của người dùng (phạm vi drive.appdata: app không thấy file nào khác của họ).
+ *  - Đổi máy / xóa nhầm dữ liệu: bấm "Khôi phục", nhập lại số điện thoại, chọn đúng tài khoản Google đã dùng → app tải về và GỘP vào máy.
+ *  - Sau lần đầu, app tự sao lưu ngầm mỗi khi dữ liệu đổi và có mạng.
  * ========================================================= */
 const GCID_DEFAULT = '';                                    // có thể điền sẵn Client ID tại đây để mọi máy dùng được ngay
-const GC_KEY = 'kt.gclient', GD_FILE = 'kinhthanh-user-data.json', GD_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-function gcid(){ let v = ''; try { v = (localStorage.getItem(GC_KEY) || '').trim(); } catch(e){} return v || GCID_DEFAULT; }
+const GC_KEY = 'kt.gclient', PH_KEY = 'kt.phone', LEG_FILE = 'kinhthanh-user-data.json', GD_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const kvGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const kvSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} };
+function gcid(){ return (kvGet(GC_KEY) || '').trim() || GCID_DEFAULT; }
 const gcidOK = v => /^[\w.-]+\.apps\.googleusercontent\.com$/i.test(String(v || '').trim());
 function gcidFromRemote(v){                                  // máy đọc nhận Client ID do admin đặt (không ghi đè nếu máy đã có)
-  try { if (gcidOK(v) && !localStorage.getItem(GC_KEY)){ localStorage.setItem(GC_KEY, String(v).trim()); gdWarm(); } } catch(e){}
+  if (gcidOK(v) && !kvGet(GC_KEY)){ kvSet(GC_KEY, String(v).trim()); gdWarm(); }
 }
 function gcSay(m, ok){ const l = $('#gcLog'); if (l){ l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); } }
-function fillGc(){ const i = $('#gcId'); if (i) i.value = localStorage.getItem(GC_KEY) || ''; }
+function fillGc(){ const i = $('#gcId'); if (i) i.value = kvGet(GC_KEY) || ''; }
 $('#gcSave').onclick = () => {
   const v = $('#gcId').value.trim();
   if (v && !gcidOK(v)) return gcSay('✖ Client ID chưa đúng dạng (phải kết thúc bằng .apps.googleusercontent.com).', false);
-  try { v ? localStorage.setItem(GC_KEY, v) : localStorage.removeItem(GC_KEY); } catch(e){ return gcSay('✖ Không lưu được: ' + e.message, false); }
+  kvSet(GC_KEY, v || null);
   gdTok = { v:'', exp:0 }; gdAuthed = false;
   if (v){ gdWarm(); markDirty(); }
-  gcSay(v ? '✔ Đã lưu cấu hình Client ID.' : 'Đã xóa cấu hình Client ID.', true); toast(v ? '✔ Đã lưu cấu hình' : 'Đã xóa Client ID');
+  gcSay(v ? '✔ Đã lưu cấu hình Client ID.' : 'Đã xóa Client ID.', true); toast(v ? '✔ Đã lưu cấu hình' : 'Đã xóa Client ID');
 };
 
-let gdTok = { v:'', exp:0 }, gdGisP = null, gdBusy = false, gdAuthed = false;
+/* --- Số điện thoại → mã hồ sơ --- */
+function normPhone(v){                                       // "0912 345 678", "+84 912 345 678", "84912345678" → "0912345678"
+  let d = String(v || '').replace(/[^\d+]/g, '');
+  if (d.startsWith('+84')) d = '0' + d.slice(3); else if (/^84\d{9,10}$/.test(d)) d = '0' + d.slice(2);
+  d = d.replace(/\D/g, '');
+  if (/^[35789]\d{8}$/.test(d)) d = '0' + d;                  // người dùng quên số 0 đầu
+  return /^0\d{9,10}$/.test(d) ? d : '';
+}
+const fmtPhone = p => p ? (p.slice(0, 4) + ' ' + p.slice(4, 7) + ' ' + p.slice(7)).trim() : '';
+const maskPhone = p => p ? p.slice(0, 2) + '•• ••• ' + p.slice(-3) : '';
+const gdPhone = () => normPhone(kvGet(PH_KEY));
+const profId = p => sha256js('kt-phone|' + p).slice(0, 20);
+const gdFileOf = p => p ? 'kt-user-' + profId(p) + '.json' : LEG_FILE;
+const gdFile = () => gdFileOf(gdPhone());
+function gdProfInfo(){ const p = gdPhone(); return p ? { id:profId(p), hint:maskPhone(p) } : null; }
+function setPhone(p){
+  if (gdPhone() !== p){ kvSet('kt.gdSig', null); kvSet('kt.gdRemote', null); kvSet('kt.gdAt', null); gdPulled = false; }
+  kvSet(PH_KEY, p); gdStatusUI();
+}
+function gdStatusUI(){
+  const p = gdPhone(), mail = kvGet('kt.gdEmail'), at = +kvGet('kt.gdAt') || 0;
+  $$('.gdPhoneTxt').forEach(e => { e.innerHTML = p ? `📱 Số điện thoại: <b>${esc(fmtPhone(p))}</b>` : '📱 Chưa đặt số điện thoại'; });
+  $$('.gdMailTxt').forEach(e => { e.hidden = !(p && mail); e.innerHTML = `✉️ Tài khoản Google: <b>${esc(mail || '')}</b>`; });
+  $$('.gdLastTxt').forEach(e => { e.textContent = at ? '🕒 Sao lưu lần cuối: ' + new Date(at).toLocaleString('vi-VN') : '🕒 Chưa sao lưu lần nào'; });
+}
+
+/* --- Đăng nhập Google (Google Identity Services) --- */
+let gdTok = { v:'', exp:0 }, gdGisP = null, gdBusy = false, gdAuthed = false, gdSilent = false;
 function gdLoadGis(){
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
   if (gdGisP) return gdGisP;
@@ -4761,21 +4813,23 @@ function gdLoadGis(){
   return gdGisP;
 }
 function gdWarm(){ if (gcid() && navigator.onLine) gdLoadGis().catch(() => {}); }   // tải sẵn để cửa sổ đăng nhập mở được ngay trong cú chạm
+const silentErr = () => Object.assign(new Error('silent'), { silent:true });
 function gdToken(){
   const id = gcid();
-  if (!id) return Promise.reject(new Error('Chưa cấu hình Google Client ID. Quản trị viên vào Quản lý dữ liệu → Đồng bộ Google Drive để nhập.'));
+  if (!id) return Promise.reject(new Error('Ứng dụng chưa được cấu hình sao lưu Google. Vui lòng liên hệ người quản lý.'));
   if (gdTok.v && Date.now() < gdTok.exp - 60000) return Promise.resolve(gdTok.v);
   return gdLoadGis().then(() => new Promise((res, rej) => {
     const c = google.accounts.oauth2.initTokenClient({
       client_id:id, scope:GD_SCOPE,
       callback:r => {
-        if (r.error) return rej(new Error(r.error === 'access_denied' ? 'Bạn chưa cấp quyền cho app truy cập Google Drive.' : 'Đăng nhập Google lỗi: ' + (r.error_description || r.error)));
-        if (r.scope && !String(r.scope).includes('drive.appdata')) return rej(new Error('Thiếu quyền lưu dữ liệu app trên Drive. Hãy đăng nhập lại và tích chọn quyền được yêu cầu.'));
-        gdTok = { v:r.access_token, exp:Date.now() + (+r.expires_in || 3600) * 1000 }; gdAuthed = true; res(r.access_token);
+        if (r.error && gdSilent) return rej(silentErr());
+        if (r.error) return rej(new Error(r.error === 'access_denied' ? 'Bạn chưa cho phép ứng dụng lưu dữ liệu vào Google Drive. Hãy thử lại và bấm “Cho phép”.' : 'Đăng nhập Google chưa được: ' + (r.error_description || r.error)));
+        if (r.scope && !String(r.scope).includes('drive.appdata')) return rej(new Error('Thiếu quyền lưu dữ liệu trên Drive. Hãy thử lại và tích chọn đủ các quyền Google hỏi.'));
+        gdTok = { v:r.access_token, exp:Date.now() + (+r.expires_in || 3600) * 1000 }; gdAuthed = true; kvSet('kt.gdConsent', '1'); res(r.access_token);
       },
-      error_callback:e => rej(new Error(e && e.type === 'popup_closed' ? 'Đã đóng cửa sổ đăng nhập Google.' : e && e.type === 'popup_failed_to_open' ? 'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên rồi thử lại.' : 'Không đăng nhập được Google (' + ((e && e.type) || 'lỗi') + ').'))
+      error_callback:e => rej(gdSilent ? silentErr() : new Error(e && e.type === 'popup_closed' ? 'Bạn đã đóng cửa sổ đăng nhập Google. Hãy thử lại.' : e && e.type === 'popup_failed_to_open' ? 'Điện thoại đã chặn cửa sổ đăng nhập Google. Hãy cho phép cửa sổ bật lên rồi thử lại. (iPhone: nếu vẫn không được, mở app bằng Safari.)' : 'Không đăng nhập được Google (' + ((e && e.type) || 'lỗi') + ').'))
     });
-    c.requestAccessToken({ prompt:gdAuthed ? '' : 'select_account' });
+    c.requestAccessToken({ prompt:gdSilent ? 'none' : (gdAuthed ? '' : 'select_account') });
   }));
 }
 async function gdApi(url, o, retry){
@@ -4786,53 +4840,201 @@ async function gdApi(url, o, retry){
   if (res.status === 401 && !retry){ gdTok = { v:'', exp:0 }; return gdApi(url, o, true); }
   if (!res.ok){
     let m = ''; try { const j = await res.json(); m = (j.error && (j.error.message || j.error.status)) || ''; } catch(e){}
-    if (res.status === 403) throw new Error(/has not been used|disabled|accessNotConfigured/i.test(m) ? 'Google Drive API chưa được bật trong Google Cloud (APIs & Services → Library → Google Drive API).' : 'Google từ chối truy cập (403). ' + m);
+    if (res.status === 403) throw new Error(/has not been used|disabled|accessNotConfigured/i.test(m) ? 'Người quản lý chưa bật Google Drive API trong Google Cloud (APIs & Services → Library → Google Drive API).' : 'Google từ chối truy cập (403). ' + m);
     if (res.status === 401) throw new Error('Phiên đăng nhập Google hết hạn, hãy thử lại.');
     throw new Error('Lỗi Google Drive ' + res.status + (m ? ': ' + m : ''));
   }
   return res;
 }
-async function gdFind(){
-  const q = encodeURIComponent(`name='${GD_FILE}' and trashed=false`);
+async function gdFind(name){
+  const q = encodeURIComponent(`name='${name || gdFile()}' and trashed=false`);
   const j = await (await gdApi(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&orderBy=modifiedTime%20desc&pageSize=1&fields=files(id,modifiedTime)`)).json();
   return (j.files && j.files[0]) || null;
 }
+async function gdWho(){                                       // email của tài khoản Google đang dùng (để người dùng ghi nhớ); lỗi thì bỏ qua
+  try { const j = await (await gdApi('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)')).json(); const e = j.user && j.user.emailAddress; if (e){ kvSet('kt.gdEmail', e); gdStatusUI(); return e; } } catch(e){}
+  return kvGet('kt.gdEmail') || '';
+}
 async function gdDoBackup(){
-  const body = JSON.stringify(dtPayload()), f = await gdFind(), B = 'ktb' + Date.now().toString(36);
-  const meta = f ? { name:GD_FILE } : { name:GD_FILE, parents:['appDataFolder'] };
+  const name = gdFile(), body = JSON.stringify(dtPayload()), f = await gdFind(name), B = 'ktb' + Date.now().toString(36);
+  const meta = f ? { name } : { name, parents:['appDataFolder'] };
   const mp = `--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${body}\r\n--${B}--`;
   const url = f ? `https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=multipart&fields=id,modifiedTime` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
-  await gdApi(url, { method:f ? 'PATCH' : 'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + B }, body:mp });
-  return { days:Object.keys(RD).length, notes:LS.length, marks:BM.length };
+  const up = await gdApi(url, { method:f ? 'PATCH' : 'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + B }, body:mp });
+  let mt = ''; try { mt = (await up.json()).modifiedTime || ''; } catch(e){}
+  return { days:Object.keys(RD).length, notes:LS.length, marks:BM.length, mt };
 }
 function gdMsg(t, ok){ $$('.gdMsg').forEach(e => { e.textContent = t; e.style.color = ok === false ? 'var(--danger)' : ''; }); gcSay(t, ok !== false); }
-async function gdRun(kind){
-  if (gdBusy) return;
-  if (!gcid()){ const m = 'Chưa cấu hình Google Client ID. Hãy nhờ quản trị viên nhập trong Quản lý dữ liệu.'; toast(m); gdMsg(m, false); return; }
-  if (!navigator.onLine){ const m = 'Đang offline, hãy kết nối mạng rồi thử lại.'; toast(m); gdMsg(m, false); return; }
-  gdBusy = true;
-  const btns = $$(kind === 'backup' ? '.gdBackup' : '.gdRestore'), old = btns.map(b => b.textContent);
-  $$('.gdBackup,.gdRestore').forEach(b => b.disabled = true); btns.forEach(b => b.textContent = '⟳ Đang xử lý…');
-  try {
-    if (kind === 'backup'){
-      const r = await gdDoBackup(), m = `✔ Đã sao lưu lên Google Drive: ${r.days} ngày đọc · ${r.notes} ghi chú · ${r.marks} dấu trang (${new Date().toLocaleString('vi-VN')}).`;
-      gdMsg(m, true); toast('☁️ Đã sao lưu lên Google Drive');
-    } else {
-      const f = await gdFind();
-      if (!f){ const m = 'Chưa có bản sao lưu nào trên Google Drive của tài khoản này.'; gdMsg(m, false); toast(m); }
-      else {
-        const text = await (await gdApi(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).text();
-        gdBusy = false;                                      // dtImport mở hộp chọn Gộp/Thay thế: nhả khóa trước để không kẹt
-        await dtImport(new File([text], GD_FILE, { type:'application/json' }));
-        gdMsg('Đã đọc bản sao lưu Google Drive (lưu lúc ' + new Date(f.modifiedTime).toLocaleString('vi-VN') + ').', true);
-      }
-    }
-  } catch(e){ const m = '✖ ' + (e.message || e); gdMsg(m, false); toast(m.slice(2)); }
-  finally { gdBusy = false; $$('.gdBackup,.gdRestore').forEach(b => b.disabled = false); btns.forEach((b, i) => b.textContent = old[i]); }
+function setBusyUI(on){ $$('.gdBackup,.gdRestore,.gdChange').forEach(b => { b.disabled = on; }); }
+async function gdGuard(fn){
+  if (gdBusy) return { err:'Đang xử lý, vui lòng chờ một chút rồi thử lại.' };
+  if (!navigator.onLine) return { err:'Điện thoại đang không có mạng. Hãy bật Wi-Fi hoặc dữ liệu di động rồi thử lại.' };
+  gdBusy = true; setBusyUI(true);
+  try { return await fn(); } catch(e){ return { err:(e && e.message) || String(e) }; }
+  finally { gdBusy = false; setBusyUI(false); }
 }
-$$('.gdBackup').forEach(b => b.onclick = () => gdRun('backup'));
-$$('.gdRestore').forEach(b => b.onclick = () => gdRun('restore'));
+const gdBackupCore = () => gdGuard(async () => {
+  const sig0 = gdSig(), r = await gdDoBackup();
+  kvSet('kt.gdSig', sig0); if (r.mt) kvSet('kt.gdRemote', r.mt); kvSet('kt.gdAt', String(Date.now()));
+  gdAutoDefault(); const email = await gdWho(); gdStatusUI();
+  return { ok:true, r, email };
+});
+const gdRestoreCore = phone => gdGuard(async () => {
+  gdTok = { v:'', exp:0 }; gdAuthed = false;                 // luôn cho người dùng chọn lại tài khoản Google
+  const name = gdFileOf(phone), f = await gdFind(name);
+  if (!f) return { none:true };
+  const text = await (await gdApi(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).text();
+  let j; try { j = JSON.parse(text); } catch(e){ throw new Error('Bản sao lưu bị lỗi, không đọc được.'); }
+  if (!j || j.app !== 'kinhthanh' || j.kind !== 'user-data') throw new Error('File trên Google Drive không phải bản sao lưu của ứng dụng này.');
+  const stat = { days:Object.keys(j.reads || {}).length, notes:(j.lessons || []).length, marks:(j.marks || []).length, when:f.modifiedTime };
+  await dtImport(new File([text], name, { type:'application/json' }), true);
+  setPhone(phone); kvSet('kt.gdRemote', f.modifiedTime); kvSet('kt.gdAt', String(Date.now())); gdPulled = true; gdAutoDefault();
+  const email = await gdWho();
+  return { ok:true, stat, email };
+});
+
+/* --- Hộp thoại chữ lớn cho người lớn tuổi --- */
+function bigDialog(o){
+  return new Promise(res => {
+    const d = document.createElement('div'); d.className = 'overlay'; d.style.zIndex = 96;
+    d.innerHTML = `<div class="sheet phsheet"><div class="phico">${o.ico || ''}</div><h3 class="pht">${esc(o.title)}</h3><div class="phd">${o.html || esc(o.text || '').replace(/\n/g, '<br>')}</div>`
+      + (o.btns || [{ t:'Đóng' }]).map((b, i) => `<button class="btn phbtn ${b.cls || ''}" data-i="${i}">${esc(b.t)}</button>`).join('') + '</div>';
+    d.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b){ d.remove(); res(+b.dataset.i); } });
+    document.body.appendChild(d);
+  });
+}
+function phoneModal(o){
+  return new Promise(res => {
+    const d = document.createElement('div'); d.className = 'overlay'; d.style.zIndex = 96;
+    d.innerHTML = `<div class="sheet phsheet"><div class="phico">📱</div><h3 class="pht">${esc(o.title)}</h3><div class="phd">${esc(o.text)}</div>
+      <input class="phin" id="phIn" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" placeholder="09xx xxx xxx" aria-label="Số điện thoại" value="${esc(o.initial || '')}">
+      <div class="pherr" id="phErr" aria-live="polite"></div>
+      <button class="btn primary phbtn" id="phGo">${esc(o.btn)}</button>
+      <button class="btn phbtn phno" id="phNo">Để sau</button></div>`;
+    const inp = d.querySelector('#phIn'), err = d.querySelector('#phErr');
+    inp.addEventListener('input', () => { const dg = inp.value.replace(/\D/g, '').slice(0, 11); inp.value = (dg.slice(0, 4) + ' ' + dg.slice(4, 7) + ' ' + dg.slice(7)).trim(); err.textContent = ''; });
+    const go = () => {
+      const p = normPhone(inp.value);
+      if (!p){ err.textContent = 'Số điện thoại chưa đúng. Hãy nhập đủ 10 số, bắt đầu bằng số 0.'; inp.focus(); return; }
+      d.remove(); res(p);
+    };
+    d.querySelector('#phGo').onclick = go;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } });
+    d.querySelector('#phNo').onclick = () => { d.remove(); res(null); };
+    document.body.appendChild(d); setTimeout(() => inp.focus(), 80);
+  });
+}
+const notReady = () => bigDialog({ ico:'🛠️', title:'Chưa sẵn sàng', text:'Tính năng sao lưu Google chưa được bật trong ứng dụng này.\nVui lòng liên hệ người quản lý ứng dụng.' });
+const errDialog = (title, msg) => bigDialog({ ico:'⚠️', title, text:msg });
+
+async function backupFlow(){
+  const r = await gdBackupCore();
+  if (r.err){ gdMsg('✖ ' + r.err, false); return errDialog('Chưa sao lưu được', r.err); }
+  const m = `✔ Đã sao lưu: ${r.r.days} ngày đọc · ${r.r.notes} ghi chú · ${r.r.marks} dấu trang.`;
+  gdMsg(m, true);
+  await bigDialog({ ico:'✅', title:'Đã lưu an toàn', html:`${esc(m.slice(2))}<br><br>Dữ liệu nằm trong Google Drive của${r.email ? ' tài khoản <b>' + esc(r.email) + '</b>' : ' tài khoản bạn vừa chọn'}.<br>Từ nay ứng dụng <b>tự động lưu</b> mỗi khi có mạng.<br><br>📝 Hãy ghi nhớ <b>số điện thoại</b> và <b>tài khoản Google</b> này để lấy lại dữ liệu khi đổi máy.`, btns:[{ t:'Tôi đã hiểu', cls:'primary' }] });
+}
+async function profileSetup(){
+  if (!gcid()) return notReady();
+  let p = gdPhone();
+  if (!p){
+    p = await phoneModal({ title:'Nhập số điện thoại của bạn', text:'Số này là “tên hồ sơ” để tìm lại ghi chú và hành trình đọc của bạn khi đổi điện thoại. Hãy nhớ kỹ số này.', btn:'Tiếp tục' });
+    if (!p) return; setPhone(p);
+  }
+  const i = await bigDialog({ ico:'🔐', title:'Chọn tài khoản Google', text:'Bây giờ Google sẽ hỏi bạn chọn tài khoản (Gmail).\nHãy chọn tài khoản của bạn rồi bấm “Cho phép”.\n\nNếu bạn không có Gmail, hãy nhờ người thân giúp.', btns:[{ t:'Tiếp tục', cls:'primary' }, { t:'Để sau' }] });
+  if (i !== 0) return;
+  return backupFlow();
+}
+async function restoreFlow(p){
+  const r = await gdRestoreCore(p);
+  if (r.err){ gdMsg('✖ ' + r.err, false); return errDialog('Chưa khôi phục được', r.err); }
+  if (r.none){
+    const i = await bigDialog({ ico:'🔍', title:'Không tìm thấy dữ liệu', text:`Không có dữ liệu của số ${fmtPhone(p)} trong tài khoản Google vừa chọn.\n\nHãy kiểm tra lại số điện thoại, hoặc chọn tài khoản Google khác (tài khoản bạn đã dùng khi sao lưu).`, btns:[{ t:'Chọn tài khoản Google khác', cls:'primary' }, { t:'Nhập lại số điện thoại' }, { t:'Đóng' }] });
+    if (i === 0) return restoreFlow(p);
+    if (i === 1) return profileRestore();
+    return;
+  }
+  const s = r.stat, when = new Date(s.when).toLocaleString('vi-VN');
+  gdMsg(`✔ Đã khôi phục (${s.days} ngày đọc · ${s.notes} ghi chú · ${s.marks} dấu trang).`, true);
+  await bigDialog({ ico:'✅', title:'Khôi phục xong', html:`Đã lấy lại <b>${s.days}</b> ngày đọc, <b>${s.notes}</b> ghi chú, <b>${s.marks}</b> dấu trang.<br>Bản lưu lúc ${esc(when)}.<br><br>Từ nay ứng dụng tự động lưu cho số <b>${esc(fmtPhone(p))}</b>.`, btns:[{ t:'Tuyệt vời', cls:'primary' }] });
+}
+async function profileRestore(){
+  if (!gcid()) return notReady();
+  const p = await phoneModal({ title:'Khôi phục dữ liệu của bạn', text:'Nhập số điện thoại bạn đã dùng khi sao lưu. Sau đó chọn đúng tài khoản Google đã dùng lúc đó.', btn:'Khôi phục', initial:fmtPhone(gdPhone()) });
+  if (p) return restoreFlow(p);
+}
+async function changePhone(){
+  if (!gcid()) return notReady();
+  const p = await phoneModal({ title:'Đổi số điện thoại', text:'Dữ liệu hiện có sẽ được lưu vào hồ sơ của số mới. Hồ sơ của số cũ vẫn còn trên Google Drive.', btn:'Lưu số mới', initial:fmtPhone(gdPhone()) });
+  if (!p || p === gdPhone()) return;
+  setPhone(p); return backupFlow();
+}
+async function backupBtn(){ if (!gcid()) return notReady(); if (!gdPhone()) return profileSetup(); return backupFlow(); }
+async function askProfile(){                                  // lần đầu mở app: hỏi một lần
+  if (!gcid() || gdPhone() || kvGet('kt.profAsk')) return;
+  kvSet('kt.profAsk', '1');
+  const i = await bigDialog({ ico:'☁️', title:'Giữ an toàn ghi chú của bạn', text:'Bạn có muốn lưu ghi chú và hành trình đọc lên Google Drive bằng số điện thoại không?\nKhi đổi điện thoại, chỉ cần nhập lại số này để lấy lại tất cả.', btns:[{ t:'Bật sao lưu', cls:'primary' }, { t:'Tôi đã dùng app trước đây: Khôi phục' }, { t:'Để sau' }] });
+  if (i === 0) profileSetup(); else if (i === 1) profileRestore();
+}
+$$('.gdBackup').forEach(b => b.onclick = backupBtn);
+$$('.gdRestore').forEach(b => b.onclick = profileRestore);
+$$('.gdChange').forEach(b => b.onclick = changePhone);
 setTimeout(gdWarm, 2500);
+
+/* ---- TỰ ĐỘNG SAO LƯU & ĐỒNG BỘ (chạy ngầm) ----
+   Điều kiện: có Client ID + đã đặt số điện thoại + người dùng đã đồng ý quyền một lần + công tắc đang Bật.
+   Lấy token IM LẶNG (prompt:'none'); dữ liệu thay đổi thì đẩy lên Drive; mỗi phiên mở app kéo bản mới từ máy khác về và GỘP (không xóa gì).
+   Nếu Google đòi xác nhận lại, app im lặng và thử lại ở cú chạm kế tiếp, không bật cửa sổ bất ngờ. */
+const gdAutoOn = () => kvGet('kt.gdAuto') === '1';
+function gdAutoDefault(){ if (kvGet('kt.gdAuto') === null) kvSet('kt.gdAuto', '1'); gdAutoUI(); gdAutoSoon(60000); }
+function gdAutoUI(){ $$('.gdAutoSeg').forEach(sg => $$('button', sg).forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === gdAutoOn()))); }
+function gdSig(){ const r = RESUME ? { b:RESUME.book, c:RESUME.ch } : null; return sigOf(JSON.stringify([RD, LS, BM, PLAN, r])); }
+let gdPulled = false, gdNeedUI = false, gdNextOK = 0, gdAutoT = 0, gdLastGest = 0;
+const gdAutoSoon = ms => { clearTimeout(gdAutoT); gdAutoT = setTimeout(gdAutoRun, ms); };
+async function gdAutoRun(){
+  if (!gdAutoOn() || !gcid() || !gdPhone() || gdBusy || !navigator.onLine || Date.now() < gdNextOK) return;
+  if (gdPulled && gdSig() === (kvGet('kt.gdSig') || '')) return;
+  gdBusy = true; gdSilent = true;
+  try {
+    await Promise.race([gdToken(), new Promise((_, rej) => setTimeout(() => rej(silentErr()), 15000))]);
+    if (!gdPulled){
+      const f = await gdFind();
+      if (f && f.modifiedTime !== kvGet('kt.gdRemote')){
+        const text = await (await gdApi(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).text();
+        await dtImport(new File([text], gdFile(), { type:'application/json' }), true);
+        kvSet('kt.gdRemote', f.modifiedTime);
+      }
+      gdPulled = true;
+    }
+    const sig = gdSig();
+    if (sig !== (kvGet('kt.gdSig') || '')){
+      const r = await gdDoBackup();
+      kvSet('kt.gdSig', sig); kvSet('kt.gdAt', String(Date.now())); if (r.mt) kvSet('kt.gdRemote', r.mt);
+      gdStatusUI(); gdMsg('☁ Tự động sao lưu lúc ' + new Date().toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' }) + ' (' + r.days + ' ngày đọc · ' + r.notes + ' ghi chú).', true);
+      gdNextOK = Date.now() + 45000;
+    }
+    gdNeedUI = false;
+  } catch(e){
+    if (e && e.silent){ gdNeedUI = true; gdNextOK = Date.now() + 30 * 60000; }
+    else gdNextOK = Date.now() + 2 * 60000;
+  } finally { gdBusy = false; gdSilent = false; }
+}
+$$('.gdAutoSeg button').forEach(b => b.onclick = () => {
+  const on = b.dataset.v === '1';
+  kvSet('kt.gdAuto', on ? '1' : '0'); gdAutoUI();
+  if (!on) return toast('Đã tắt tự động sao lưu');
+  if (!gdPhone() || !kvGet('kt.gdConsent')) return profileSetup();   // lần đầu cần số điện thoại và sự đồng ý quyền Google
+  gdNextOK = 0; gdNeedUI = false; gdAutoSoon(800); toast('Đã bật tự động sao lưu');
+});
+gdAutoUI(); gdStatusUI();
+setInterval(() => gdAutoRun(), 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden'){ gdNextOK = Math.min(gdNextOK, Date.now()); gdAutoRun(); } else gdAutoSoon(1500); });
+addEventListener('online', () => { gdNextOK = 0; gdAutoSoon(1500); });
+document.addEventListener('pointerdown', () => {                 // cú chạm của người dùng cho phép thử lại im lặng sau khi Google đòi xác nhận
+  if (!gdNeedUI || !gdAutoOn() || Date.now() - gdLastGest < 10 * 60000) return;
+  gdLastGest = Date.now(); gdNextOK = 0; gdAutoRun();
+}, { capture:true, passive:true });
+setTimeout(() => gdAutoRun(), 4500);
 
 /* =========================================================
  *  CHỮ LỚN · HƯỚNG DẪN LẦN ĐẦU · CHIA SẺ CÂU THÀNH ẢNH
@@ -4858,7 +5060,7 @@ function showOnboard(){
   if ($('#obOverlay')) return;
   const o = document.createElement('div'); o.className = 'overlay'; o.id = 'obOverlay'; o.style.zIndex = 75;
   let i = 0;
-  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); };
+  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); setTimeout(askProfile, 600); };
   const draw = () => {
     const s = OB[i], last = i === OB.length - 1;
     const sizes = s.size ? `<div class="obsizes">${[[20, 'Vừa'], [24, 'Lớn'], [28, 'Rất lớn']].map(([n, l]) => `<button class="btn${S.fs === n ? ' primary' : ''}" data-fs="${n}" style="font-size:${n - 4}px">${l}</button>`).join('')}</div><div class="obprev">Hôm nay bạn đã đọc Lời CHÚA chưa?</div>` : '';
@@ -5159,7 +5361,7 @@ planSum();
     return;
   }
   updateSyncUI();
-  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
+  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800); else setTimeout(askProfile, 3500);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
