@@ -896,6 +896,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
       <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
+      <button class="btn" id="edWord">📄 Xuất Word</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -960,8 +961,10 @@ function choose(title, msg, opts){
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
 const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
-const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
+const S = { theme:'light', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
+/* Mở app luôn ở giao diện sáng: người dùng cũ đang để 'Tự động' (theo máy, hay bị tối) được chuyển về 'Sáng' một lần; muốn tối vẫn chọn trong Cài đặt */
+try { if (!localStorage.getItem('kt.themeLight')){ if (S.theme === 'auto') S.theme = 'light'; localStorage.setItem('kt.themeLight', '1'); localStorage.setItem('kt.settings', JSON.stringify(S)); } } catch(e){}
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
 
 function applyTheme(){
@@ -4042,6 +4045,84 @@ async function exportBook(name){
 }
 $('#exGo').onclick = () => exportBook($('#exBook').value);
 $('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
+
+/* ---- Xuất Word (.docx) từ trình soạn thảo: chương đang soạn hoặc cả sách ---- */
+function wRun(t, o){
+  o = o || {};
+  const rpr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}<w:sz w:val="${o.sz || 26}"/><w:szCs w:val="${o.sz || 26}"/>${o.sup ? '<w:vertAlign w:val="superscript"/>' : ''}</w:rPr>`;
+  return String(t).split('\n').map((ln, k) => `<w:r>${rpr}${k ? '<w:br/>' : ''}<w:t xml:space="preserve">${wx(ln)}</w:t></w:r>`).join('');
+}
+function wParaX(runs, o){
+  o = o || {};
+  return `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.brk ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 340}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'both'}"/></w:pPr>${runs}</w:p>`;
+}
+function docxBookFile(bookName, sub, chapters, fname){        // chapters: [{ch, vs}]
+  const SZ = 26; let body = '';
+  const subL = String(sub || '').split('\n').map(x => x.trim()).filter(Boolean);
+  chapters.forEach((c, ci) => {
+    const first = ci === 0;
+    if (subL.length && c.ch === 1) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
+    body += wParaX(wRun(bookName.toUpperCase(), { b:true, sz:36 }), { align:'center', after:40, before:first || (subL.length && c.ch === 1) ? 0 : 0, brk:!first && !(subL.length && c.ch === 1), keep:true });
+    body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true });
+    let para = null, lastPoem = false;
+    const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
+    c.vs.forEach(v => {
+      if (v.h){
+        flush();
+        String(v.h).split('\n').map(x => x.trim()).filter(Boolean).forEach((l, k) => {
+          const ref = /^\([^()]*\)$/.test(l);
+          body += wParaX(wRun(l, ref ? { i:true, sz:22, color:'7A6E60' } : { b:true, sz:k ? 26 : 28 }), { align:'center', before:k ? 0 : 200, after:80, keep:true });
+        });
+      }
+      const poem = Array.isArray(v.q) && v.q.length;
+      if (poem){
+        flush();
+        String(v.t).split('\n').forEach((ln, k) => {
+          const r = (k === 0 ? wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ', { sz:SZ }) : '') + wRun(ln, { sz:SZ });
+          body += wParaX(r, { align:'left', left:360 * (v.q[k] || 1), after:20, line:320 });
+        });
+        lastPoem = true;
+      } else {
+        if (lastPoem){ body += wParaX('', { after:60 }); lastPoem = false; }
+        if (!para || v.p){ flush(); para = ''; }
+        para += wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ' + String(v.t) + ' ', { sz:SZ });
+      }
+    });
+    flush();
+    const fns = c.vs.flatMap(v => v.fn || []);
+    fns.forEach((f, k) => { body += wParaX(wRun(f, { i:true, sz:20, color:'6B6150' }), { align:'left', before:k ? 0 : 200, after:60, line:300 }); });
+  });
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const enc = new TextEncoder();
+  const zip = zipStore([
+    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
+    { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
+    { name:'word/document.xml', data:enc.encode(doc) }
+  ]);
+  return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+$('#edWord').onclick = async () => {
+  await edAuto();
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  if (!name) return toast('Hãy nhập hoặc chọn tên sách');
+  const base = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
+  const curVs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+  const rec = await dbGet('books', name);
+  const nFilled = rec ? rec.chapters.filter(c => c && c.length).length : 0;
+  let mode = 0;
+  if (curVs.length && nFilled > 1){
+    mode = await choose('Xuất file Word', 'Bạn muốn xuất phần nào?', [{ t:`📄 Chương đang soạn (${name} ${ch})`, cls:'primary' }, { t:`📚 Cả sách ${name} (${nFilled} chương)` }, { t:'Hủy' }]);
+    if (mode !== 0 && mode !== 1) return;
+  } else if (!curVs.length && nFilled) mode = 1;
+  else if (!curVs.length) return toast('Chưa có nội dung để xuất');
+  let chapters, fname;
+  if (mode === 0){ chapters = [{ ch, vs:curVs }]; fname = `${base}-${ch}.docx`; }
+  else { chapters = rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length); fname = base + '.docx'; }
+  try {
+    const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname);
+    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
+  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
+};
 $('#exRestore').onclick = () => $('#exFile').click();
 $('#exFile').onchange = async e => {
   const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
