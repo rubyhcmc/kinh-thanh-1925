@@ -80,6 +80,12 @@ html.sa body{position:absolute;left:0;top:0;right:auto;bottom:auto;width:100%;he
 html.sa body.pg:not(.searching) .top{position:absolute}
 html.sa body.pg .pgv{position:absolute}
 html.sa body.pg #pgFoot{position:absolute}
+/* Bản AB4: ở chế độ Màn hình chính, thanh menu chuyển XUỐNG DƯỚI (mép trên chỉ còn nội dung, không còn thanh nào bị iOS làm mờ) */
+html.sa body{padding-top:env(safe-area-inset-top);padding-bottom:0}
+html.sa .top,html.sa body:not(.pg) .top{order:2;height:calc(48px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom) 10px;border-top:1px solid var(--line);border-bottom:0}
+html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
+html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
+html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -620,6 +626,9 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Không tự tắt khi đang đọc</span></div>
         <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
+      <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
+        <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      </div>
       <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Phóng to chữ cho dễ đọc</span></div>
         <div class="seg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
@@ -937,7 +946,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -974,7 +983,7 @@ function choose(title, msg, opts){
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
 const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
-const S = { theme:'light', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
+const S = { theme:'light', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false, fullauto:true };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
 /* Mở app luôn ở giao diện sáng: người dùng cũ đang để 'Tự động' (theo máy, hay bị tối) được chuyển về 'Sáng' một lần; muốn tối vẫn chọn trong Cài đặt */
 try { if (!localStorage.getItem('kt.themeLight')){ if (S.theme === 'auto') S.theme = 'light'; localStorage.setItem('kt.themeLight', '1'); localStorage.setItem('kt.settings', JSON.stringify(S)); } } catch(e){}
@@ -1223,7 +1232,7 @@ function curVerseNo(){
     const v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
     return v.dataset.n;
   }
-  const hb = $('.top') ? $('.top').getBoundingClientRect().bottom : 0;
+  const hb = SCR.getBoundingClientRect().top;
   /* Câu đang đọc = câu đầu tiên có DÒNG ĐẦU nằm trọn dưới thanh đầu trang.
      (Trước đây tính theo đáy của câu nên đuôi câu trước vẫn lấp ló dưới thanh đầu trang bị tính nhầm → nhập câu 13 lại hiện 12.) */
   let v = vs.find(x => { const r = x.getClientRects()[0]; return r && r.top >= hb - 2; });
@@ -4162,16 +4171,22 @@ function paperFullscreen(on){
     const de = document.documentElement, fs = document.fullscreenElement || document.webkitFullscreenElement;
     if (on && !fs && matchMedia('(pointer:coarse)').matches){
       const r = de.requestFullscreen ? de.requestFullscreen({ navigationUI:'hide' }) : (de.webkitRequestFullscreen && de.webkitRequestFullscreen());
-      if (r && r.catch) r.catch(() => {});
+      if (r && r.then) r.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch(e){} }, () => {});   // vào được toàn màn hình thì khóa xoay dọc (Android)
     } else if (!on && fs){
+      try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch(e){}
       const r = document.exitFullscreen ? document.exitFullscreen() : (document.webkitExitFullscreen && document.webkitExitFullscreen());
       if (r && r.catch) r.catch(() => {});
     }
   } catch(e){}
 }
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen(PAPER_PAGED && S.paper); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen((PAPER_PAGED && S.paper) || S.fullauto); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
 // Mở app đang ở chế độ Trang giấy: chạm lần đầu để vào toàn màn hình (trình duyệt chỉ cho phép sau một cú chạm)
-document.addEventListener('click', () => { if (PAPER_PAGED && S.paper) paperFullscreen(true); }, { once:true, capture:true });
+document.addEventListener('click', () => {
+  if ((PAPER_PAGED && S.paper) || S.fullauto) paperFullscreen(true);
+  /* iPhone Safari không có toàn màn hình: nhắc một lần cách dùng toàn màn hình thật */
+  try { if (S.fullauto && IS_IOS && !document.documentElement.classList.contains('sa') && !localStorage.getItem('kt.iosFsHint')){ localStorage.setItem('kt.iosFsHint', '1'); setTimeout(() => toast('iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính" để đọc toàn màn hình'), 600); } } catch(e){}
+}, { once:true, capture:true });
+$$('#fullSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!S.fullauto); b.onclick = () => { S.fullauto = b.dataset.v === '1'; saveS(); $$('#fullSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === S.fullauto)); paperFullscreen(S.fullauto || (PAPER_PAGED && S.paper)); }; });
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
@@ -4949,6 +4964,17 @@ function openPlan(opts){
   document.body.appendChild(o);
 }
 planSum();
+
+/* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở, thân trang co theo vùng nhìn thấy để ô nhập không bị bàn phím che */
+(function(){
+  if (!document.documentElement.classList.contains('sa') || !window.visualViewport) return;
+  const vv = window.visualViewport, b = document.body;
+  const fit = () => {
+    if (vv.height >= innerHeight - 1){ b.style.height = ''; b.style.top = ''; return; }
+    b.style.height = vv.height + 'px'; b.style.top = vv.offsetTop + 'px';
+  };
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+})();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
