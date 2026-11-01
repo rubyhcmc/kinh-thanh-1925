@@ -1025,7 +1025,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB8';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB9';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5156,14 +5156,14 @@ const PStore = (() => {
   /* ---------- 2) Mở app: localStorage bị xóa mà IndexedDB còn → tự khôi phục ---------- */
   async function bootRestore(){
     try {
-      if (!(await withTimeout(ensure(), 7000))) return false;
       const s = snapshot();
-      if (hasData(s)){ mirror(); return false; }                              // bình thường
+      if (hasData(s)){ mirror(); return false; }                              // bình thường: KHÔNG chờ IndexedDB, app mở ngay
       if (localStorage.getItem(EMPTY_KEY)) return false;                       // người dùng đã chủ động xóa hết
       try { if (sessionStorage.getItem(RELOAD_KEY)) return false; } catch(e){}  // chống vòng lặp tải lại
-      const cur = await store.getItem('current');
+      if (!(await withTimeout(ensure(), 4000))) return false;                  // chỉ khi localStorage trống mới cần chờ kho dự phòng (tối đa 4 giây)
+      const cur = await withTimeout(store.getItem('current'), 4000);
       let d = clean(cur && cur.data), src = 'bản phản chiếu';
-      if (!hasData(d)){ const h = (await store.getItem('hist')) || []; const e = h.find(x => hasData(clean(x.data))); d = e ? clean(e.data) : null; src = 'bản sao lưu định kỳ'; }
+      if (!hasData(d)){ const h = (await withTimeout(store.getItem('hist'), 4000)) || []; const e = h.find(x => hasData(clean(x.data))); d = e ? clean(e.data) : null; src = 'bản sao lưu định kỳ'; }
       if (!hasData(d)) return false;
       const put = (k, v) => { if (v != null) rawSet.call(localStorage, k, JSON.stringify(v)); };
       put('kt.reads', d.reads); put('kt.lessons', d.lessons); put('kt.marks', d.marks);
@@ -5189,7 +5189,7 @@ const PStore = (() => {
       } catch(e){ console.warn('PStore.addHistory', e); return false; }
     });
   }
-  const safety = async label => { try { await addHistory(label); } catch(e){} };    // điểm an toàn trước thao tác nguy hiểm
+  const safety = async label => { try { await withTimeout(addHistory(label), 3000); } catch(e){} };    // điểm an toàn trước thao tác nguy hiểm
 
   function remind(){
     if (!localStorage.getItem('kt.onboard') || !hasData(snapshot())) return;
