@@ -86,6 +86,7 @@ html.sa .top,html.sa body:not(.pg) .top{order:2;height:calc(48px + env(safe-area
 html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
 /* Sửa lỗi thanh trạng thái iOS che mép trên: khi mở ô TÌM KIẾM ở chế độ Trang giấy (Màn hình chính), thanh .top nằm ở mép trên nhưng quy tắc 'html.sa .top' ở trên đã xóa mất padding-top
    → ô tìm kiếm chui xuống dưới đồng hồ/pin. Trả lại khoảng đệm an toàn phía trên cho đúng trường hợp này. */
+html.sa body.pg.searching main{top:calc(var(--hh) + var(--sbx,0px))}      /* khung tìm kiếm không bị thanh menu (đã cao thêm phần chừa mép) che */
 html.sa body.pg.searching .top{top:0;height:calc(var(--hh) + var(--sbx,0px));padding:calc(env(safe-area-inset-top) + var(--sbx,0px)) 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
 html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
 html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
@@ -1058,7 +1059,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
 try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElement.classList.add('mtop'); } catch(e){ document.documentElement.classList.add('mtop'); }
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null ? 24 : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', '24px'); }
-const APP_VERSION = '2026.11.01-AB17';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB18';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
