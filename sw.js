@@ -1,54 +1,111 @@
-/* Service worker: ưu tiên bản MỚI NHẤT từ mạng, nhưng KHÔNG bắt người dùng chờ mạng chậm, và luôn mở được khi mất mạng.
-   - Cài đặt (install): trang chính PHẢI lưu được thì bản này mới được cài. Nếu lưu lỗi (mạng chập chờn) thì bản cũ (và kho lưu cũ) giữ nguyên,
-     lần mở sau trình duyệt tự thử lại. Nhờ vậy không bao giờ có chuyện “đã cài mà kho lưu trống”.
-   - Mở trang (navigate): có bản đã lưu thì mở NGAY (không chờ mạng); bản mới tải ngầm và dùng từ lần mở sau.
-   - Tệp dữ liệu .json KHÔNG đi qua đây: Kinh Thánh nằm trong IndexedDB của app, không nằm trong Cache Storage.
-   - Kho 'kt-store-v1' (kho dự phòng cũ) và 'kt-fallback-v1' (kho dự phòng dùng khi IndexedDB của máy hỏng) KHÔNG bị xóa ở đây: do app tự quản.
-   - Khóa lưu sẵn bỏ phần “?…”: mở trang với tham số khác nhau (?kho=…) vẫn dùng chung một bản lưu. */
-const CACHE = 'kt-20261101-h';
-const LEGACY_STORE = 'kt-store-v1', FALLBACK_STORE = 'kt-fallback-v1', DATA_STORE = 'kt-data-v1';
-const NAV_WAIT_MS = 2500;
-const ESSENTIAL = ['./', './index.html'];
-const OPTIONAL = ['./manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
-async function cacheShell(){
-  const c = await caches.open(CACHE);
-  await Promise.all(ESSENTIAL.map(u => c.add(new Request(u, { cache:'reload' }))));        // lỗi → ném ra → không cài
-  await Promise.all(OPTIONAL.map(u => c.add(new Request(u, { cache:'reload' })).catch(() => {})));
-}
-self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(cacheShell());
-});
-self.addEventListener('activate', e => {
-  e.waitUntil((async () => {
-    const ks = await caches.keys();
-    await Promise.all(ks.filter(k => k !== CACHE && k !== LEGACY_STORE && k !== FALLBACK_STORE && k !== DATA_STORE).map(k => caches.delete(k)));
-    await self.clients.claim();
-  })());
-});
-self.addEventListener('message', e => {                  // trang yêu cầu lưu lại vỏ app (khi kiểm tra thấy chưa có)
-  if (e.data === 'cache-shell') e.waitUntil(cacheShell().catch(() => {}));
-});
-self.addEventListener('fetch', e => {
-  const r = e.request;
-  if (r.method !== 'GET') return;
-  const u = new URL(r.url);
-  if (u.origin !== location.origin) return;
-  if (/\.json$/i.test(u.pathname)) return;
-  const key = u.origin + u.pathname;
-  const net = fetch(r.url, { cache:'no-store' }).then(res => {
-    if (res.status === 200){ const cp = res.clone(); caches.open(CACHE).then(c => c.put(key, cp)).catch(() => {}); }
-    return res;
-  });
-  const fallback = () => caches.match(key).then(m => m || (r.mode === 'navigate' ? caches.match('./index.html') : undefined));
-  if (r.mode === 'navigate'){
-    e.waitUntil(net.catch(() => {}));                    // luôn tải bản mới ngầm để lần mở sau dùng
-    e.respondWith((async () => {
-      const cached = await fallback();
-      if (cached) return cached;                         // có bản đã lưu → mở NGAY, không chờ mạng (nhanh, và chạy offline)
-      return net.catch(() => Response.error());          // lần đầu tiên chưa có gì → bắt buộc chờ mạng
-    })());
-    return;
+/**
+ * Cloudflare Worker – cầu nối an toàn giữa app Kinh Thánh và GitHub.
+ * Token GitHub nằm ở ĐÂY (biến bí mật của Worker), KHÔNG nằm trong app → người dùng không thấy, không phải nhập gì.
+ *
+ * Mỗi người dùng có một "mã đồng bộ" ngẫu nhiên do app tự tạo; dữ liệu của họ nằm ở  users/<mã>.json  trong kho GitHub.
+ *   GET  /u/<mã>  → { sha, data }            (404 nếu chưa có bản sao lưu)
+ *   PUT  /u/<mã>  body { base, data }         base = sha lần cuối app biết ('' nếu chưa có) → { sha }; 409 nếu máy khác đã ghi trước
+ *
+ * Cài đặt (Cloudflare → Workers & Pages → Create Worker → dán file này → Deploy), rồi vào Settings → Variables:
+ *   GITHUB_TOKEN   (Secret)  PAT fine-grained, chỉ cho đúng 1 kho, quyền Contents: Read and write
+ *   REPO           (Text)    ví dụ  ten-nguoi-dung/kinh-thanh-userdata   (nên là kho RIÊNG TƯ)
+ *   ALLOWED_ORIGIN (Text)    địa chỉ web của app, ví dụ  https://ten.github.io   (nhiều địa chỉ: ngăn cách bằng dấu phẩy; bỏ trống = cho mọi nơi)
+ *   BRANCH         (Text, tùy chọn)  mặc định nhánh mặc định của kho
+ */
+const MAX_BYTES = 2 * 1024 * 1024;
+
+export default {
+  async fetch(req, env) {
+    const origins = String(env.ALLOWED_ORIGIN || '*').split(',').map(s => s.trim()).filter(Boolean);
+    const origin = req.headers.get('Origin') || '';
+    const okOrigin = origins.includes('*') || !origin || origins.includes(origin);
+    const cors = {
+      'Access-Control-Allow-Origin': origins.includes('*') ? '*' : (origins.includes(origin) ? origin : origins[0]),
+      'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin'
+    };
+    const out = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (!okOrigin) return out({ error: 'Nguồn truy cập không được phép.' }, 403);
+    if (!env.GITHUB_TOKEN || !env.REPO) return out({ error: 'Worker chưa được cấu hình (thiếu GITHUB_TOKEN hoặc REPO).' }, 500);
+
+    const m = new URL(req.url).pathname.match(/^\/u\/([A-Z2-9]{20,32})$/);
+    if (!m) return out({ error: 'Mã đồng bộ không hợp lệ.' }, 400);
+    const path = `users/${m[1]}.json`;
+
+    try {
+      const cur = await getFile(env, path);
+
+      if (req.method === 'GET') {
+        if (!cur) return out({ error: 'Chưa có bản sao lưu cho mã này.' }, 404);
+        return out({ sha: cur.sha, data: JSON.parse(cur.text) });
+      }
+
+      if (req.method === 'PUT') {
+        const len = +req.headers.get('Content-Length') || 0;
+        if (len > MAX_BYTES) return out({ error: 'Dữ liệu quá lớn.' }, 413);
+        const text = await req.text();
+        if (text.length > MAX_BYTES) return out({ error: 'Dữ liệu quá lớn.' }, 413);
+        let body; try { body = JSON.parse(text); } catch (e) { return out({ error: 'Dữ liệu không phải JSON.' }, 400); }
+        const d = body && body.data;
+        if (!d || d.app !== 'kinhthanh' || d.kind !== 'user-data') return out({ error: 'Sai định dạng dữ liệu.' }, 400);
+        if (cur && String(body.base || '') !== cur.sha) return out({ error: 'Dữ liệu trên máy chủ đã thay đổi.', sha: cur.sha }, 409);
+
+        const put = { message: 'Cập nhật dữ liệu người dùng ' + new Date().toISOString(), content: toB64(JSON.stringify(d, null, 2)) };
+        if (cur) put.sha = cur.sha;
+        if (env.BRANCH) put.branch = env.BRANCH;
+        const r = await gh(env, path, { method: 'PUT', body: JSON.stringify(put) });
+        if (r.status === 409 || r.status === 422) return out({ error: 'Dữ liệu trên máy chủ vừa thay đổi.', sha: (await getFile(env, path) || {}).sha || '' }, 409);
+        if (!r.ok) return out({ error: 'GitHub trả lỗi ' + r.status }, 502);
+        return out({ sha: (await r.json()).content.sha });
+      }
+
+      return out({ error: 'Phương thức không được hỗ trợ.' }, 405);
+    } catch (e) {
+      return out({ error: 'Lỗi máy chủ: ' + (e && e.message || e) }, 500);
+    }
   }
-  e.respondWith(net.catch(() => fallback().then(m => m || Response.error())));
-});
+};
+
+function gh(env, path, init = {}) {
+  const q = env.BRANCH && (!init.method || init.method === 'GET') ? '?ref=' + encodeURIComponent(env.BRANCH) : '';
+  return fetch(`https://api.github.com/repos/${env.REPO}/contents/${path}${q}`, {
+    ...init,
+    headers: {
+      Authorization: 'Bearer ' + env.GITHUB_TOKEN,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'kinhthanh-sync-worker',
+      ...(init.body ? { 'Content-Type': 'application/json' } : {})
+    }
+  });
+}
+async function getFile(env, path) {
+  const r = await gh(env, path);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('GitHub trả lỗi ' + r.status);
+  const j = await r.json();
+  let text;
+  if (j.content && j.encoding === 'base64') text = fromB64(j.content);
+  else {                                                         // file > 1MB: tải bản raw
+    const raw = await fetch(`https://api.github.com/repos/${env.REPO}/contents/${path}${env.BRANCH ? '?ref=' + encodeURIComponent(env.BRANCH) : ''}`, {
+      headers: { Authorization: 'Bearer ' + env.GITHUB_TOKEN, Accept: 'application/vnd.github.raw+json', 'User-Agent': 'kinhthanh-sync-worker' }
+    });
+    if (!raw.ok) throw new Error('GitHub trả lỗi ' + raw.status);
+    text = await raw.text();
+  }
+  return { sha: j.sha, text };
+}
+function toB64(str) {
+  const b = new TextEncoder().encode(str); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function fromB64(b64) {
+  const bin = atob(String(b64).replace(/\s/g, '')), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(u);
+}
