@@ -548,6 +548,24 @@ html[data-paper] .reader.print{text-align:justify}
 .ctrule{width:56px;height:1px;border:0;margin:16px auto 14px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7}
 .cthi{margin:0;font:700 17px/1.4 var(--serif);color:var(--fg)}
 .ctmsg{margin:8px auto 0;max-width:290px;font:italic 14px/1.65 var(--serif);color:var(--muted)}
+/* ===== Đồng bộ GitHub (dữ liệu người dùng) ===== */
+.usbadge{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:14px;font-weight:600}
+.usbadge .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.usbadge.ok .dot{background:#2e7d32}
+.usbadge.busy .dot{background:var(--accent);animation:uspulse 1s infinite}
+.usbadge.dirty .dot{background:var(--accent)}
+.usbadge.err,.usbadge.conflict{color:var(--danger)}
+.usbadge.err .dot,.usbadge.conflict .dot{background:var(--danger)}
+@keyframes uspulse{50%{opacity:.25}}
+.usdetail{white-space:pre-line;font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.usstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin:12px 0 4px}
+.usstats div{background:var(--bg);border-radius:10px;padding:8px 2px;font-size:11.5px;color:var(--muted)}
+.usstats b{display:block;font:700 19px var(--serif);color:var(--accent)}
+.uspw{position:relative}
+.uspw input{padding-right:62px}
+.uspw button{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:6px 10px;border:0;background:none;color:var(--muted);font-size:13px}
+.uslog{font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;max-height:120px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px;color:var(--muted);margin-top:10px;user-select:text;-webkit-user-select:text}
+#usSheet .sheet{user-select:text;-webkit-user-select:text}
 </style>
 </head>
 <body>
@@ -644,6 +662,8 @@ html[data-paper] .reader.print{text-align:justify}
         <button class="sbtn" id="dtImport">Nhập file</button><input type="file" id="dtFile" accept=".json,application/json" hidden></div>
       <div class="srow"><div class="stxt"><b>Làm mới hành trình</b><span>Xóa lịch sử đọc, giữ nguyên ghi chú</span></div>
         <button class="sbtn warn" id="dtReset">Làm mới</button></div>
+      <div class="srow"><div class="stxt"><b>Đồng bộ GitHub</b><span id="usSum">Chưa bật · tự sao lưu ghi chú, kế hoạch, dấu trang</span></div>
+        <button class="sbtn" id="usOpen">Cấu hình</button></div>
     </div>
 
     <div class="slabel">Giới thiệu</div>
@@ -659,6 +679,45 @@ html[data-paper] .reader.print{text-align:justify}
     </div>
 
     <!-- Chế độ chỉ đọc: không có nút quản trị công khai. Quản trị viên mở bảng đăng nhập bằng cách chạm 5 lần liên tiếp vào chữ “Cài đặt” hoặc tên ứng dụng. -->
+  </div>
+</div>
+
+<!-- ĐỒNG BỘ GITHUB (ghi chú, kế hoạch đọc, lịch sử đọc, dấu trang) -->
+<div class="overlay" id="usSheet" style="z-index:85" hidden>
+  <div class="sheet">
+    <div class="sgrab"></div>
+    <div class="shead"><h3>Đồng bộ GitHub</h3><button class="sdone" id="usClose">Xong</button></div>
+    <div class="usbadge off" id="usBadge"><span class="dot"></span><span id="usText">Chưa cấu hình</span></div>
+    <div class="usdetail" id="usDetail"></div>
+    <div class="usstats">
+      <div><b id="usStLessons">0</b>Ghi chú</div>
+      <div><b id="usStDays">0</b>Ngày đọc</div>
+      <div><b id="usStMarks">0</b>Dấu trang</div>
+      <div><b id="usStPlan">—</b>Kế hoạch</div>
+    </div>
+
+    <div class="slabel">Cấu hình</div>
+    <div class="sgroup" style="padding:4px 14px 14px">
+      <label class="lbl" for="usToken">GitHub Token (PAT)</label>
+      <div class="uspw"><input type="password" id="usToken" placeholder="ghp_… hoặc github_pat_…" autocomplete="off" spellcheck="false" autocapitalize="off"><button type="button" id="usEye">Hiện</button></div>
+      <label class="lbl" for="usRepo">Tên Repo</label>
+      <input type="text" id="usRepo" placeholder="tên-người-dùng/ten-kho (hoặc chỉ ten-kho)" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <label class="lbl" for="usPath">Đường dẫn file</label>
+      <input type="text" id="usPath" placeholder="backup.json" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <label class="lbl" for="usBranch">Nhánh (để trống = nhánh mặc định)</label>
+      <input type="text" id="usBranch" placeholder="main" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <label class="chk"><input type="checkbox" id="usAuto"> Tự động đẩy lên GitHub sau mỗi thay đổi</label>
+      <p class="bmhint" style="margin:10px 0 0">Token cần quyền ghi kho (classic: <b>repo</b>; fine-grained: <b>Contents → Read and write</b>). Nên dùng kho <b>Riêng tư</b>. Token chỉ lưu trên máy này, không nằm trong file sao lưu; đừng dùng trên máy dùng chung. File này độc lập với đồng bộ Kinh Thánh của quản trị viên.</p>
+      <div class="btns"><button class="btn primary" id="usSave">💾 Lưu &amp; kiểm tra</button><button class="btn danger" id="usClear">Xóa cấu hình</button></div>
+    </div>
+
+    <div class="slabel">Sao lưu &amp; Khôi phục</div>
+    <div class="sgroup" style="padding:4px 14px 14px">
+      <label class="lbl" for="usMode">Cách khôi phục</label>
+      <select id="usMode"><option value="merge">Gộp: giữ dữ liệu hiện tại, thêm từ GitHub (khuyên dùng)</option><option value="replace">Thay thế: dùng đúng như bản trên GitHub</option></select>
+      <div class="btns"><button class="btn primary" id="usPush">⬆ Đẩy lên ngay</button><button class="btn" id="usRestore">⬇ Khôi phục dữ liệu</button></div>
+    </div>
+    <div class="uslog" id="usLog"></div>
   </div>
 </div>
 
@@ -946,7 +1005,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB7';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4979,6 +5038,299 @@ planSum();
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
 })();
+
+/* =========================================================
+ *  ĐỒNG BỘ DỮ LIỆU NGƯỜI DÙNG QUA GITHUB (UserSync)
+ *  Ghi chú (kt.lessons) · lịch sử đọc (kt.reads) · dấu trang (kt.marks) · kế hoạch (kt.plan, kt.planCustom) · chỗ đọc tiếp nối (kt.resume)
+ *  - Tự bắt mọi thay đổi ở các khóa trên (localStorage vẫn là nơi lưu chính) và tự đẩy file JSON lên GitHub.
+ *  - Khôi phục: tải file về, xử lý SHA, ghi lại vào localStorage rồi tải lại app.
+ *  - Định dạng file = "user-data" giống nút Sao lưu/Khôi phục có sẵn nên dùng chung được.
+ *  - Cấu hình riêng (kt.usersync.cfg) – không đụng tới đồng bộ Kinh Thánh của quản trị viên (kt.gh).
+ * ========================================================= */
+const UserSync = (() => {
+  const CFG_KEY = 'kt.usersync.cfg', META_KEY = 'kt.usersync.meta';
+  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume'];
+  const SOFT = ['kt.resume'];                                   // đổi liên tục khi cuộn đọc → gom lại, đẩy thưa hơn
+  const API = 'https://api.github.com', DEBOUNCE = 4000, DEBOUNCE_SOFT = 90000;
+  const LABEL = { off:'Chưa cấu hình', ok:'Đã đồng bộ', busy:'Đang đồng bộ…', dirty:'Có thay đổi chưa đẩy lên', err:'Lỗi đồng bộ', conflict:'Xung đột dữ liệu', offline:'Chưa có mạng' };
+  let cfg = { token:'', repo:'', path:'backup.json', branch:'', auto:true };
+  let meta = { sha:'', hash:'', at:0, dirty:false };            // sha = phiên bản file trên GitHub lần cuối; hash = nội dung đã đẩy gần nhất
+  let state = 'off', busy = false, timer = 0, suppress = 0, logTxt = '';
+  const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;      // bản gốc, không bị chặn
+  const configured = () => !!(cfg.token && cfg.repo && cfg.path);
+  const ld = (k, d) => { try { return Object.assign({}, d, JSON.parse(localStorage.getItem(k) || '{}')); } catch(e){ return d; } };
+  const saveCfg = () => rawSet.call(localStorage, CFG_KEY, JSON.stringify(cfg));
+  const saveMeta = () => rawSet.call(localStorage, META_KEY, JSON.stringify(meta));
+
+  /* ---------- Trạng thái & nhật ký ---------- */
+  function ulog(m){ logTxt = (`[${new Date().toLocaleTimeString('vi-VN')}] ${m}\n` + logTxt).slice(0, 3000); const e = $('#usLog'); if (e) e.textContent = logTxt; }
+  const readJ = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch(e){ return d; } };
+  function snapshot(){
+    return { app:'kinhthanh', kind:'user-data', version:1,
+      reads:readJ('kt.reads', {}), lessons:readJ('kt.lessons', []), marks:readJ('kt.marks', []),
+      plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null) };
+  }
+  const hashOf = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + '-' + (h >>> 0).toString(16); };
+  function stats(){
+    const s = snapshot(), set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+    set('#usStLessons', s.lessons.length); set('#usStDays', Object.keys(s.reads).length); set('#usStMarks', s.marks.length);
+    set('#usStPlan', s.plan ? (s.plan.id === 'custom' ? s.plan.days + 'n' : s.plan.id) : '—');
+  }
+  function setState(st, msg){
+    state = st;
+    const b = $('#usBadge'); if (b) b.className = 'usbadge ' + st;
+    const t = $('#usText'); if (t) t.textContent = LABEL[st] || st;
+    const at = meta.at ? new Date(meta.at).toLocaleString('vi-VN') : 'chưa lần nào';
+    const d = $('#usDetail');
+    if (d) d.textContent = (msg ? msg + '\n' : '') + (configured() ? `Kho: ${cfg.repo} · File: ${cfg.path}${cfg.branch ? ' · Nhánh: ' + cfg.branch : ''}\nĐồng bộ gần nhất: ${at}` : 'Nhập token, tên repo và đường dẫn file bên dưới.');
+    const sm = $('#usSum'); if (sm) sm.textContent = !configured() ? 'Chưa bật · tự sao lưu ghi chú, kế hoạch, dấu trang' : (LABEL[st] || st);
+    if (msg) ulog((LABEL[st] || st) + ': ' + msg);
+    stats();
+  }
+
+  /* ---------- 1) Tự bắt thay đổi localStorage ---------- */
+  function schedule(soft){
+    if (!cfg.auto || !configured()) return;
+    if (soft){ if (timer) return; timer = setTimeout(() => { timer = 0; push({ auto:true }); }, DEBOUNCE_SOFT); }
+    else { clearTimeout(timer); timer = setTimeout(() => { timer = 0; push({ auto:true }); }, DEBOUNCE); }
+  }
+  function onChange(key){
+    if (suppress || !TRACKED.includes(key)) return;
+    if (!meta.dirty){ meta.dirty = true; saveMeta(); }
+    if (!configured()){ stats(); return; }
+    if (!busy) setState('dirty', SOFT.includes(key) ? '' : 'Sẽ tự đẩy lên GitHub sau vài giây…');
+    schedule(SOFT.includes(key));
+  }
+  Storage.prototype.setItem = function(k, v){ rawSet.call(this, k, v); if (this === localStorage) onChange(k); };
+  Storage.prototype.removeItem = function(k){ rawRemove.call(this, k); if (this === localStorage) onChange(k); };
+  addEventListener('storage', e => { if (e.storageArea === localStorage && TRACKED.includes(e.key)) onChange(e.key); });
+
+  /* ---------- UTF-8 <-> base64 ---------- */
+  function toB64(str){
+    const b = new TextEncoder().encode(str); let s = '';
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function fromB64(b64){
+    const bin = atob(String(b64).replace(/\s/g, '')), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(u);
+  }
+
+  /* ---------- 2) GitHub Contents API ---------- */
+  const nRepo = s => {
+    s = String(s || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\.git$/i, '').replace(/^\/+|\/+$/g, '');
+    const p = s.split('/').filter(Boolean); return p.length >= 2 ? p[0] + '/' + p[1] : (p[0] || '');
+  };
+  const nPath = p => String(p || '').trim().replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+  const fPath = () => cfg.path.split('/').map(encodeURIComponent).join('/');
+  const refQ = () => (cfg.branch ? 'ref=' + encodeURIComponent(cfg.branch) + '&' : '') + '_=' + Date.now();
+  function explain(status, msg, res){
+    if (status === 401) return 'Token sai hoặc đã hết hạn. Hãy tạo token mới.';
+    if (status === 403){
+      if (res && res.headers.get('x-ratelimit-remaining') === '0'){ const r = +res.headers.get('x-ratelimit-reset') * 1000; return 'GitHub tạm giới hạn lượt truy cập' + (r ? ', thử lại sau ' + new Date(r).toLocaleTimeString('vi-VN') : '') + '.'; }
+      return /rate limit/i.test(msg) ? 'GitHub tạm giới hạn lượt truy cập, hãy thử lại sau ít phút.' : 'Token chưa đủ quyền ghi nội dung kho (cần "repo" hoặc "Contents: Read and write").';
+    }
+    if (status === 404) return 'Không tìm thấy kho/file (kho riêng tư cần token đúng quyền; kiểm tra lại tên repo).';
+    if (status === 409 || status === 422) return 'Phiên bản file trên GitHub vừa thay đổi (lệch SHA).';
+    if (status >= 500) return 'GitHub đang gặp sự cố (' + status + '), thử lại sau.';
+    return 'Lỗi GitHub ' + status + (msg ? ': ' + msg : '');
+  }
+  async function gh(path, o = {}){
+    const h = { Accept:o.raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', Authorization:'Bearer ' + cfg.token };
+    if (o.body) h['Content-Type'] = 'application/json';
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
+    let res;
+    try { res = await fetch(API + path, { method:o.method || 'GET', headers:h, body:o.body, cache:'no-store', signal:ctl.signal }); }
+    catch(e){ throw Object.assign(new Error(e.name === 'AbortError' ? 'Hết thời gian chờ GitHub.' : 'Không kết nối được GitHub. Hãy kiểm tra mạng.'), { network:true }); }
+    finally { clearTimeout(to); }
+    if (!res.ok){ let m = ''; try { m = (await res.clone().json()).message || ''; } catch(e){} throw Object.assign(new Error(explain(res.status, m, res)), { status:res.status }); }
+    return res;
+  }
+  async function getRemote(){                                   // { sha, text } hoặc null nếu kho có nhưng chưa có file
+    let j;
+    try { j = await (await gh(`/repos/${cfg.repo}/contents/${fPath()}?${refQ()}`)).json(); }
+    catch(e){
+      if (e.status !== 404) throw e;
+      await gh(`/repos/${cfg.repo}?_=${Date.now()}`);          // vẫn 404 → kho không tồn tại / không có quyền (ném lỗi)
+      return null;
+    }
+    if (Array.isArray(j)) throw new Error('Đường dẫn file đang trỏ tới một thư mục, hãy nhập tên file (vd: backup.json).');
+    const text = (j.content && j.encoding === 'base64') ? fromB64(j.content)
+      : await (await gh(`/repos/${cfg.repo}/contents/${fPath()}?${refQ()}`, { raw:true })).text();   // file > 1MB: tải bản raw
+    return { sha:j.sha, text };
+  }
+  async function getSha(){
+    try { const j = await (await gh(`/repos/${cfg.repo}/contents/${fPath()}?${refQ()}`)).json(); return Array.isArray(j) ? null : j.sha; }
+    catch(e){ if (e.status === 404) return null; throw e; }
+  }
+  async function putRemote(text, sha){
+    const body = { message:'Sao lưu dữ liệu người dùng ' + new Date().toLocaleString('vi-VN'), content:toB64(text) };
+    if (cfg.branch) body.branch = cfg.branch;
+    if (sha) body.sha = sha;
+    return (await (await gh(`/repos/${cfg.repo}/contents/${fPath()}`, { method:'PUT', body:JSON.stringify(body) })).json()).content.sha;
+  }
+  async function ask(title, msg, opts){ const i = await choose(title, msg, opts.map(o => ({ t:o.t, cls:o.cls }))); return opts[i] ? opts[i].k : 'x'; }
+
+  /* ---------- 3) BACKUP: tự đẩy file JSON lên GitHub ---------- */
+  async function push(o = {}){
+    if (busy) return;
+    if (!configured()){ setState('off'); return; }
+    if (!navigator.onLine){ setState('offline', 'Sẽ tự đẩy lên khi có mạng.'); return; }
+    clearTimeout(timer); timer = 0; busy = true; setState('busy', 'Đang đẩy dữ liệu lên GitHub…');
+    try {
+      const data = snapshot(), h = hashOf(data);
+      if (o.auto && !meta.dirty && h === meta.hash){ setState('ok', 'Không có thay đổi mới.'); return; }
+      const remoteSha = await getSha();
+      if (remoteSha && meta.sha && remoteSha !== meta.sha && !o.force){       // máy khác đã cập nhật file này
+        setState('conflict', 'File trên GitHub đã được cập nhật từ nơi khác. Hãy khôi phục (gộp) hoặc ghi đè.');
+        if (!o.auto){
+          busy = false;
+          const c = await ask('Xung đột dữ liệu', 'File trên GitHub khác với bản bạn đã đồng bộ lần trước.\nBạn muốn làm gì?',
+            [{ t:'⬇ Khôi phục (gộp) từ GitHub', k:'restore', cls:'primary' }, { t:'⬆ Ghi đè GitHub bằng dữ liệu máy này', k:'force', cls:'danger' }, { t:'Để sau', k:'x' }]);
+          if (c === 'force') return push({ force:true });
+          if (c === 'restore') return restore({ mode:'merge', silent:true });
+        }
+        return;
+      }
+      data.exportedAt = new Date().toISOString(); data.appVersion = APP_VERSION;
+      const text = JSON.stringify(data, null, 2);
+      let sha;
+      try { sha = await putRemote(text, remoteSha || undefined); }
+      catch(e){
+        if (e.status !== 409 && e.status !== 422) throw e;
+        const again = await getSha();                                          // SHA lệch giữa lúc đọc và ghi → lấy SHA mới, thử đúng 1 lần
+        if (again && meta.sha && again !== meta.sha && !o.force) throw new Error('File trên GitHub vừa bị thay đổi, hãy bấm "Khôi phục dữ liệu" hoặc "Đẩy lên ngay".');
+        sha = await putRemote(text, again || undefined);
+      }
+      meta = { sha, hash:h, at:Date.now(), dirty:false }; saveMeta();
+      setState('ok', 'Đã sao lưu lên GitHub.'); if (!o.auto) toast('✔ Đã đẩy dữ liệu lên GitHub');
+    } catch(e){
+      setState(e.network ? 'offline' : 'err', e.message || String(e)); if (!o.auto) toast('Lỗi: ' + (e.message || e));
+    } finally { busy = false; }
+  }
+
+  /* ---------- 4) RESTORE: tải về, cập nhật SHA, ghi vào localStorage ---------- */
+  function validate(j){
+    if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('File không phải đối tượng JSON hợp lệ.');
+    if (j.app !== 'kinhthanh' || j.kind !== 'user-data') throw new Error('File trên GitHub không phải bản sao lưu dữ liệu người dùng của app này.');
+    return {
+      reads:(j.reads && typeof j.reads === 'object' && !Array.isArray(j.reads)) ? j.reads : {},
+      lessons:Array.isArray(j.lessons) ? j.lessons.filter(x => x && x.book && x.ch >= 1 && typeof x.text === 'string') : [],
+      marks:Array.isArray(j.marks) ? j.marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1) : [],
+      plan:(j.plan && /^\d{4}-\d{2}-\d{2}$/.test(j.plan.start || '')) ? j.plan : null,
+      planCustom:j.planCustom || null,
+      resume:(j.resume && j.resume.book && j.resume.ch >= 1) ? j.resume : null
+    };
+  }
+  const lk = x => `${x.book}|${x.ch}|${(x.ns || [x.n]).join(',')}`;
+  function applyData(r, mode){
+    suppress++;
+    try {
+      const put = (k, v) => { if (v == null) rawRemove.call(localStorage, k); else rawSet.call(localStorage, k, JSON.stringify(v)); };
+      if (mode === 'replace'){
+        put('kt.reads', r.reads); put('kt.lessons', r.lessons); put('kt.marks', r.marks);
+        put('kt.plan', r.plan); put('kt.planCustom', r.planCustom); put('kt.resume', r.resume);
+      } else {
+        const cur = snapshot(), reads = Object.assign({}, cur.reads);
+        Object.keys(r.reads).forEach(d => { if (Array.isArray(r.reads[d])) reads[d] = [...new Set([...(reads[d] || []), ...r.reads[d]])]; });
+        const lm = new Map(cur.lessons.map(x => [lk(x), x]));
+        r.lessons.forEach(x => { const c = lm.get(lk(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(lk(x), x); });      // trùng thì giữ bản mới hơn
+        const mm = new Map(cur.marks.map(x => [`${x.book}|${x.ch}|${x.n}`, x]));
+        r.marks.forEach(x => { const k = `${x.book}|${x.ch}|${x.n}`; if (!mm.has(k)) mm.set(k, x); });
+        put('kt.reads', reads);
+        put('kt.lessons', [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)));
+        put('kt.marks', [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, BM_MAX));
+        if (!cur.plan && r.plan) put('kt.plan', r.plan);
+        if (!cur.planCustom && r.planCustom) put('kt.planCustom', r.planCustom);
+        if (!cur.resume && r.resume) put('kt.resume', r.resume);
+      }
+    } finally { suppress--; }
+  }
+  async function restore(o = {}){
+    if (busy) return;
+    if (!configured()) return toast('Hãy nhập token, tên repo và đường dẫn file trước.');
+    if (!navigator.onLine){ setState('offline', 'Cần có mạng để khôi phục.'); return; }
+    const mode = o.mode || ($('#usMode') ? $('#usMode').value : 'merge');
+    busy = true; setState('busy', 'Đang tải dữ liệu từ GitHub…');
+    let reload = false;
+    try {
+      const remote = await getRemote();
+      if (!remote){ setState('err', `Chưa có file "${cfg.path}" trên GitHub. Hãy bấm "Đẩy lên ngay" để tạo.`); return; }
+      let j; try { j = JSON.parse(remote.text.replace(/^\uFEFF/, '')); } catch(e){ throw new Error('File trên GitHub không đúng định dạng JSON.'); }
+      const r = validate(j);
+      if (!o.silent){
+        busy = false;
+        const c = await ask(mode === 'replace' ? 'Thay thế toàn bộ dữ liệu?' : 'Khôi phục dữ liệu (gộp)?',
+          `File trên GitHub có:\n• ${Object.keys(r.reads).length} ngày đọc\n• ${r.lessons.length} ghi chú\n• ${r.marks.length} dấu trang\n• Kế hoạch: ${r.plan ? 'có' : 'không'}\n\n` + (mode === 'replace' ? 'Dữ liệu hiện tại trong máy sẽ bị XÓA và thay bằng bản này.' : 'Dữ liệu hiện tại được giữ, chỉ thêm phần còn thiếu.'),
+          [{ t:'Tiếp tục khôi phục', k:'go', cls:'primary' }, { t:'Hủy', k:'x' }]);
+        busy = true;
+        if (c !== 'go'){ setState(meta.dirty ? 'dirty' : (meta.sha ? 'ok' : 'off'), 'Đã hủy khôi phục.'); return; }
+      }
+      applyData(r, mode);
+      meta = { sha:remote.sha, hash:hashOf(snapshot()), at:Date.now(), dirty:mode === 'merge' }; saveMeta();   // nhớ SHA mới nhất → lần đẩy sau cập nhật đúng phiên bản
+      setState(meta.dirty ? 'dirty' : 'ok', 'Đã khôi phục dữ liệu từ GitHub. Đang tải lại app…'); toast('✔ Đã khôi phục dữ liệu – đang tải lại');
+      reload = true;
+    } catch(e){
+      setState(e.network ? 'offline' : 'err', e.message || String(e)); toast('Lỗi: ' + (e.message || e));
+    } finally { busy = false; }
+    if (reload) setTimeout(() => location.reload(), 1100);       // app nạp lại ghi chú, kế hoạch, dấu trang từ localStorage
+  }
+
+  /* ---------- Giao diện ---------- */
+  function fill(){ $('#usToken').value = cfg.token; $('#usRepo').value = cfg.repo; $('#usPath').value = cfg.path; $('#usBranch').value = cfg.branch; $('#usAuto').checked = cfg.auto !== false; }
+  async function saveTest(){
+    const token = $('#usToken').value.trim(), repoIn = nRepo($('#usRepo').value), path = nPath($('#usPath').value) || 'backup.json';
+    if (!token) return toast('Hãy nhập GitHub Token (PAT).');
+    if (!repoIn) return toast('Hãy nhập tên repo.');
+    if (/\.\./.test(path) || /\/$/.test(path)) return toast('Đường dẫn file không hợp lệ (vd: backup.json).');
+    const btn = $('#usSave'); btn.disabled = true; setState('busy', 'Đang kiểm tra kết nối…');
+    const old = Object.assign({}, cfg);
+    try {
+      cfg = { token, repo:repoIn, path, branch:$('#usBranch').value.trim(), auto:$('#usAuto').checked };
+      const login = (await (await gh('/user')).json()).login;                      // kiểm tra token
+      if (!cfg.repo.includes('/')) cfg.repo = login + '/' + cfg.repo;
+      const info = await (await gh('/repos/' + cfg.repo)).json();                  // kiểm tra kho + quyền ghi
+      if (info.permissions && info.permissions.push === false) throw new Error('Token không có quyền ghi vào kho này.');
+      if (cfg.repo !== old.repo || cfg.path !== old.path || cfg.branch !== old.branch){ meta.sha = ''; meta.hash = ''; saveMeta(); }   // đổi nơi lưu → coi như chưa đồng bộ
+      saveCfg(); fill();
+      const remote = await getRemote();
+      setState(meta.dirty ? 'dirty' : 'ok', `✔ Kết nối thành công (${login} → ${cfg.repo}). ` + (remote ? `Đã có file "${cfg.path}" trên GitHub.` : `Chưa có file "${cfg.path}", sẽ tạo khi đẩy lần đầu.`));
+      toast('✔ Đã lưu cấu hình');
+      const s = snapshot(), hasData = s.lessons.length || Object.keys(s.reads).length || s.marks.length || s.plan;
+      if (!remote){ if (hasData) push({}); }
+      else if (!meta.sha){
+        const c = await ask('Đã có bản sao lưu trên GitHub', `File "${cfg.path}" đã tồn tại. Bạn muốn làm gì?`,
+          [{ t:'⬇ Khôi phục (gộp) từ GitHub', k:'restore', cls:'primary' }, { t:'⬆ Ghi đè GitHub bằng dữ liệu máy này', k:'force', cls:'danger' }, { t:'Để sau', k:'x' }]);
+        if (c === 'restore') restore({ mode:'merge', silent:true });
+        else if (c === 'force'){ meta.sha = remote.sha; saveMeta(); push({ force:true }); }
+      }
+    } catch(e){ cfg = old; setState(e.network ? 'offline' : 'err', e.message || String(e)); toast('Lỗi: ' + (e.message || e)); }
+    finally { btn.disabled = false; }
+  }
+  function clearCfg(){
+    if (!confirm('Xóa cấu hình GitHub (đồng bộ dữ liệu người dùng) trên máy này? Ghi chú, kế hoạch vẫn được giữ.')) return;
+    clearTimeout(timer); timer = 0; cfg = { token:'', repo:'', path:'backup.json', branch:'', auto:true }; meta = { sha:'', hash:'', at:0, dirty:false };
+    rawRemove.call(localStorage, CFG_KEY); rawRemove.call(localStorage, META_KEY); fill(); setState('off'); toast('Đã xóa cấu hình');
+  }
+  function init(){
+    cfg = ld(CFG_KEY, cfg); meta = ld(META_KEY, meta);
+    $('#usOpen').onclick = () => { fill(); setState(state, ''); show('#usSheet'); };
+    $('#usClose').onclick = () => show('#usSheet', false);
+    $('#usSheet').addEventListener('click', e => { if (e.target.id === 'usSheet') show('#usSheet', false); });
+    $('#usSave').onclick = saveTest; $('#usClear').onclick = clearCfg;
+    $('#usPush').onclick = () => push({}); $('#usRestore').onclick = () => restore({});
+    $('#usAuto').onchange = () => { cfg.auto = $('#usAuto').checked; saveCfg(); if (cfg.auto && meta.dirty) schedule(false); };
+    $('#usEye').onclick = () => { const i = $('#usToken'), s = i.type === 'password'; i.type = s ? 'text' : 'password'; $('#usEye').textContent = s ? 'Ẩn' : 'Hiện'; };
+    addEventListener('online', () => { if (configured() && meta.dirty && cfg.auto) push({ auto:true }); else if (state === 'offline') setState(meta.dirty ? 'dirty' : 'ok'); });
+    addEventListener('offline', () => { if (configured()) setState('offline', 'Mất mạng. Dữ liệu vẫn được lưu trong máy.'); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && configured() && meta.dirty && cfg.auto && navigator.onLine && !busy) push({ auto:true }); });
+    setState(!configured() ? 'off' : (meta.dirty ? 'dirty' : (meta.sha ? 'ok' : 'off')), '');
+    if (configured() && meta.dirty && cfg.auto && navigator.onLine) timer = setTimeout(() => { timer = 0; push({ auto:true }); }, 2500);
+  }
+  return { init, push, restore, snapshot };
+})();
+UserSync.init();
 
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
