@@ -567,6 +567,11 @@ html[data-paper] .reader.print{text-align:justify}
 .uslog{font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;max-height:120px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px;color:var(--muted);margin-top:10px;user-select:text;-webkit-user-select:text}
 #usSheet .sheet{user-select:text;-webkit-user-select:text}
 .uscode{font:700 17px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-align:center;word-break:break-all;padding:12px;border-radius:10px;background:var(--bg);color:var(--accent);user-select:text;-webkit-user-select:text}
+.psbig{display:block;width:100%;min-height:54px;font-size:18px;margin-top:14px}
+.psdetail{white-space:pre-line;font-size:16px;line-height:1.6;margin:12px 2px 2px}
+.psnote{font-size:14.5px;line-height:1.55;color:var(--muted);margin:8px 2px 4px}
+.psmore{margin-top:18px}
+.psmore summary{font-size:17px;font-weight:600;padding:12px 2px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -657,13 +662,7 @@ html[data-paper] .reader.print{text-align:justify}
 
     <div class="slabel">Dữ liệu của tôi</div>
     <div class="sgroup">
-      <div class="srow"><div class="stxt"><b>Sao lưu</b><span>Tải về file JSON: lịch sử đọc, ghi chú, dấu trang</span></div>
-        <button class="sbtn" id="dtExport">Xuất file</button></div>
-      <div class="srow"><div class="stxt"><b>Khôi phục</b><span>Nhập file JSON khi đổi thiết bị</span></div>
-        <button class="sbtn" id="dtImport">Nhập file</button><input type="file" id="dtFile" accept=".json,application/json" hidden></div>
-      <div class="srow"><div class="stxt"><b>Làm mới hành trình</b><span>Xóa lịch sử đọc, giữ nguyên ghi chú</span></div>
-        <button class="sbtn warn" id="dtReset">Làm mới</button></div>
-      <div class="srow"><div class="stxt"><b>Sao lưu trong máy</b><span id="psSum">Tự lưu mỗi ngày, khôi phục được khi máy lỡ xóa dữ liệu</span></div>
+      <div class="srow"><div class="stxt"><b>Sao lưu &amp; khôi phục</b><span id="psSum">Giữ an toàn ghi chú, kế hoạch, dấu trang</span></div>
         <button class="sbtn" id="psOpen">Mở</button></div>
       <div class="srow"><div class="stxt"><b>Sao lưu tự động</b><span id="usSum">Tự động sao lưu ghi chú, kế hoạch, dấu trang</span></div>
         <button class="sbtn" id="usOpen">Mở</button></div>
@@ -685,23 +684,31 @@ html[data-paper] .reader.print{text-align:justify}
   </div>
 </div>
 
-<!-- SAO LƯU TRONG MÁY (localForage / IndexedDB): bản phản chiếu + các bản định kỳ -->
+<!-- SAO LƯU & KHÔI PHỤC (một nơi duy nhất, chữ đơn giản) -->
 <div class="overlay" id="psSheet" style="z-index:85" hidden>
   <div class="sheet">
     <div class="sgrab"></div>
-    <div class="shead"><h3>Sao lưu trong máy</h3><button class="sdone" id="psClose">Xong</button></div>
-    <div class="usbadge off" id="psBadge"><span class="dot"></span><span id="psText">Đang kiểm tra…</span></div>
-    <div class="usdetail" id="psDetail"></div>
-    <div class="usstats">
-      <div><b id="psStLessons">0</b>Ghi chú</div>
-      <div><b id="psStDays">0</b>Ngày đọc</div>
-      <div><b id="psStMarks">0</b>Dấu trang</div>
-      <div><b id="psStPlan">—</b>Kế hoạch</div>
-    </div>
-    <p class="bmhint" style="margin:10px 2px 0">Ghi chú, kế hoạch đọc, lịch sử đọc và dấu trang được chép liên tục sang một kho riêng trong máy và lưu thêm một bản mỗi ngày (giữ 8 bản gần nhất). Nếu iPhone lỡ xóa dữ liệu của app, lần mở sau app tự khôi phục. Bạn vẫn nên thỉnh thoảng tải file sao lưu về Tệp / iCloud.</p>
-    <div class="slabel">Các bản sao lưu trong máy</div>
-    <div class="sgroup" id="psList"></div>
-    <div class="btns" style="margin-top:14px"><button class="btn primary" id="psNow" style="flex:1">⬆ Sao lưu ngay</button><button class="btn" id="psFile">💾 Xuất file JSON</button></div>
+    <div class="shead"><h3>Sao lưu &amp; khôi phục</h3><button class="sdone" id="psClose">Xong</button></div>
+    <div class="usbadge off" id="psBadge" style="font-size:17px"><span class="dot"></span><span id="psText">Đang kiểm tra…</span></div>
+    <div class="psdetail" id="psDetail"></div>
+
+    <button class="btn primary psbig" id="dtExport">💾 Lưu một bản ra Tệp</button>
+    <p class="psnote">Nên làm mỗi tháng. Khi hiện bảng chọn, hãy bấm “Lưu vào Tệp” (hoặc iCloud Drive) để giữ an toàn khi đổi máy.</p>
+    <button class="btn psbig" id="dtImport">📂 Khôi phục từ Tệp</button>
+    <input type="file" id="dtFile" accept=".json,application/json" hidden>
+    <p class="psnote">Dùng khi đổi điện thoại hoặc lỡ mất dữ liệu: chọn lại tệp đã lưu.</p>
+
+    <details class="psmore">
+      <summary>Bản máy tự lưu mỗi ngày<span id="psListN"></span></summary>
+      <p class="psnote">Máy tự lưu giúp bạn. Nếu lỡ mất ghi chú hay kế hoạch, hãy bấm “Khôi phục” ở bản gần nhất.</p>
+      <div class="sgroup" id="psList"></div>
+    </details>
+    <details class="psmore">
+      <summary>Thao tác khác</summary>
+      <button class="btn psbig" id="psCloud" hidden>☁ Sao lưu lên mạng (mã đồng bộ)</button>
+      <button class="btn psbig danger" id="dtReset">Xóa lịch sử đọc</button>
+      <p class="psnote">Xóa lịch sử đọc và chuỗi ngày đọc; ghi chú và dấu trang vẫn giữ nguyên.</p>
+    </details>
   </div>
 </div>
 
@@ -1025,7 +1032,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB9';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB10';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4734,38 +4741,24 @@ async function dtDownload(name){          // → true nếu đã xuất; false n
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   PStore.noteExport(); return true;
 }
-function dtExport(){
-  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 80;
-  o.innerHTML = `<div class="sheet"><h3>Sao lưu dữ liệu</h3>
-    <p class="bmhint" style="margin:0 0 10px">${Object.keys(RD).length} ngày đọc · ${LS.length} ghi chú · ${BM.length} dấu trang</p>
-    <label class="bkchk"><span>Tên file</span></label>
-    <input class="bkin" id="bkName" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
-    <label class="bkchk"><input type="checkbox" id="bkDate" checked> Kèm ngày tháng trong tên file</label>
-    <div class="bkext">File sẽ được lưu với đuôi .json</div>
-    <div class="btns"><button class="btn" data-close="1">Hủy</button><button class="btn primary" data-go="1" style="margin-left:auto">Tải về</button></div></div>`;
-  const nm = o.querySelector('#bkName'), cb = o.querySelector('#bkDate'); let last = dtDefName(true); nm.value = last;
-  cb.onchange = () => { if (nm.value.replace(/\.json$/i, '') === last){ last = dtDefName(cb.checked); nm.value = last; } else toast('Tên file đang được bạn tự đặt'); };
-  o.addEventListener('click', e => {
-    if (e.target === o || e.target.closest('[data-close]')) return o.remove();
-    if (e.target.closest('[data-go]')){ const f = dtClean(nm.value); o.remove(); dtDownload(f).then(ok => { if (ok) toast('💾 Đã tạo file ' + f); }); }
-  });
-  nm.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); o.querySelector('[data-go]').click(); } });
-  document.body.appendChild(o); setTimeout(() => { nm.focus(); nm.select(); }, 60);
+function dtExport(){                          // một chạm: tự đặt tên theo ngày, không hỏi gì thêm
+  const f = dtClean(dtDefName(true));
+  return dtDownload(f).then(ok => { if (ok) toast('💾 Đã lưu file ' + f); return ok; });
 }
 const dtKeyL = x => `${x.book}|${x.ch}|${compressRange(x.ns || [x.n])}`;
 async function dtImport(file){
   let j; try { j = JSON.parse(await file.text()); } catch(e){ return toast('File không đọc được (không phải JSON hợp lệ)'); }
-  return dtApply(j, 'File');
+  return dtApply(j, 'Tệp này');
 }
 async function dtApply(j, srcName){          // khôi phục từ một đối tượng dữ liệu (file JSON hoặc bản sao lưu trong máy)
   if (!j || j.app !== 'kinhthanh' || j.kind !== 'user-data') return toast('Đây không phải file sao lưu của app này');
   const reads = j.reads && typeof j.reads === 'object' && !Array.isArray(j.reads) ? j.reads : {}, lessons = Array.isArray(j.lessons) ? j.lessons : [], marks = Array.isArray(j.marks) ? j.marks : [];
   const days = Object.keys(reads).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(reads[k]));
   const L = lessons.filter(x => x && x.book && x.ch >= 1 && typeof x.text === 'string'), M = marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1);
-  const i = await choose('Khôi phục dữ liệu', `${srcName || 'File'} có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
-    [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
+  const i = await choose('Khôi phục dữ liệu', `${srcName || 'Tệp này'} có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nNên chọn “Khôi phục”: dữ liệu đang có trên máy vẫn được giữ lại.`,
+    [{ t:'Khôi phục (khuyên dùng)', cls:'primary' }, { t:'Thay hoàn toàn bằng bản này', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
-  await PStore.safety('Trước khi khôi phục');      // giữ lại bản hiện tại phòng khi chọn nhầm
+  await PStore.safety('Lưu tạm trước khi khôi phục');      // giữ lại bản hiện tại phòng khi chọn nhầm
   if (i === 1){ RD = {}; LS = []; BM = []; }
   if (planOK(j.plan) && (i === 1 || !PLAN)){ PLAN = planNorm(j.plan); savePlan(); }
   if (j.planCustom && (i === 1 || !PCUST) && (j.planCustom.mode === 'days' || j.planCustom.mode === 'chapters')){ PCUST = { mode:j.planCustom.mode, val:j.planCustom.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){} }
@@ -4786,7 +4779,7 @@ async function dtReset(){
   const b = await choose('Xác nhận lần cuối', 'Thao tác này không thể hoàn tác. Bạn nên sao lưu trước khi xóa.\n\nXóa toàn bộ lịch sử đọc ngay bây giờ?', [{ t:'Xóa lịch sử đọc', cls:'danger' }, { t:'Sao lưu trước' }, { t:'Hủy, giữ lại' }]);
   if (b === 1) return dtExport();
   if (b !== 0) return;
-  await PStore.safety('Trước khi làm mới hành trình');
+  await PStore.safety('Lưu tạm trước khi xóa lịch sử đọc');
   RD = {}; try { localStorage.removeItem('kt.reads'); } catch(e){}
   toast('Đã làm mới hành trình đọc');
 }
@@ -5143,7 +5136,7 @@ const PStore = (() => {
     return enqueue(async () => {
       try { await store.setItem('current', { savedAt:Date.now(), hash:h, appVersion:APP_VERSION, data:s }); lastHash = h; meta.mirrorAt = Date.now(); saveMeta(); }
       catch(e){ console.warn('PStore: ghi bản phản chiếu lỗi', e); }
-    });
+    }).then(() => { try { const sh = $('#psSheet'); if (sh && !sh.hidden) refreshUI(); updateSum(); } catch(e){} });
   }
   function schedule(soft){
     if (soft){ if (timer) return; timer = setTimeout(() => { timer = 0; mirror(); }, MIRROR_SOFT_MS); }
@@ -5191,69 +5184,72 @@ const PStore = (() => {
   }
   const safety = async label => { try { await withTimeout(addHistory(label), 3000); } catch(e){} };    // điểm an toàn trước thao tác nguy hiểm
 
-  function remind(){
+  async function remind(){                           // nhắc nhẹ nhàng (tối đa 1 lần/tuần) bằng hộp thoại dễ đọc, không phải toast thoáng qua
     if (!localStorage.getItem('kt.onboard') || !hasData(snapshot())) return;
+    if (document.querySelector('.overlay:not([hidden])')) return;             // đang mở bảng khác → để lần sau
     const last = meta.exportAt || meta.firstSeen, now = Date.now();
-    if (last && now - last > REMIND_MS && now - (meta.remindAt || 0) > REMIND_GAP){
-      meta.remindAt = now; saveMeta();
-      toast('💾 Đã lâu bạn chưa tải file sao lưu. Vào Cài đặt → Dữ liệu của tôi → Xuất file.');
-    }
+    if (!last || now - last <= REMIND_MS || now - (meta.remindAt || 0) <= REMIND_GAP) return;
+    meta.remindAt = now; saveMeta();
+    const i = await choose('Nên lưu một bản sao lưu', 'Đã hơn hai tuần bạn chưa lưu bản sao lưu ra Tệp. Chỉ mất vài giây, và giúp bạn không mất ghi chú khi đổi máy.', [{ t:'💾 Lưu ngay', cls:'primary' }, { t:'Để sau' }]);
+    if (i === 0) dtExport();
   }
   async function periodic(){                           // gọi khi mở app, khi quay lại app và mỗi 15 phút
     try {
       if (!hasData(snapshot())) return;
       if (!meta.firstSeen){ meta.firstSeen = Date.now(); saveMeta(); }
       await mirror();
-      if (Date.now() - (meta.histAt || 0) >= PERIOD_MS) await addHistory('Tự động định kỳ');
+      if (Date.now() - (meta.histAt || 0) >= PERIOD_MS) await addHistory('Tự lưu hằng ngày');
       try { UserSync.push({ auto:true }); } catch(e){}  // đám mây (nếu bật): không có thay đổi thì tự bỏ qua
       remind(); updateSum();
     } catch(e){ console.warn('PStore.periodic', e); }
   }
-  const noteExport = () => { meta.exportAt = Date.now(); saveMeta(); updateSum(); };
+  const noteExport = () => { meta.exportAt = Date.now(); saveMeta(); updateSum(); try { const sh = $('#psSheet'); if (sh && !sh.hidden) refreshUI(); } catch(e){} };
 
-  /* ---------- Giao diện ---------- */
+  /* ---------- Giao diện (chữ đơn giản, ít nút, dễ dùng cho mọi lứa tuổi) ---------- */
+  const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+  function ago(t){
+    if (!t) return 'chưa lần nào';
+    const now = Date.now(), hm = new Date(t).toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' });
+    if (sameDay(t, now)) return 'hôm nay lúc ' + hm;
+    if (sameDay(t, now - 864e5)) return 'hôm qua';
+    return Math.max(2, Math.round((now - t) / 864e5)) + ' ngày trước';
+  }
+  const fileStale = s => hasData(s) && (!meta.exportAt || Date.now() - meta.exportAt > REMIND_MS);   // chưa có file ra Tệp, hoặc đã quá cũ
   function updateSum(){
     const e = $('#psSum'); if (!e) return;
-    e.textContent = meta.histAt ? 'Tự lưu mỗi ngày · gần nhất ' + new Date(meta.histAt).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : 'Tự lưu mỗi ngày, khôi phục được khi máy lỡ xóa dữ liệu';
+    const s = snapshot();
+    e.textContent = !hasData(s) ? 'Giữ an toàn ghi chú, kế hoạch, dấu trang' : fileStale(s) ? '⚠ Nên lưu thêm một bản ra Tệp' : '✔ Đã lưu ra Tệp · ' + ago(meta.exportAt);
   }
   async function refreshUI(){
-    const s = snapshot(), set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
-    set('#psStLessons', s.lessons.length); set('#psStDays', Object.keys(s.reads).length); set('#psStMarks', s.marks.length);
-    set('#psStPlan', s.plan ? (s.plan.id === 'custom' ? s.plan.days + 'n' : s.plan.id) : '—');
-    const ok = await ensure();
-    let persisted = null; try { if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted(); } catch(e){}
+    const s = snapshot(), ok = await ensure(), has = hasData(s);
     const hist = ok ? ((await store.getItem('hist')) || []) : [];
-    $('#psBadge').className = 'usbadge ' + (ok ? 'ok' : 'err');
-    $('#psText').textContent = ok ? 'Đang được bảo vệ trong máy' : 'Kho dự phòng không dùng được';
-    $('#psDetail').textContent = [
-      ok ? 'Kho dự phòng (localForage/IndexedDB): hoạt động' : 'Trình duyệt chưa cho mở IndexedDB (đang ở chế độ riêng tư?). Hãy dùng Xuất file để tự giữ bản sao.',
-      'Chép gần nhất: ' + fmt(meta.mirrorAt),
-      'Bản sao lưu định kỳ gần nhất: ' + fmt(meta.histAt),
-      'File JSON tải về gần nhất: ' + fmt(meta.exportAt),
-      persisted === true ? 'Trình duyệt đã cam kết giữ dữ liệu lâu dài.' : persisted === false ? 'Trình duyệt CHƯA cam kết giữ dữ liệu: trên iPhone hãy “Thêm vào Màn hình chính” và thỉnh thoảng tải file sao lưu.' : ''
-    ].filter(Boolean).join('\n');
-    const L = $('#psList');
-    L.innerHTML = hist.length ? hist.map(x => `<div class="srow"><div class="stxt"><b>${esc(fmt(x.at))}</b><span>${esc(x.reason || '')} · ${x.counts.lessons} ghi chú · ${x.counts.days} ngày đọc · ${x.counts.marks} dấu trang</span></div><button class="sbtn" data-id="${esc(x.id)}">Khôi phục</button></div>`).join('')
-      : '<div class="srow"><div class="stxt"><span>Chưa có bản sao lưu nào. Bản đầu tiên được tạo tự động khi bạn có dữ liệu.</span></div></div>';
+    let st, tx; const dt = [];
+    if (!has){ st = 'off'; tx = 'Chưa có gì cần sao lưu'; dt.push('Khi bạn ghi chú, chọn kế hoạch đọc hoặc đánh dấu trang, máy sẽ tự lưu giúp bạn.'); }
+    else {
+      const c = counts(s); let pn = ''; try { pn = s.plan ? ' · kế hoạch ' + planDef(s.plan).name : ''; } catch(e){}
+      dt.push(`Bạn đang có ${c.lessons} ghi chú · ${c.days} ngày đọc · ${c.marks} dấu trang${pn}.`);
+      if (!ok){ st = 'err'; tx = 'Máy chưa tự lưu được'; dt.push('Bạn hãy bấm “Lưu một bản ra Tệp” để giữ dữ liệu an toàn.'); }
+      else if (fileStale(s)){ st = 'dirty'; tx = 'Nên lưu thêm một bản ra Tệp'; dt.push('Máy đã tự lưu ' + ago(meta.mirrorAt) + '. Bản ra Tệp giúp bạn không mất dữ liệu khi đổi máy.'); }
+      else { st = 'ok'; tx = 'Dữ liệu của bạn đang được giữ an toàn'; dt.push('Đã lưu ra Tệp: ' + ago(meta.exportAt) + '.\nMáy tự lưu: ' + ago(meta.mirrorAt) + '.'); }
+    }
+    $('#psBadge').className = 'usbadge ' + st; $('#psText').textContent = tx; $('#psDetail').textContent = dt.join('\n');
+    $('#psListN').textContent = hist.length ? ' (' + hist.length + ')' : '';
+    $('#psList').innerHTML = hist.length ? hist.map(x => `<div class="srow"><div class="stxt"><b>${esc(fmt(x.at))}</b><span>${esc(x.reason || '')} · ${x.counts.lessons} ghi chú · ${x.counts.days} ngày đọc · ${x.counts.marks} dấu trang</span></div><button class="sbtn" data-id="${esc(x.id)}">Khôi phục</button></div>`).join('')
+      : '<div class="srow"><div class="stxt"><span>Chưa có bản nào. Máy sẽ tự tạo khi bạn có dữ liệu.</span></div></div>';
     updateSum();
   }
   function init(){
     updateSum();
     const open = $('#psOpen'); if (!open) return;
+    const ur = $('#usOpen') && $('#usOpen').closest('.srow');                 // sao lưu lên mạng (nếu quản trị đã bật) → gom vào cùng một chỗ
+    if (ur && !ur.hidden){ ur.hidden = true; const b = $('#psCloud'); if (b){ b.hidden = false; b.onclick = () => { show('#psSheet', false); $('#usOpen').click(); }; } }
     open.onclick = () => { show('#psSheet'); refreshUI(); };
     $('#psClose').onclick = () => show('#psSheet', false);
     $('#psSheet').addEventListener('click', e => { if (e.target.id === 'psSheet') show('#psSheet', false); });
-    $('#psFile').onclick = () => { show('#psSheet', false); dtExport(); };
-    $('#psNow').onclick = async () => {
-      await mirror(true);
-      const r = await addHistory('Sao lưu thủ công');
-      toast(r === true ? '✔ Đã sao lưu vào bộ nhớ máy' : r === 'same' ? 'Dữ liệu chưa thay đổi so với bản gần nhất' : r === 'empty' ? 'Chưa có dữ liệu để sao lưu' : 'Không lưu được: kho dự phòng không dùng được');
-      refreshUI();
-    };
     $('#psList').addEventListener('click', async e => {
       const b = e.target.closest('[data-id]'); if (!b || !(await ensure())) return;
       const ent = ((await store.getItem('hist')) || []).find(x => x.id === b.dataset.id); if (!ent) return;
-      await dtApply(ent.data, 'Bản sao lưu ' + fmt(ent.at));
+      await dtApply(ent.data, 'Bản tự lưu ' + fmt(ent.at));
       refreshUI();
     });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); else periodic(); });
