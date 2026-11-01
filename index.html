@@ -67,24 +67,31 @@ body:not(.pg) .top{transition:none!important;transform:none}
 /* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến chữ/biểu tượng bị vẽ mờ → ở chế độ này bỏ ép lớp; thanh vẫn cố định bằng position:fixed. Safari giữ nguyên. */
 html.sa body:not(.pg) .top{transform:none}
 html.sa .top,html.sa .top *{-webkit-transform:none;transform:none;will-change:auto;-webkit-font-smoothing:subpixel-antialiased;font-smooth:auto}
-/* iPhone mở từ Màn hình chính: KHÔNG dùng bố cục flex và KHÔNG ép lớp 3D nữa.
-   Thanh menu là position:fixed ghim ở mép DƯỚI (không chạm mép trên nên iOS 26 không phủ lớp mờ "scroll edge"), transform:none, không backface-visibility, không will-change,
-   nên WebKit vẽ chữ/biểu tượng ở độ phân giải gốc, không bị nhòe. Vùng đọc cũng position:fixed, chừa chỗ cho thanh dưới. */
+/* iPhone mở từ Màn hình chính (sửa lỗi menu mờ nhòe trên SE 3): thanh trên KHÔNG còn position:fixed nữa mà nằm trong luồng bố cục (body = cột flex: thanh trên + vùng đọc).
+   Thanh cố định chồng lên các lớp tăng tốc phía dưới (sân khấu lật trang dựng sẵn, vùng đọc fixed…) bị WebKit vẽ thành lớp riêng độ phân giải thấp → chữ/biểu tượng mờ.
+   Nằm trong luồng thì không còn lớp nào bị ép tách riêng, chữ luôn sắc nét; thanh vẫn đứng yên vì vùng đọc mới là phần cuộn. Chỉ áp dụng cho chế độ thường (chế độ Trang giấy giữ cách cũ). */
+html.sa body:not(.pg){display:flex;flex-direction:column}
 html.sa body:not(.pg)::before{display:none}
-html.sa body:not(.pg) .top{position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;transform:none!important;-webkit-transform:none!important}
-html.sa body:not(.pg) main{position:fixed;top:env(safe-area-inset-top);bottom:calc(48px + env(safe-area-inset-bottom));left:0;right:0;width:100%;height:auto}
+html.sa body:not(.pg) .top{position:relative;top:auto;left:auto;right:auto;width:100%;flex:none;transform:none!important;-webkit-transform:none!important;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa body:not(.pg) main{position:relative;top:auto;bottom:auto;left:auto;right:auto;flex:1 1 auto;min-height:0;height:auto}
 /* Bản AB3: iOS mới (iOS 26 trở lên) tự phủ một lớp mờ dần (“scroll edge effect”) lên mép trên khi thấy phần tử position:fixed bám sát mép trên màn hình (thân trang body, khung Trang giấy, thanh dưới…).
    iPhone 8 Plus không lên được iOS đó nên không bị. Ở chế độ Màn hình chính: bỏ hết position:fixed bám mép trên → dùng position:absolute trong thân trang cao đúng bằng màn hình (trang vẫn đứng yên, không cuộn). */
 html.sa body{position:absolute;left:0;top:0;right:auto;bottom:auto;width:100%;height:100%}
-html.sa body.pg:not(.searching) .top{position:fixed}
+html.sa body.pg:not(.searching) .top{position:absolute}
 html.sa body.pg .pgv{position:absolute}
 html.sa body.pg #pgFoot{position:absolute}
 /* Bản AB4: ở chế độ Màn hình chính, thanh menu chuyển XUỐNG DƯỚI (mép trên chỉ còn nội dung, không còn thanh nào bị iOS làm mờ) */
 html.sa body{padding-top:env(safe-area-inset-top);padding-bottom:0}
-html.sa .top,html.sa body:not(.pg) .top{height:calc(48px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom) 10px;border-top:1px solid var(--line);border-bottom:0}
+html.sa .top,html.sa body:not(.pg) .top{order:2;height:calc(48px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom) 10px;border-top:1px solid var(--line);border-bottom:0}
 html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
 html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
 html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+/* Bản AB5 – triệt để lỗi mờ mép trên (iOS 26/27, iPhone SE 3, chạy từ Màn hình chính):
+   iOS mới phủ lớp mờ dần "scroll edge effect" lên mép trên khi gặp BẤT KỲ phần tử position:fixed nào dính mép trên màn hình – kể cả loại chỉ hiện thoáng qua
+   (sân khấu lật trang .fl-stage, nền menu chạm giữ, hộp thoại .overlay/.admin/.lssheet, dải che vùng an toàn body::before). Ở chế độ Màn hình chính chuyển TẤT CẢ sang position:absolute
+   (thân trang body đã là absolute, cao đúng bằng màn hình, nên toạ độ không đổi) → không còn phần tử fixed nào chạm mép trên. */
+html.sa body::before{display:none!important}
+html.sa .fl-stage,html.sa .overlay,html.sa .admin,html.sa .lssheet,html.sa .vmenu-bg{position:absolute!important}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
