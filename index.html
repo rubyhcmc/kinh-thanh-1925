@@ -90,6 +90,10 @@ html.sa body.pg.searching .top{top:0;height:var(--hh);padding:env(safe-area-inse
 html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
 html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 /* Bàn phím mở khi gõ ở thanh menu (class kb do mã bên dưới bật): thanh menu nổi lên trên bàn phím, nội dung trang chính không co/nhảy, vẫn vuốt được */
+/* iOS 26/27 (Màn hình chính): hệ thống phủ lớp mờ lên mép trên. Cách đã thấy hiệu quả: một phần tử position:fixed sát mép trên (cao ≥6px, rộng ≥80% màn hình, cách mép ≤4px) có màu nền = màu trang;
+   iOS lấy đúng màu đó tô vùng thanh trạng thái nên lớp mờ không còn lộ ra. Dải này nằm dưới mọi hộp thoại (z-index thấp) và không chặn chạm. Tắt/bật ở Cài đặt → "Sửa mờ mép trên". */
+#sbStrip{display:none}
+html.sa:not(.nosb) #sbStrip{display:block;position:fixed;top:0;left:0;width:100%;height:12px;background:var(--bg);z-index:1;pointer-events:none}
 html.sa.kb body:not(.pg) .top{top:calc(env(safe-area-inset-bottom) - var(--kb,0px))}
 html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom))}
 html.sa.kb body.pg:not(.searching) .top{bottom:calc(var(--kb,0px) - env(safe-area-inset-bottom))}
@@ -582,6 +586,7 @@ html[data-paper] .reader.print{text-align:justify}
 </style>
 </head>
 <body>
+<div id="sbStrip" aria-hidden="true"></div>
 
 <header class="top">
   <h1 id="title">Kinh Thánh</h1>
@@ -659,6 +664,9 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
         <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      </div>
+      <div class="srow"><div class="stxt"><b>Sửa mờ mép trên (iPhone)</b><span>Chỉ tác dụng khi mở từ biểu tượng Màn hình chính. Nếu thấy lạ, thử Tắt</span></div>
+        <div class="seg" id="sbSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
       <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Phóng to chữ cho dễ đọc</span></div>
         <div class="seg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
@@ -1039,7 +1047,8 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB12';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+try { if (localStorage.getItem('kt.sbfix') === '0') document.documentElement.classList.add('nosb'); } catch(e){}
+const APP_VERSION = '2026.11.01-AB13';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4280,6 +4289,16 @@ document.addEventListener('click', () => {
   try { if (S.fullauto && IS_IOS && !document.documentElement.classList.contains('sa') && !localStorage.getItem('kt.iosFsHint')){ localStorage.setItem('kt.iosFsHint', '1'); setTimeout(() => toast('iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính" để đọc toàn màn hình'), 600); } } catch(e){}
 }, { once:true, capture:true });
 $$('#fullSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!S.fullauto); b.onclick = () => { S.fullauto = b.dataset.v === '1'; saveS(); $$('#fullSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === S.fullauto)); paperFullscreen(S.fullauto || (PAPER_PAGED && S.paper)); }; });
+(function(){                                                  // Sửa mờ mép trên: mặc định BẬT
+  const de = document.documentElement, on = () => !de.classList.contains('nosb');
+  const paint = () => $$('#sbSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === on()));
+  $$('#sbSeg button').forEach(b => b.onclick = () => {
+    const v = b.dataset.v === '1'; de.classList.toggle('nosb', !v);
+    try { localStorage.setItem('kt.sbfix', v ? '1' : '0'); } catch(e){}
+    paint(); toast(v ? 'Đã bật sửa mờ mép trên' : 'Đã tắt sửa mờ mép trên');
+  });
+  paint();
+})();
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
