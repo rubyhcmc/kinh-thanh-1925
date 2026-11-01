@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f7f3ea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Thử A">
+<title>Thử A</title>
+<style>
+:root{--bg:#f7f3ea;--fg:#2a2118;--muted:#7a6e60;--line:#e0d6c3;--hh:calc(46px + env(safe-area-inset-top))}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:Georgia,'Times New Roman',serif;-webkit-text-size-adjust:100%}
+body{position:fixed;inset:0;width:100%}
+.top{z-index:35;height:var(--hh);padding:env(safe-area-inset-top) 4px 0 10px;gap:4px;display:flex;align-items:center;background:var(--bg);border-bottom:1px solid var(--line)}
+.nav{display:grid;grid-template-columns:2.3fr 1fr 1.05fr;gap:5px;flex:1;min-width:0}
+select{height:36px;border:1px solid var(--line);border-radius:8px;background:transparent;font:inherit;font-size:16px;color:var(--fg);padding:0 8px;-webkit-appearance:none;appearance:none;min-width:0}
+.ic{width:36px;height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:20px}
+.aa{font-weight:600}
+main{overflow-y:auto;overscroll-behavior:none;-webkit-overflow-scrolling:touch;padding:14px 16px 140px}
+main p{font-size:19px;line-height:1.8;margin:0 0 14px}
+/* BẢNG ĐIỀU KHIỂN */
+#panel{position:fixed;z-index:99;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));background:#fff;border:1px solid #ccc;border-radius:12px;padding:8px;font:14px -apple-system,Helvetica,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+#panel b{display:block;margin:0 0 6px}
+#panel button{font:inherit;margin:2px;padding:7px 10px;border:1px solid #888;border-radius:8px;background:#f2f2f2}
+#panel button.on{background:#222;color:#fff}
+/* CÁC KIỂU */
+body.v1 .top{position:fixed;top:0;left:0;right:0} body.v1 main{position:fixed;top:var(--hh);bottom:0;left:0;right:0}
+body.v2 .top{position:fixed;top:1px;left:0;right:0;height:calc(var(--hh) - 1px)} body.v2 main{position:fixed;top:var(--hh);bottom:0;left:0;right:0}
+body.v3{display:flex;flex-direction:column} body.v3 .top{position:relative;flex:none} body.v3 main{flex:1;min-height:0}
+body.v4 .top{position:absolute;top:0;left:0;right:0} body.v4 main{position:absolute;top:var(--hh);bottom:0;left:0;right:0}
+body.v5 .top{position:fixed;top:0;left:0;right:0;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden} body.v5 main{position:fixed;top:var(--hh);bottom:0;left:0;right:0}
+body.v6 .top{position:fixed;top:0;left:0;right:0;isolation:isolate;contain:layout paint} body.v6 main{position:fixed;top:var(--hh);bottom:0;left:0;right:0}
+body.v7 main{position:fixed;inset:0;padding:0 0 140px} body.v7 main p{padding:0 16px} body.v7 main p:first-child{padding-top:14px} body.v7 .top{position:sticky;top:0;width:100%}
+body.v8 .top{position:fixed;top:0;left:0;right:0;background:#fff} body.v8 main{position:fixed;top:var(--hh);bottom:0;left:0;right:0}
+</style></head>
+<body class="v1">
+<div class="top" id="top">
+  <div class="nav"><select><option>SÁNG THẾ KÝ</option></select><select><option>3</option></select><select><option>1</option></select></div>
+  <span class="ic">🔍︎</span><span class="ic">🔖︎</span><span class="ic">✎</span><span class="ic">▤</span><span class="ic aa">Aa</span>
+</div>
+<main id="main">
+<p><b>SÁNG THẾ KÝ – Chương 3</b></p>
+<p>Vả, trong các loài thú đồng mà Giê-hô-va Đức Chúa Trời đã làm nên, có con rắn là giống quỉ-quyệt hơn hết. Rắn nói cùng người nữ rằng: Mà chi! Đức Chúa Trời há có phán dặn các ngươi không được phép ăn trái các cây trong vườn sao?</p>
+<p>Người nữ đáp rằng: Chúng ta được ăn trái các cây trong vườn, song về phần trái của cây mọc giữa vườn, Đức Chúa Trời có phán rằng: Hai ngươi chớ ăn đến, chớ rờ đến, kẻo chết.</p>
+<p>Rắn bèn nói với người nữ rằng: Chẳng chết đâu; nhưng Đức Chúa Trời biết rằng ngày nào hai ngươi ăn trái cây đó, mắt mình mở ra, sẽ như Đức Chúa Trời, biết điều thiện và điều ác.</p>
+<p>Người nữ thấy trái cây đó bộ ăn ngon, lại đẹp mắt và quí vì để mở trí khôn, thì hái ăn, rồi trao cho chồng đứng gần mình, chồng cũng ăn nữa.</p>
+<p>Mắt hai người liền mở ra, thấy mình trần truồng, bèn lấy lá cây vả đóng khố che thân.</p>
+</main>
+<div id="panel"><b>Kiểu A (như app hiện tại) – bấm từng số, nhìn thanh trên cùng, rồi cho tôi biết các số SẮC NÉT</b>
+<button data-v="1" class="on">1 Hiện tại</button><button data-v="2">2 Cách mép 1px</button><button data-v="3">3 Không “fixed”</button><button data-v="4">4 Absolute</button><button data-v="5">5 Lớp 3D</button><button data-v="6">6 Cô lập</button><button data-v="7">7 Sticky</button><button data-v="8">8 Nền trắng</button></div>
+<script>
+document.getElementById('panel').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+ document.body.className='v'+b.dataset.v;var t=document.getElementById('top'),m=document.getElementById('main');if(b.dataset.v==='7'){m.insertBefore(t,m.firstChild)}else if(t.parentNode===m){document.body.insertBefore(t,m)}[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b)});});
+</script>
+</body></html>
