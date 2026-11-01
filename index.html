@@ -117,7 +117,7 @@ html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-
 html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{top:calc(env(safe-area-inset-top) + var(--sbx,0px));bottom:auto;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
 /* Gõ ở ô Chương / Câu khi menu ở DƯỚI (class kbup): thanh menu GIỮ nguyên chỗ trong bố cục, chỉ được nâng lên ngay trên bàn phím bằng transform
    (không đụng tới bố cục nên nội dung trang chính đứng yên, không bị đẩy; bật ngay lúc chạm nên không có độ trễ). */
-html.sa.kbup:not(.mtop) .top,html.sa.kbup:not(.mtop) body:not(.pg) .top,html.sa.kbup:not(.mtop) body.pg:not(.searching) .top{transform:translate3d(0,calc(-1px * var(--kbu,0) + env(safe-area-inset-bottom)),0)!important;-webkit-transform:translate3d(0,calc(-1px * var(--kbu,0) + env(safe-area-inset-bottom)),0)!important;transition:none!important;z-index:60}
+html.sa.kbup:not(.mtop) .top,html.sa.kbup:not(.mtop) body:not(.pg) .top,html.sa.kbup:not(.mtop) body.pg:not(.searching) .top{transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;-webkit-transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;transition:none!important;z-index:60}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -5156,13 +5156,22 @@ planSum();
   const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)))); };
   const numBox = () => { const a = document.activeElement; return !!(a && (a.id === 'niChap' || a.id === 'niVerse')); };
   const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb', 'kbtop', 'kbup'); de.style.removeProperty('--kb'); de.style.removeProperty('--kbu'); };
+  /* Đo vị trí thật của thanh menu rồi nâng/hạ cho đáy thanh khớp đúng mép trên bàn phím (không dựa vào con số ước lượng) */
+  const place = () => {
+    const bar = document.querySelector('.top'); if (!bar) return;
+    const cur = parseFloat(de.style.getPropertyValue('--kbu')) || 0;
+    const r = bar.getBoundingClientRect();
+    const ns = Math.max(0, Math.round(cur + r.bottom - (vv.offsetTop + vv.height)));
+    if (Math.abs(ns - cur) > 1) de.style.setProperty('--kbu', String(ns));
+  };
   const fit = settle => {
     const kb = Math.round(innerHeight - vv.height);
+    if (de.classList.contains('kbup') && numBox()){ if (settle === true) place(); if (kb <= 1) return; }
     if (kb <= 1){ if (typing() && Date.now() < pend) return; reset(); return; }      // đang chờ bàn phím hiện: giữ vị trí ước lượng
     b.style.top = vv.offsetTop + 'px';
     if (inBar() && de.classList.contains('kbup')){
       b.style.height = '';
-      if (kb > 100){ if (settle === true) de.style.setProperty('--kbu', String(kb)); try { localStorage.setItem(KB, String(kb)); } catch(e){} }   // chỉ chốt chiều cao thật khi bàn phím đã mở xong → thanh không chìm xuống rồi nổi lên
+      if (kb > 100){ if (settle === true) place(); try { localStorage.setItem(KB, String(kb)); } catch(e){} }   // chỉ chốt chiều cao thật khi bàn phím đã mở xong → thanh không chìm xuống rồi nổi lên
     } else if (inBar()){
       b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb'); if (typing() && !de.classList.contains('mtop')) de.classList.add('kbtop');
       if (kb > 100){ try { localStorage.setItem(KB, String(kb)); } catch(e){} }
