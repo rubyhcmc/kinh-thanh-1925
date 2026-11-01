@@ -89,6 +89,11 @@ html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
 html.sa body.pg.searching .top{top:0;height:calc(var(--hh) + var(--sbx,0px));padding:calc(env(safe-area-inset-top) + var(--sbx,0px)) 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
 html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
 html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+/* Thanh menu ở TRÊN (class mtop, mặc định; đổi ở Cài đặt → "Vị trí thanh menu"): nằm ngay dưới khoảng chừa mép trên */
+html.sa.mtop body:not(.pg) .top{order:0;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
+html.sa.mtop body.pg:not(.searching) .top{top:calc(env(safe-area-inset-top) + var(--sbx,0px));bottom:auto;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
+html.sa.mtop .copybar{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px)}
+html.sa.mtop .toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px)}
 /* Bàn phím mở khi gõ ở thanh menu (class kb do mã bên dưới bật): thanh menu nổi lên trên bàn phím, nội dung trang chính không co/nhảy, vẫn vuốt được */
 /* iOS 27 (Màn hình chính): hệ thống làm mờ một dải phía dưới thanh trạng thái, dải này sâu hơn vùng an toàn → làm mờ chữ ở mép trên.
    Cách xử lý: chừa thêm một khoảng TRỐNG cùng màu nền (--sbx) dưới thanh trạng thái, đẩy toàn bộ phần hiển thị của app xuống. Lớp mờ chỉ làm mờ vùng trống.
@@ -96,9 +101,9 @@ html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 html.sa body{padding-top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
 html.sa body.pg .pgv{top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
 html.sa .admin .bar{padding-top:calc(10px + env(safe-area-inset-top) + var(--sbx,0px))}
-html.sa.kb body:not(.pg) .top{top:calc(env(safe-area-inset-bottom) - var(--kb,0px))}
+html.sa.kb:not(.mtop) body:not(.pg) .top{top:calc(env(safe-area-inset-bottom) - var(--kb,0px))}
 html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom))}
-html.sa.kb body.pg:not(.searching) .top{bottom:calc(var(--kb,0px) - env(safe-area-inset-bottom))}
+html.sa.kb:not(.mtop) body.pg:not(.searching) .top{bottom:calc(var(--kb,0px) - env(safe-area-inset-bottom))}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -666,6 +671,9 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
         <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
+      <div class="srow"><div class="stxt"><b>Vị trí thanh menu (iPhone)</b><span>Chỉ khi mở từ biểu tượng Màn hình chính: ở trên hoặc ở dưới màn hình</span></div>
+        <div class="seg" id="mpSeg"><button data-v="top">Trên</button><button data-v="bottom">Dưới</button></div>
+      </div>
       <div class="srow"><div class="stxt"><b>Chừa mép trên (iPhone)</b><span>Chỉ khi mở từ biểu tượng Màn hình chính. Nếu chữ ở mép trên còn bị mờ, tăng mức này</span></div>
         <div class="seg" id="sbSeg"><button data-v="0">Không</button><button data-v="12">Ít</button><button data-v="24">Vừa</button><button data-v="36">Nhiều</button></div>
       </div>
@@ -1048,8 +1056,9 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
+try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElement.classList.add('mtop'); } catch(e){ document.documentElement.classList.add('mtop'); }
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null ? 24 : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', '24px'); }
-const APP_VERSION = '2026.11.01-AB16';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB17';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4290,6 +4299,16 @@ document.addEventListener('click', () => {
   try { if (S.fullauto && IS_IOS && !document.documentElement.classList.contains('sa') && !localStorage.getItem('kt.iosFsHint')){ localStorage.setItem('kt.iosFsHint', '1'); setTimeout(() => toast('iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính" để đọc toàn màn hình'), 600); } } catch(e){}
 }, { once:true, capture:true });
 $$('#fullSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!S.fullauto); b.onclick = () => { S.fullauto = b.dataset.v === '1'; saveS(); $$('#fullSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === S.fullauto)); paperFullscreen(S.fullauto || (PAPER_PAGED && S.paper)); }; });
+(function(){                                                  // Vị trí thanh menu: trên / dưới
+  const de = document.documentElement, cur = () => (de.classList.contains('mtop') ? 'top' : 'bottom');
+  const paint = () => $$('#mpSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === cur()));
+  $$('#mpSeg button').forEach(b => b.onclick = () => {
+    de.classList.toggle('mtop', b.dataset.v === 'top');
+    try { localStorage.setItem('kt.menupos', b.dataset.v); } catch(e){}
+    paint(); toast(b.dataset.v === 'top' ? 'Thanh menu ở trên' : 'Thanh menu ở dưới');
+  });
+  paint();
+})();
 (function(){                                                  // Chừa mép trên: 0 / 12 / 24 / 36 px
   const de = document.documentElement, cur = () => String(parseInt(de.style.getPropertyValue('--sbx')) || 0);
   const paint = () => $$('#sbSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === cur()));
@@ -5111,7 +5130,7 @@ planSum();
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    if (typeof IS_IOS !== 'undefined' && IS_IOS && typing() && !de.classList.contains('kb')){
+    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && typing() && !de.classList.contains('kb')){
       let est = 0; try { est = +localStorage.getItem(KB) || 0; } catch(e){}
       if (est < 150 || est > 520) est = 340;
       pend = Date.now() + 900; de.style.setProperty('--kb', est + 'px'); de.classList.add('kb');   // nâng thanh lên NGAY, trước khi iOS đẩy trang
