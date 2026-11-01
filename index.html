@@ -1331,12 +1331,10 @@ function flashVerse(el){
 /* Chọn sách xong → con trỏ tự nhảy sang ô Chương (sách chỉ có 1 chương thì nhảy thẳng sang ô Câu) */
 $('#selBook').onchange = async e => {
   const nc = $('#niChap'), nv = $('#niVerse');
-  if (!nc.disabled) nc.focus();                                // focus ngay trong cú chạm để iPhone giữ được bàn phím số
   await openBook(e.target.value, 1);
   if (!curBook) return;
-  if (curBook.chapters.length === 1){ nv.focus(); return; }
+  /* Chọn sách xong: KHÔNG tự bật bàn phím. Chỉ bấm vào ô Chương / Câu mới hiện bàn phím. */
   if (document.activeElement === nc) nc.dispatchEvent(new Event('focus'));   // cập nhật lại dải số chương theo sách mới
-  else nc.focus();
 };
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
 $('#selVerse').onchange = e => {
