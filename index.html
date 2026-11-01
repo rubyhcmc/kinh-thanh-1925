@@ -102,9 +102,12 @@ html.sa.mtop .toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px
 html.sa body{padding-top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
 html.sa body.pg .pgv{top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
 html.sa .admin .bar{padding-top:calc(10px + env(safe-area-inset-top) + var(--sbx,0px))}
-html.sa.kb:not(.mtop) body:not(.pg) .top{top:calc(env(safe-area-inset-bottom) - var(--kb,0px))}
+/* Menu ở DƯỚI + đang gõ ở thanh menu (class kbtop): thanh tạm bay lên TRÊN, như khi menu ở trên → ô nhập không bị bàn phím che, iOS không đẩy trang, nội dung đứng yên.
+   Thanh rời luồng bố cục (fixed) nên đầu vùng đọc không dịch chuyển; gõ xong thanh về lại đáy. */
+html.sa.kbtop:not(.mtop) body:not(.pg) .top{position:fixed;top:calc(env(safe-area-inset-top) + var(--sbx,0px));left:0;right:0;width:100%;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line);z-index:40}
+html.sa.kbtop:not(.mtop) body.searching:not(.pg) main{padding-top:46px}
 html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom))}
-html.sa.kb:not(.mtop) body.pg:not(.searching) .top{bottom:calc(var(--kb,0px) - env(safe-area-inset-bottom))}
+html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{top:calc(env(safe-area-inset-top) + var(--sbx,0px));bottom:auto;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -1062,7 +1065,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.01-AB19';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB20';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5111,8 +5114,8 @@ planSum();
 
 /* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở.
    Vì sao trang bị "đẩy lên": ô nhập nằm sát đáy; iOS thấy bàn phím sắp che ô đó nên TỰ ĐẨY CẢ TRANG lên (cuộn khung nhìn), sau đó mã mới kịp chỉnh lại → nội dung giật.
-   Cách làm mới: ngay lúc ô nhận con trỏ (trước khi iOS tính toán), nâng thanh menu lên cao hơn bàn phím theo chiều cao ước lượng (nhớ từ lần trước).
-   iOS thấy ô đã nằm trên bàn phím nên KHÔNG đẩy trang nữa; khi biết chiều cao thật thì chỉnh lại vài px. Nội dung trang chính giữ nguyên, bàn phím đè lên trên,
+   Cách làm mới (menu ở dưới): ngay lúc ô nhận con trỏ (trước khi iOS tính toán), thanh menu tạm bay lên TRÊN (class kbtop) như khi menu ở trên.
+   Ô nhập không còn nằm dưới bàn phím nên iOS KHÔNG đẩy trang. Nội dung trang chính giữ nguyên, bàn phím đè lên trên,
    phần cuối trang có đệm bằng chiều cao bàn phím nên vẫn vuốt hết được (kết quả tìm kiếm cũng vậy).
    Gõ ở chỗ khác (hộp thoại, soạn ghi chú…): giữ cách cũ, thân trang co theo vùng nhìn thấy. */
 (function(){
@@ -5122,23 +5125,21 @@ planSum();
   let pend = 0;
   const inBar = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)); };
   const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)))); };
-  const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb'); de.style.removeProperty('--kb'); };
+  const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb', 'kbtop'); de.style.removeProperty('--kb'); };
   const fit = () => {
     const kb = Math.round(innerHeight - vv.height);
     if (kb <= 1){ if (typing() && Date.now() < pend) return; reset(); return; }      // đang chờ bàn phím hiện: giữ vị trí ước lượng
     b.style.top = vv.offsetTop + 'px';
     if (inBar()){
-      b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb');
+      b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb'); if (typing() && !de.classList.contains('mtop')) de.classList.add('kbtop');
       if (kb > 100){ try { localStorage.setItem(KB, String(kb)); } catch(e){} }
     } else if (de.classList.contains('kb')){ /* bàn phím đang đóng lại: giữ nguyên, tránh giật */ }
     else { b.style.height = vv.height + 'px'; }
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && typing() && !de.classList.contains('kb')){
-      let est = 0; try { est = +localStorage.getItem(KB) || 0; } catch(e){}
-      if (est < 150 || est > 520) est = 340;
-      pend = Date.now() + 900; de.style.setProperty('--kb', est + 'px'); de.classList.add('kb');   // nâng thanh lên NGAY, trước khi iOS đẩy trang
+    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && typing() && !de.classList.contains('kbtop')){
+      pend = Date.now() + 900; de.classList.add('kbtop');       // bay lên trên NGAY lúc chạm, trước khi iOS tính chuyện đẩy trang
     }
     setTimeout(fit, 60); setTimeout(fit, 400); setTimeout(fit, 950);
   });
