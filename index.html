@@ -1048,7 +1048,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
 try { if (localStorage.getItem('kt.sbfix') === '0') document.documentElement.classList.add('nosb'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB13';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB14';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5085,24 +5085,39 @@ function openPlan(opts){
 planSum();
 
 /* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở.
-   - Đang gõ trong thanh menu (ô Chương / Câu / Tìm kiếm): thanh trượt LÊN trên bàn phím, còn nội dung trang chính giữ NGUYÊN kích thước và vị trí
-     (bàn phím đè lên trên nội dung, không bắt nội dung co lại/nhảy). Trang chính vẫn vuốt lên xuống được; phần cuối được chèn thêm đệm bằng chiều cao bàn phím để vuốt tới.
-   - Gõ ở chỗ khác (hộp thoại, soạn ghi chú…): giữ cách cũ, thân trang co theo vùng nhìn thấy. */
+   Vì sao trang bị "đẩy lên": ô nhập nằm sát đáy; iOS thấy bàn phím sắp che ô đó nên TỰ ĐẨY CẢ TRANG lên (cuộn khung nhìn), sau đó mã mới kịp chỉnh lại → nội dung giật.
+   Cách làm mới: ngay lúc ô nhận con trỏ (trước khi iOS tính toán), nâng thanh menu lên cao hơn bàn phím theo chiều cao ước lượng (nhớ từ lần trước).
+   iOS thấy ô đã nằm trên bàn phím nên KHÔNG đẩy trang nữa; khi biết chiều cao thật thì chỉnh lại vài px. Nội dung trang chính giữ nguyên, bàn phím đè lên trên,
+   phần cuối trang có đệm bằng chiều cao bàn phím nên vẫn vuốt hết được (kết quả tìm kiếm cũng vậy).
+   Gõ ở chỗ khác (hộp thoại, soạn ghi chú…): giữ cách cũ, thân trang co theo vùng nhìn thấy. */
 (function(){
   const de = document.documentElement;
   if (!de.classList.contains('sa') || !window.visualViewport) return;
-  const vv = window.visualViewport, b = document.body;
+  const vv = window.visualViewport, b = document.body, KB = 'kt.kbh';
+  let pend = 0;
   const inBar = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)); };
+  const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)))); };
+  const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb'); de.style.removeProperty('--kb'); };
   const fit = () => {
     const kb = Math.round(innerHeight - vv.height);
-    if (kb <= 1){ b.style.height = ''; b.style.top = ''; de.classList.remove('kb'); de.style.removeProperty('--kb'); return; }
+    if (kb <= 1){ if (typing() && Date.now() < pend) return; reset(); return; }      // đang chờ bàn phím hiện: giữ vị trí ước lượng
     b.style.top = vv.offsetTop + 'px';
-    if (inBar()){ b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb'); }
-    else { de.classList.remove('kb'); de.style.removeProperty('--kb'); b.style.height = vv.height + 'px'; }
+    if (inBar()){
+      b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb');
+      if (kb > 100){ try { localStorage.setItem(KB, String(kb)); } catch(e){} }
+    } else if (de.classList.contains('kb')){ /* bàn phím đang đóng lại: giữ nguyên, tránh giật */ }
+    else { b.style.height = vv.height + 'px'; }
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
-  document.addEventListener('focusin', () => setTimeout(fit, 60));
-  document.addEventListener('focusout', () => setTimeout(fit, 120));
+  document.addEventListener('focusin', () => {
+    if (typeof IS_IOS !== 'undefined' && IS_IOS && typing() && !de.classList.contains('kb')){
+      let est = 0; try { est = +localStorage.getItem(KB) || 0; } catch(e){}
+      if (est < 150 || est > 520) est = 340;
+      pend = Date.now() + 900; de.style.setProperty('--kb', est + 'px'); de.classList.add('kb');   // nâng thanh lên NGAY, trước khi iOS đẩy trang
+    }
+    setTimeout(fit, 60); setTimeout(fit, 400); setTimeout(fit, 950);
+  });
+  document.addEventListener('focusout', () => { setTimeout(fit, 120); setTimeout(fit, 500); });
 })();
 
 /* =========================================================
