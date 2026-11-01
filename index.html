@@ -644,6 +644,9 @@ html[data-paper] .reader.print{text-align:justify}
         <button class="sbtn" id="dtImport">Nhập file</button><input type="file" id="dtFile" accept=".json,application/json" hidden></div>
       <div class="srow"><div class="stxt"><b>Làm mới hành trình</b><span>Xóa lịch sử đọc, giữ nguyên ghi chú</span></div>
         <button class="sbtn warn" id="dtReset">Làm mới</button></div>
+      <div class="srow col"><div class="stxt"><div><b>Google Drive</b><span>Sao lưu ghi chú &amp; hành trình lên Drive của bạn, khôi phục khi đổi máy hoặc xóa trình duyệt</span></div></div>
+        <div style="display:flex;gap:8px"><button class="sbtn gdBackup" style="flex:1">☁️ Sao lưu</button><button class="sbtn gdRestore" style="flex:1">🔄 Khôi phục</button></div>
+        <div class="bmhint gdMsg" style="margin:0"></div></div>
     </div>
 
     <div class="slabel">Giới thiệu</div>
@@ -828,6 +831,29 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
+      <h4>Đồng bộ Google Drive (sao lưu hành trình &amp; ghi chú)</h4>
+      <p class="hint">Người dùng sao lưu lịch sử đọc, ghi chú, dấu trang, kế hoạch vào Google Drive riêng của họ (thư mục ẩn của app, không lẫn với file khác) và khôi phục khi xóa trình duyệt hoặc đổi điện thoại.</p>
+      <label class="lbl" for="gcId">Google OAuth Client ID</label>
+      <input type="text" id="gcId" placeholder="xxxxxxxx-xxxx.apps.googleusercontent.com" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="btns"><button class="btn primary" id="gcSave">Lưu Cấu Hình</button></div>
+      <div class="btns">
+        <button class="btn gdBackup" id="gdBackupA">☁️ Sao lưu</button>
+        <button class="btn gdRestore" id="gdRestoreA">🔄 Khôi phục</button>
+      </div>
+      <div class="log" id="gcLog"></div>
+      <details>
+        <summary>Cách lấy Client ID</summary>
+        <ol>
+          <li>Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console → Credentials</a>, tạo (hoặc chọn) một Project.</li>
+          <li>Bật <b>Google Drive API</b> (APIs &amp; Services → Library).</li>
+          <li>Cấu hình <b>OAuth consent screen</b>, thêm phạm vi <b>.../auth/drive.appdata</b>. Nếu để chế độ Testing, thêm email người dùng vào "Test users".</li>
+          <li>Create Credentials → <b>OAuth client ID</b> → loại <b>Web application</b>. Ở <b>Authorized JavaScript origins</b> điền địa chỉ web của app (vd <b>https://tên.github.io</b>, không có đường dẫn phía sau).</li>
+          <li>Sao chép Client ID dán vào ô trên rồi bấm <b>Lưu Cấu Hình</b>. Client ID không phải bí mật; app còn tự chuyển nó sang máy khác qua đồng bộ GitHub.</li>
+        </ol>
+      </details>
+    </div>
+
+    <div class="card">
       <h4>Sao lưu &amp; xóa</h4>
       <div class="btns" style="margin-top:0">
         <button class="btn" id="doExport">⬇️ Tải tệp sao lưu</button>
@@ -946,7 +972,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB7';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2381,7 +2407,7 @@ async function buildBooks(){
   const map = new Map(recs.map(b => [b.name, b]));
   return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
-const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
+const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT, gcid:gcid() });
 
 /* =========================================================
  *  LỚP LƯU TRỮ (ADAPTER) – tách rời giao diện khỏi nơi lưu dữ liệu
@@ -2460,7 +2486,7 @@ async function restoreFromDataCache(){
   const text = await dataCacheGet(); if (!text) return false;
   try {
     const j = parseRemote(text), books = normBible(j.bible || j); if (!books.length) return false;
-    await importBible(books, 'replace'); applyAbout(j.about);
+    await importBible(books, 'replace'); applyAbout(j.about); gcidFromRemote(j.gcid);
     SY = { sha:sigOf(text), dirty:false, at:Date.now(), store:'github' }; saveSY();
     await reloadAll(); return bibleMeta.length > 0;
   } catch(e){ return false; }
@@ -2513,7 +2539,7 @@ Store.active = 'myserver';
 async function applyRemote(A, r){
   const j = r.payload || {}, books = normBible(j.bible || j);
   if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
-  await importBible(books, 'replace'); applyAbout(j.about);
+  await importBible(books, 'replace'); applyAbout(j.about); gcidFromRemote(j.gcid);
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
   const y = SCR.scrollTop, kb = curBook && curBook.name, kc = S.chapter, kn = parseInt(curVerseNo(), 10) || 0;
   await reloadAll(); SCR.scrollTop = y;
@@ -2922,7 +2948,7 @@ async function refreshStats(){
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
 }
-function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
+function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGc(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
 async function reloadAll(){ await initBible(); await refreshStats(); }
 
 function setLog(msg, ok){ const l = $('#impLog'); l.textContent = msg; l.className = 'log ' + (ok ? 'ok' : 'err'); }
@@ -4698,6 +4724,115 @@ $('#dtExport').onclick = dtExport;
 $('#dtImport').onclick = () => $('#dtFile').click();
 $('#dtFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) dtImport(f); };
 $('#dtReset').onclick = dtReset;
+
+/* =========================================================
+ *  GOOGLE DRIVE: sao lưu / khôi phục dữ liệu cá nhân (hành trình, ghi chú, dấu trang, kế hoạch)
+ *  - Đăng nhập bằng Google Identity Services (OAuth token client), chỉ xin phạm vi drive.appdata:
+ *    app chỉ thấy thư mục ẩn của chính nó, không đọc được file khác trong Drive.
+ *  - Nội dung sao lưu = đúng dtPayload() như nút "Xuất file"; khôi phục đi qua dtImport() (có hộp chọn Gộp / Thay thế).
+ * ========================================================= */
+const GCID_DEFAULT = '';                                    // có thể điền sẵn Client ID tại đây để mọi máy dùng được ngay
+const GC_KEY = 'kt.gclient', GD_FILE = 'kinhthanh-user-data.json', GD_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+function gcid(){ let v = ''; try { v = (localStorage.getItem(GC_KEY) || '').trim(); } catch(e){} return v || GCID_DEFAULT; }
+const gcidOK = v => /^[\w.-]+\.apps\.googleusercontent\.com$/i.test(String(v || '').trim());
+function gcidFromRemote(v){                                  // máy đọc nhận Client ID do admin đặt (không ghi đè nếu máy đã có)
+  try { if (gcidOK(v) && !localStorage.getItem(GC_KEY)){ localStorage.setItem(GC_KEY, String(v).trim()); gdWarm(); } } catch(e){}
+}
+function gcSay(m, ok){ const l = $('#gcLog'); if (l){ l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); } }
+function fillGc(){ const i = $('#gcId'); if (i) i.value = localStorage.getItem(GC_KEY) || ''; }
+$('#gcSave').onclick = () => {
+  const v = $('#gcId').value.trim();
+  if (v && !gcidOK(v)) return gcSay('✖ Client ID chưa đúng dạng (phải kết thúc bằng .apps.googleusercontent.com).', false);
+  try { v ? localStorage.setItem(GC_KEY, v) : localStorage.removeItem(GC_KEY); } catch(e){ return gcSay('✖ Không lưu được: ' + e.message, false); }
+  gdTok = { v:'', exp:0 }; gdAuthed = false;
+  if (v){ gdWarm(); markDirty(); }
+  gcSay(v ? '✔ Đã lưu cấu hình Client ID.' : 'Đã xóa cấu hình Client ID.', true); toast(v ? '✔ Đã lưu cấu hình' : 'Đã xóa Client ID');
+};
+
+let gdTok = { v:'', exp:0 }, gdGisP = null, gdBusy = false, gdAuthed = false;
+function gdLoadGis(){
+  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  if (gdGisP) return gdGisP;
+  gdGisP = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = res; s.onerror = () => { gdGisP = null; s.remove(); rej(new Error('Không tải được dịch vụ đăng nhập của Google. Hãy kiểm tra mạng.')); };
+    document.head.appendChild(s);
+  });
+  return gdGisP;
+}
+function gdWarm(){ if (gcid() && navigator.onLine) gdLoadGis().catch(() => {}); }   // tải sẵn để cửa sổ đăng nhập mở được ngay trong cú chạm
+function gdToken(){
+  const id = gcid();
+  if (!id) return Promise.reject(new Error('Chưa cấu hình Google Client ID. Quản trị viên vào Quản lý dữ liệu → Đồng bộ Google Drive để nhập.'));
+  if (gdTok.v && Date.now() < gdTok.exp - 60000) return Promise.resolve(gdTok.v);
+  return gdLoadGis().then(() => new Promise((res, rej) => {
+    const c = google.accounts.oauth2.initTokenClient({
+      client_id:id, scope:GD_SCOPE,
+      callback:r => {
+        if (r.error) return rej(new Error(r.error === 'access_denied' ? 'Bạn chưa cấp quyền cho app truy cập Google Drive.' : 'Đăng nhập Google lỗi: ' + (r.error_description || r.error)));
+        if (r.scope && !String(r.scope).includes('drive.appdata')) return rej(new Error('Thiếu quyền lưu dữ liệu app trên Drive. Hãy đăng nhập lại và tích chọn quyền được yêu cầu.'));
+        gdTok = { v:r.access_token, exp:Date.now() + (+r.expires_in || 3600) * 1000 }; gdAuthed = true; res(r.access_token);
+      },
+      error_callback:e => rej(new Error(e && e.type === 'popup_closed' ? 'Đã đóng cửa sổ đăng nhập Google.' : e && e.type === 'popup_failed_to_open' ? 'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên rồi thử lại.' : 'Không đăng nhập được Google (' + ((e && e.type) || 'lỗi') + ').'))
+    });
+    c.requestAccessToken({ prompt:gdAuthed ? '' : 'select_account' });
+  }));
+}
+async function gdApi(url, o, retry){
+  const tok = await gdToken();
+  let res;
+  try { res = await fetch(url, Object.assign({}, o, { headers:Object.assign({ Authorization:'Bearer ' + tok }, (o && o.headers) || {}), cache:'no-store' })); }
+  catch(e){ throw new Error('Không kết nối được Google Drive. Hãy kiểm tra mạng.'); }
+  if (res.status === 401 && !retry){ gdTok = { v:'', exp:0 }; return gdApi(url, o, true); }
+  if (!res.ok){
+    let m = ''; try { const j = await res.json(); m = (j.error && (j.error.message || j.error.status)) || ''; } catch(e){}
+    if (res.status === 403) throw new Error(/has not been used|disabled|accessNotConfigured/i.test(m) ? 'Google Drive API chưa được bật trong Google Cloud (APIs & Services → Library → Google Drive API).' : 'Google từ chối truy cập (403). ' + m);
+    if (res.status === 401) throw new Error('Phiên đăng nhập Google hết hạn, hãy thử lại.');
+    throw new Error('Lỗi Google Drive ' + res.status + (m ? ': ' + m : ''));
+  }
+  return res;
+}
+async function gdFind(){
+  const q = encodeURIComponent(`name='${GD_FILE}' and trashed=false`);
+  const j = await (await gdApi(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&orderBy=modifiedTime%20desc&pageSize=1&fields=files(id,modifiedTime)`)).json();
+  return (j.files && j.files[0]) || null;
+}
+async function gdDoBackup(){
+  const body = JSON.stringify(dtPayload()), f = await gdFind(), B = 'ktb' + Date.now().toString(36);
+  const meta = f ? { name:GD_FILE } : { name:GD_FILE, parents:['appDataFolder'] };
+  const mp = `--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${body}\r\n--${B}--`;
+  const url = f ? `https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=multipart&fields=id,modifiedTime` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
+  await gdApi(url, { method:f ? 'PATCH' : 'POST', headers:{ 'Content-Type':'multipart/related; boundary=' + B }, body:mp });
+  return { days:Object.keys(RD).length, notes:LS.length, marks:BM.length };
+}
+function gdMsg(t, ok){ $$('.gdMsg').forEach(e => { e.textContent = t; e.style.color = ok === false ? 'var(--danger)' : ''; }); gcSay(t, ok !== false); }
+async function gdRun(kind){
+  if (gdBusy) return;
+  if (!gcid()){ const m = 'Chưa cấu hình Google Client ID. Hãy nhờ quản trị viên nhập trong Quản lý dữ liệu.'; toast(m); gdMsg(m, false); return; }
+  if (!navigator.onLine){ const m = 'Đang offline, hãy kết nối mạng rồi thử lại.'; toast(m); gdMsg(m, false); return; }
+  gdBusy = true;
+  const btns = $$(kind === 'backup' ? '.gdBackup' : '.gdRestore'), old = btns.map(b => b.textContent);
+  $$('.gdBackup,.gdRestore').forEach(b => b.disabled = true); btns.forEach(b => b.textContent = '⟳ Đang xử lý…');
+  try {
+    if (kind === 'backup'){
+      const r = await gdDoBackup(), m = `✔ Đã sao lưu lên Google Drive: ${r.days} ngày đọc · ${r.notes} ghi chú · ${r.marks} dấu trang (${new Date().toLocaleString('vi-VN')}).`;
+      gdMsg(m, true); toast('☁️ Đã sao lưu lên Google Drive');
+    } else {
+      const f = await gdFind();
+      if (!f){ const m = 'Chưa có bản sao lưu nào trên Google Drive của tài khoản này.'; gdMsg(m, false); toast(m); }
+      else {
+        const text = await (await gdApi(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).text();
+        gdBusy = false;                                      // dtImport mở hộp chọn Gộp/Thay thế: nhả khóa trước để không kẹt
+        await dtImport(new File([text], GD_FILE, { type:'application/json' }));
+        gdMsg('Đã đọc bản sao lưu Google Drive (lưu lúc ' + new Date(f.modifiedTime).toLocaleString('vi-VN') + ').', true);
+      }
+    }
+  } catch(e){ const m = '✖ ' + (e.message || e); gdMsg(m, false); toast(m.slice(2)); }
+  finally { gdBusy = false; $$('.gdBackup,.gdRestore').forEach(b => b.disabled = false); btns.forEach((b, i) => b.textContent = old[i]); }
+}
+$$('.gdBackup').forEach(b => b.onclick = () => gdRun('backup'));
+$$('.gdRestore').forEach(b => b.onclick = () => gdRun('restore'));
+setTimeout(gdWarm, 2500);
 
 /* =========================================================
  *  CHỮ LỚN · HƯỚNG DẪN LẦN ĐẦU · CHIA SẺ CÂU THÀNH ẢNH
