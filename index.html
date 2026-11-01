@@ -94,6 +94,10 @@ html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
    iOS lấy đúng màu đó tô vùng thanh trạng thái nên lớp mờ không còn lộ ra. Dải này nằm dưới mọi hộp thoại (z-index thấp) và không chặn chạm. Tắt/bật ở Cài đặt → "Sửa mờ mép trên". */
 #sbStrip{display:none}
 html.sa:not(.nosb) #sbStrip{display:block;position:fixed;top:0;left:0;width:100%;height:12px;background:var(--bg);z-index:1;pointer-events:none}
+/* Các cách thử khác nhau (chọn ở Cài đặt → "Sửa mờ mép trên"): 1 = dải thấp; 2 = dải nằm trên cùng; 3 = dải "vô hình" (background-clip:text); 4 = dải phủ kín vùng thanh trạng thái */
+html.sa.sbv2 #sbStrip{z-index:2147483000}
+html.sa.sbv3 #sbStrip{z-index:auto;height:11px;-webkit-background-clip:text;background-clip:text}
+html.sa.sbv4 #sbStrip{z-index:2147483000;height:calc(env(safe-area-inset-top) + 8px)}
 html.sa.kb body:not(.pg) .top{top:calc(env(safe-area-inset-bottom) - var(--kb,0px))}
 html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom))}
 html.sa.kb body.pg:not(.searching) .top{bottom:calc(var(--kb,0px) - env(safe-area-inset-bottom))}
@@ -665,8 +669,8 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
         <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
-      <div class="srow"><div class="stxt"><b>Sửa mờ mép trên (iPhone)</b><span>Chỉ tác dụng khi mở từ biểu tượng Màn hình chính. Nếu thấy lạ, thử Tắt</span></div>
-        <div class="seg" id="sbSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      <div class="srow"><div class="stxt"><b>Sửa mờ mép trên (iPhone)</b><span>Chỉ khi mở từ biểu tượng Màn hình chính. Bấm lần lượt 1, 2, 3, 4 xem cách nào hết mờ; Tắt = như cũ</span></div>
+        <div class="seg" id="sbSeg"><button data-v="0">Tắt</button><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
       </div>
       <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Phóng to chữ cho dễ đọc</span></div>
         <div class="seg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
@@ -1047,8 +1051,8 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-try { if (localStorage.getItem('kt.sbfix') === '0') document.documentElement.classList.add('nosb'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB14';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+try { const v = localStorage.getItem('kt.sbfix'); document.documentElement.classList.add(v === '0' ? 'nosb' : /^[1-4]$/.test(v || '') ? 'sbv' + v : 'sbv1'); } catch(e){ document.documentElement.classList.add('sbv1'); }
+const APP_VERSION = '2026.11.01-AB15';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4289,13 +4293,13 @@ document.addEventListener('click', () => {
   try { if (S.fullauto && IS_IOS && !document.documentElement.classList.contains('sa') && !localStorage.getItem('kt.iosFsHint')){ localStorage.setItem('kt.iosFsHint', '1'); setTimeout(() => toast('iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính" để đọc toàn màn hình'), 600); } } catch(e){}
 }, { once:true, capture:true });
 $$('#fullSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!S.fullauto); b.onclick = () => { S.fullauto = b.dataset.v === '1'; saveS(); $$('#fullSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === S.fullauto)); paperFullscreen(S.fullauto || (PAPER_PAGED && S.paper)); }; });
-(function(){                                                  // Sửa mờ mép trên: mặc định BẬT
-  const de = document.documentElement, on = () => !de.classList.contains('nosb');
-  const paint = () => $$('#sbSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === on()));
+(function(){                                                  // Sửa mờ mép trên: chọn cách 0 (tắt), 1–4
+  const de = document.documentElement, cur = () => (de.classList.contains('nosb') ? '0' : ((de.className.match(/sbv([1-4])/) || [])[1] || '1'));
+  const paint = () => $$('#sbSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === cur()));
   $$('#sbSeg button').forEach(b => b.onclick = () => {
-    const v = b.dataset.v === '1'; de.classList.toggle('nosb', !v);
-    try { localStorage.setItem('kt.sbfix', v ? '1' : '0'); } catch(e){}
-    paint(); toast(v ? 'Đã bật sửa mờ mép trên' : 'Đã tắt sửa mờ mép trên');
+    const v = b.dataset.v; de.classList.remove('nosb', 'sbv1', 'sbv2', 'sbv3', 'sbv4'); de.classList.add(v === '0' ? 'nosb' : 'sbv' + v);
+    try { localStorage.setItem('kt.sbfix', v); } catch(e){}
+    paint(); toast(v === '0' ? 'Đã tắt sửa mờ mép trên' : 'Đang thử cách ' + v + ' – đóng Cài đặt và nhìn mép trên');
   });
   paint();
 })();
