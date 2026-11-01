@@ -115,6 +115,9 @@ html.sa.kbtop:not(.mtop) body:not(.pg) .top{position:fixed;top:calc(env(safe-are
 html.sa.kbtop:not(.mtop) body.searching:not(.pg) main{padding-top:46px}
 html.sa.kb body:not(.pg) main{padding-bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom))}
 html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{top:calc(env(safe-area-inset-top) + var(--sbx,0px));bottom:auto;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line)}
+/* Gõ ở ô Chương / Câu khi menu ở DƯỚI (class kbup): thanh menu GIỮ nguyên chỗ trong bố cục, chỉ được nâng lên ngay trên bàn phím bằng transform
+   (không đụng tới bố cục nên nội dung trang chính đứng yên, không bị đẩy; bật ngay lúc chạm nên không có độ trễ). */
+html.sa.kbup:not(.mtop) .top,html.sa.kbup:not(.mtop) body:not(.pg) .top,html.sa.kbup:not(.mtop) body.pg:not(.searching) .top{transform:translate3d(0,calc(-1px * var(--kbu,0) + env(safe-area-inset-bottom)),0)!important;-webkit-transform:translate3d(0,calc(-1px * var(--kbu,0) + env(safe-area-inset-bottom)),0)!important;transition:none!important;z-index:60}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -5151,23 +5154,34 @@ planSum();
   let pend = 0;
   const inBar = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)); };
   const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)))); };
-  const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb', 'kbtop'); de.style.removeProperty('--kb'); };
-  const fit = () => {
+  const numBox = () => { const a = document.activeElement; return !!(a && (a.id === 'niChap' || a.id === 'niVerse')); };
+  const reset = () => { b.style.height = ''; b.style.top = ''; de.classList.remove('kb', 'kbtop', 'kbup'); de.style.removeProperty('--kb'); de.style.removeProperty('--kbu'); };
+  const fit = settle => {
     const kb = Math.round(innerHeight - vv.height);
     if (kb <= 1){ if (typing() && Date.now() < pend) return; reset(); return; }      // đang chờ bàn phím hiện: giữ vị trí ước lượng
     b.style.top = vv.offsetTop + 'px';
-    if (inBar()){
+    if (inBar() && de.classList.contains('kbup')){
+      b.style.height = '';
+      if (kb > 100){ if (settle === true) de.style.setProperty('--kbu', String(kb)); try { localStorage.setItem(KB, String(kb)); } catch(e){} }   // chỉ chốt chiều cao thật khi bàn phím đã mở xong → thanh không chìm xuống rồi nổi lên
+    } else if (inBar()){
       b.style.height = ''; de.style.setProperty('--kb', kb + 'px'); de.classList.add('kb'); if (typing() && !de.classList.contains('mtop')) de.classList.add('kbtop');
       if (kb > 100){ try { localStorage.setItem(KB, String(kb)); } catch(e){} }
-    } else if (de.classList.contains('kb')){ /* bàn phím đang đóng lại: giữ nguyên, tránh giật */ }
+    } else if (de.classList.contains('kb') || de.classList.contains('kbup')){ /* bàn phím đang đóng lại: giữ nguyên, tránh giật */ }
     else { b.style.height = vv.height + 'px'; }
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && typing() && !de.classList.contains('kbtop')){
-      pend = Date.now() + 900; de.classList.add('kbtop');       // bay lên trên NGAY lúc chạm, trước khi iOS tính chuyện đẩy trang
+    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
+      /* Ô Chương/Câu: thanh menu nổi lên trên bàn phím NGAY lúc ô nhận con trỏ (dùng chiều cao bàn phím đã nhớ từ lần trước) → iOS không phải đẩy trang */
+      let h = 0; try { h = +localStorage.getItem(KB) || 0; } catch(e){}
+      if (h < 150 || h > 420) h = 271;
+      pend = Date.now() + 1200;
+      if (!de.classList.contains('kbup')) de.style.setProperty('--kbu', String(h));
+      de.classList.remove('kbtop'); de.classList.add('kbup');
+    } else if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && typing() && !de.classList.contains('kbtop')){
+      pend = Date.now() + 900; de.classList.add('kbtop');       // ô tìm kiếm…: bay lên trên NGAY lúc chạm, trước khi iOS tính chuyện đẩy trang
     }
-    setTimeout(fit, 60); setTimeout(fit, 400); setTimeout(fit, 950);
+    setTimeout(fit, 60); setTimeout(() => fit(true), 400); setTimeout(() => fit(true), 950);
   });
   document.addEventListener('focusout', () => { setTimeout(fit, 120); setTimeout(fit, 500); });
 })();
