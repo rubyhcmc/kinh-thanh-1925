@@ -63,10 +63,10 @@ body{position:fixed;left:0;right:0;top:0;bottom:0;width:100%;overflow:hidden;ove
 body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body:not(.pg) .top{transition:none!important;transform:none}
+body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 /* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến chữ/biểu tượng bị vẽ mờ → ở chế độ này bỏ ép lớp; thanh vẫn cố định bằng position:fixed. Safari giữ nguyên. */
-html.sa body:not(.pg) .top{transform:none}
-html.sa .top,html.sa .top *{-webkit-transform:none;transform:none;will-change:auto;-webkit-font-smoothing:subpixel-antialiased;font-smooth:auto}
+html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa .top,html.sa .top *{-webkit-transform:none;will-change:auto;-webkit-font-smoothing:antialiased}
 /* iPhone mở từ Màn hình chính (sửa lỗi menu mờ nhòe trên SE 3): thanh trên KHÔNG còn position:fixed nữa mà nằm trong luồng bố cục (body = cột flex: thanh trên + vùng đọc).
    Thanh cố định chồng lên các lớp tăng tốc phía dưới (sân khấu lật trang dựng sẵn, vùng đọc fixed…) bị WebKit vẽ thành lớp riêng độ phân giải thấp → chữ/biểu tượng mờ.
    Nằm trong luồng thì không còn lớp nào bị ép tách riêng, chữ luôn sắc nét; thanh vẫn đứng yên vì vùng đọc mới là phần cuộn. Chỉ áp dụng cho chế độ thường (chế độ Trang giấy giữ cách cũ). */
@@ -86,12 +86,6 @@ html.sa .top,html.sa body:not(.pg) .top{order:2;height:calc(48px + env(safe-area
 html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
 html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
 html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
-/* Bản AB5 – triệt để lỗi mờ mép trên (iOS 26/27, iPhone SE 3, chạy từ Màn hình chính):
-   iOS mới phủ lớp mờ dần "scroll edge effect" lên mép trên khi gặp BẤT KỲ phần tử position:fixed nào dính mép trên màn hình – kể cả loại chỉ hiện thoáng qua
-   (sân khấu lật trang .fl-stage, nền menu chạm giữ, hộp thoại .overlay/.admin/.lssheet, dải che vùng an toàn body::before). Ở chế độ Màn hình chính chuyển TẤT CẢ sang position:absolute
-   (thân trang body đã là absolute, cao đúng bằng màn hình, nên toạ độ không đổi) → không còn phần tử fixed nào chạm mép trên. */
-html.sa body::before{display:none!important}
-html.sa .fl-stage,html.sa .overlay,html.sa .admin,html.sa .lssheet,html.sa .vmenu-bg{position:absolute!important}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -404,7 +398,7 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .fl-stage{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:hidden;pointer-events:none;contain:strict;transform:translateZ(0)}
 .fl-book{position:absolute;top:0;bottom:0}      /* KHÔNG có perspective: lật bằng co ngang, mép trên/dưới đứng yên */
 .fl-under,.fl-leaf{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
-.fl-leaf{transform-origin:0% 50%;will-change:transform;
+.fl-leaf{transform-origin:0% 50%;-webkit-backface-visibility:hidden;backface-visibility:hidden;will-change:transform;
   box-shadow:6px 0 22px rgba(0,0,0,.22)}
 .fl-pg{position:absolute;left:0;right:0}
 .fl-cast{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
@@ -952,7 +946,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB5';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4237,7 +4231,11 @@ function setupPWA(){
     const i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.href = 'icon-192.png'; document.head.appendChild(i);
     const t = document.createElement('link'); t.rel = 'apple-touch-icon'; t.href = 'apple-touch-icon.png'; document.head.appendChild(t);
   };
-  addDynamicManifest();   // KHÔI PHỤC bản AA: khai báo cài đặt tạo bằng mã như cũ
+  /* iPhone/iPad: KHÔNG khai báo manifest. Từ iOS 26, nếu lúc "Thêm vào Màn hình chính" trang có manifest (display:standalone) thì iOS cài thành "web app" kiểu mới,
+     có lớp mờ "scroll edge" ở mép trên và bám cứng cấu hình đó trong biểu tượng. Không manifest thì iOS dùng chế độ cổ điển (apple-mobile-web-app-capable) – mép trên sắc nét như trước.
+     Android/máy tính vẫn dùng manifest tạo bằng mã để cài được. */
+  if (IS_IOS){ try { const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = makeIcon(180); document.head.appendChild(l); } catch(e){} }
+  else addDynamicManifest();
   // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
   const persist = async () => {
     try {

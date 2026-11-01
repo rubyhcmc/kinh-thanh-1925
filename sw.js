@@ -5,7 +5,7 @@
    - Tệp dữ liệu .json KHÔNG đi qua đây: Kinh Thánh nằm trong IndexedDB của app, không nằm trong Cache Storage.
    - Kho 'kt-store-v1' (kho dự phòng cũ) và 'kt-fallback-v1' (kho dự phòng dùng khi IndexedDB của máy hỏng) KHÔNG bị xóa ở đây: do app tự quản.
    - Khóa lưu sẵn bỏ phần “?…”: mở trang với tham số khác nhau (?kho=…) vẫn dùng chung một bản lưu. */
-const CACHE = 'kt-20261101-f';
+const CACHE = 'kt-20261101-g';
 const LEGACY_STORE = 'kt-store-v1', FALLBACK_STORE = 'kt-fallback-v1', DATA_STORE = 'kt-data-v1';
 const NAV_WAIT_MS = 2500;
 const ESSENTIAL = ['./', './index.html'];
