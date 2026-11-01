@@ -67,6 +67,13 @@ body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webki
 /* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến chữ/biểu tượng bị vẽ mờ → ở chế độ này bỏ ép lớp; thanh vẫn cố định bằng position:fixed. Safari giữ nguyên. */
 html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
 html.sa .top,html.sa .top *{-webkit-transform:none;will-change:auto;-webkit-font-smoothing:antialiased}
+/* iPhone mở từ Màn hình chính (sửa lỗi menu mờ nhòe trên SE 3): thanh trên KHÔNG còn position:fixed nữa mà nằm trong luồng bố cục (body = cột flex: thanh trên + vùng đọc).
+   Thanh cố định chồng lên các lớp tăng tốc phía dưới (sân khấu lật trang dựng sẵn, vùng đọc fixed…) bị WebKit vẽ thành lớp riêng độ phân giải thấp → chữ/biểu tượng mờ.
+   Nằm trong luồng thì không còn lớp nào bị ép tách riêng, chữ luôn sắc nét; thanh vẫn đứng yên vì vùng đọc mới là phần cuộn. Chỉ áp dụng cho chế độ thường (chế độ Trang giấy giữ cách cũ). */
+html.sa body:not(.pg){display:flex;flex-direction:column}
+html.sa body:not(.pg)::before{display:none}
+html.sa body:not(.pg) .top{position:relative;top:auto;left:auto;right:auto;width:100%;flex:none;transform:none!important;-webkit-transform:none!important;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa body:not(.pg) main{position:relative;top:auto;bottom:auto;left:auto;right:auto;flex:1 1 auto;min-height:0;height:auto}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -924,7 +931,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.10.31-AA6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB1';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
