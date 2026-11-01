@@ -24,6 +24,13 @@
 }
 /* Chế độ Trang giấy: đen trắng tương phản cao, không màu, không hiệu ứng */
 html[data-paper]{--bg:#f4f3ee; --card:#fbfaf6; --fg:#000; --muted:#3d3d3a; --accent:#000; --accent-soft:#e6e5df; --line:#b9b8b1; --hl:#d6d5ce; --danger:#000}
+/* Trang giấy – bản tối: nền đen giấy, chữ trắng ngà, tương phản cao, không màu (chọn "Tối" ở Cài đặt → Chế độ màu) */
+html[data-paper][data-theme=dark]{--bg:#0e0e0d; --card:#151514; --fg:#f2f1ec; --muted:#c4c3bc; --accent:#f2f1ec; --accent-soft:#2a2a28; --line:#4a4a46; --hl:#44443f; --danger:#f2f1ec}
+html[data-paper][data-theme=dark] .fnm{color:#f2f1ec}
+html[data-paper][data-theme=dark] .iconbtn.on{background:#f2f1ec;color:#0e0e0d}
+html[data-paper][data-theme=dark] .v.flash{outline-color:#f2f1ec}
+html[data-paper][data-theme=dark] .v.flash .vn{background:#f2f1ec;color:#0e0e0d;box-shadow:0 0 0 2px #f2f1ec}
+html[data-paper][data-theme=dark] .btn.primary,html[data-paper][data-theme=dark] .seg button.on{color:#0e0e0d}
 html[data-paper] *{transition:none!important;animation:none!important;box-shadow:none!important;text-shadow:none!important}
 html.fw .reader{visibility:hidden}
 html[data-paper] .fnm{color:#000;text-decoration:underline;text-underline-offset:.18em}
@@ -1109,14 +1116,14 @@ try { if (!localStorage.getItem('kt.themeLight')){ if (S.theme === 'auto') S.the
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
 
 function applyTheme(){
-  const dark = !S.paper && (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));
+  const dark = (S.theme === 'dark' || (S.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches));   // Trang giấy cũng có bản tối
   document.documentElement.toggleAttribute('data-paper', !!S.paper);
   document.body.classList.toggle('pg', PAPER_PAGED && !!S.paper); if (!S.paper) document.body.classList.remove('pgchrome');
   try { pgRefresh(); } catch(e){}
   try { window.ktFlipDirty && window.ktFlipDirty(); } catch(e){}      // đổi chế độ → dựng lại bản sao lật trang chính cho khớp
   const pb = $('#btnPaper'); if (pb){ pb.classList.toggle('on', !!S.paper); pb.setAttribute('aria-pressed', S.paper ? 'true' : 'false'); }
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name=theme-color]').content = S.paper ? '#f4f3ee' : (dark ? '#1c1b19' : '#fffdf8');
+  $('meta[name=theme-color]').content = S.paper ? (dark ? '#0e0e0d' : '#f4f3ee') : (dark ? '#1c1b19' : '#fffdf8');
   $$('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.theme));
 }
 function applyFs(){
