@@ -150,7 +150,9 @@ body.searching .top .sfield{display:flex}
 .nf{position:relative;min-width:0}
 .top .navrow .nf input{height:36px;padding:0 6px 0 8px;border-radius:8px;font-size:16px;background:transparent;text-overflow:ellipsis;-webkit-appearance:none;appearance:none}
 .nf input::placeholder{color:var(--fg);opacity:1}
-.nf input:focus{border-color:var(--accent);outline:0}
+.nf input:focus,.nf.vf input{border-color:var(--accent);outline:0}
+.nf.vf input::placeholder{color:var(--muted);opacity:.55}
+#kbProxy{position:fixed;top:70px;left:0;width:40px;height:30px;opacity:.01;font-size:16px;border:0;padding:0;margin:0;background:transparent;color:transparent;caret-color:transparent;pointer-events:none;z-index:-1;-webkit-user-select:text;user-select:text}
 .nf input:focus::placeholder{color:var(--muted);opacity:.55}
 .nf input:disabled{opacity:.5}
 .rng{display:none!important}
@@ -5139,6 +5141,57 @@ planSum();
   document.addEventListener('focusin', () => { pin(); setTimeout(pin, 60); setTimeout(pin, 350); });
   document.addEventListener('focusout', () => { setTimeout(pin, 120); setTimeout(pin, 500); });
   if (vv){ vv.addEventListener('resize', pin); vv.addEventListener('scroll', pin); }
+})();
+
+/* Ô Chương / Câu khi menu ở DƯỚI (iPhone, Màn hình chính): "ô nhập thay thế".
+   Gốc lỗi: ô thật nằm sát đáy nên iOS luôn tự đẩy/cuộn cả trang để khỏi bị bàn phím che. Không có cách nào chặn việc đó khi ô thật còn ở đáy.
+   Cách dứt điểm: khi chạm ô Chương/Câu, bàn phím được mở bằng một ô ẩn (#kbProxy) đặt ở phía trên màn hình (luôn nhìn thấy → iOS không có lý do đẩy trang).
+   Ký tự gõ vào ô ẩn được chép sang ô thật (niChap / niVerse) và phát lại đúng các sự kiện cũ nên mọi logic nhảy chương/câu giữ nguyên.
+   Trang chính và thanh menu đứng yên; thanh menu được nâng lên sát mép trên bàn phím như một lớp phủ (CSS .kbup). */
+(function(){
+  const de = document.documentElement, doc = document;
+  const nc = doc.getElementById('niChap'), nv = doc.getElementById('niVerse');
+  if (!nc || !nv) return;
+  const proxy = doc.createElement('input');
+  proxy.id = 'kbProxy'; proxy.type = 'text'; proxy.setAttribute('inputmode', 'numeric'); proxy.setAttribute('pattern', '[0-9]*');
+  proxy.setAttribute('enterkeyhint', 'done'); proxy.setAttribute('autocomplete', 'off'); proxy.setAttribute('aria-hidden', 'true'); proxy.tabIndex = -1;
+  doc.body.appendChild(proxy);
+  const nativeFocus = HTMLElement.prototype.focus, nativeBlur = HTMLElement.prototype.blur;
+  const actGet = Object.getOwnPropertyDescriptor(Document.prototype, 'activeElement').get;
+  let vT = null;
+  const ok = () => typeof IS_IOS !== 'undefined' && IS_IOS && de.classList.contains('sa') && !de.classList.contains('mtop');
+  Object.defineProperty(doc, 'activeElement', { configurable: true, get(){ const a = actGet.call(doc); return (a === proxy && vT) ? vT : a; } });
+  const mark = (inp, on) => { const f = inp && inp.closest('.nf'); if (f) f.classList.toggle('vf', on); };
+  function vFocus(inp){
+    if (inp.disabled) return;
+    const prev = vT; vT = inp; proxy.value = inp.value;
+    if (actGet.call(doc) !== proxy) nativeFocus.call(proxy, { preventScroll: true });
+    if (prev !== inp){ mark(prev, false); mark(inp, true); inp.dispatchEvent(new Event('focus')); proxy.value = inp.value; }
+  }
+  function vBlur(){
+    if (!vT) return;
+    const inp = vT; vT = null; mark(inp, false);
+    if (actGet.call(doc) === proxy) nativeBlur.call(proxy);
+    inp.dispatchEvent(new Event('blur'));
+  }
+  [nc, nv].forEach(inp => {
+    inp.focus = function(o){ if (ok()) vFocus(inp); else nativeFocus.call(inp, o); };
+    inp.blur = function(){ if (vT === inp) vBlur(); else if (!ok()) nativeBlur.call(inp); };
+    inp.addEventListener('touchend', e => { if (!ok() || inp.disabled) return; e.preventDefault(); vFocus(inp); }, { passive: false });
+  });
+  proxy.addEventListener('input', () => {
+    const t = vT; if (!t) return;
+    t.value = proxy.value; t.dispatchEvent(new Event('input', { bubbles: true }));
+    proxy.value = (vT || t).value;
+  });
+  proxy.addEventListener('keydown', e => {
+    if (!vT) return;
+    const ev = new KeyboardEvent('keydown', { key: e.key, bubbles: true, cancelable: true });
+    vT.dispatchEvent(ev); if (ev.defaultPrevented) e.preventDefault();
+    proxy.value = vT ? vT.value : '';
+  });
+  proxy.addEventListener('blur', () => { if (vT) vBlur(); });
+  doc.addEventListener('touchstart', e => { if (vT && !(e.target.closest && e.target.closest('.nf'))) vBlur(); }, { passive: true, capture: true });
 })();
 
 /* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở.
