@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Kinh Thánh</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual">
 <meta name="theme-color" content="#f7f3ea">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -4769,7 +4769,7 @@ async function pgFlip(dir){                                        // chạm mé
     wheelFlipAt = now; pgFlip(d > 0 ? 1 : -1);
   }, { passive:false });
   $('#pgFoot').addEventListener('click', () => document.body.classList.toggle('pgchrome'));
-  let rsT; addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (!pg.busy && !st) pgRefresh(); }, 180); });
+  let rsT; addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { if (!pg.busy && !st && !window.ktKbFocus) pgRefresh(); }, 180); });
   addEventListener('keydown', e => {
     if (!pgOn() || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
@@ -5118,6 +5118,25 @@ function openPlan(opts){
   document.body.appendChild(o);
 }
 planSum();
+
+/* Gõ vào ô Chương / Câu / Tìm kiếm: nội dung ĐỨNG YÊN, bàn phím chỉ che phía dưới, không đẩy trang lên và không dàn trang lại.
+   - Trình duyệt Android: meta viewport "interactive-widget=resizes-visual" (ở đầu tệp) khiến bàn phím không co khung nhìn.
+   - Safari iPhone (không phải Màn hình chính): khi iOS cuộn khung nhìn lúc bàn phím mở, ghim thân trang theo ngược lại để chữ không nhúc nhích.
+   - Trong lúc bàn phím mở, tạm hoãn việc dàn lại trang (chế độ Trang giấy). */
+(function(){
+  const b = document.body, vv = window.visualViewport;
+  const topInput = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)); };
+  const pin = () => {
+    window.ktKbFocus = topInput();
+    if (!vv || document.documentElement.classList.contains('sa')) return;       // Màn hình chính đã có cách xử lý riêng ở dưới
+    if (window.ktKbFocus && (vv.offsetTop > 0 || vv.offsetLeft > 0)) b.style.transform = 'translate3d(' + vv.offsetLeft + 'px,' + vv.offsetTop + 'px,0)';
+    else if (b.style.transform) b.style.transform = '';
+    if (window.ktKbFocus && window.scrollY) window.scrollTo(0, 0);
+  };
+  document.addEventListener('focusin', () => { pin(); setTimeout(pin, 60); setTimeout(pin, 350); });
+  document.addEventListener('focusout', () => { setTimeout(pin, 120); setTimeout(pin, 500); });
+  if (vv){ vv.addEventListener('resize', pin); vv.addEventListener('scroll', pin); }
+})();
 
 /* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở.
    Vì sao trang bị "đẩy lên": ô nhập nằm sát đáy; iOS thấy bàn phím sắp che ô đó nên TỰ ĐẨY CẢ TRANG lên (cuộn khung nhìn), sau đó mã mới kịp chỉnh lại → nội dung giật.
