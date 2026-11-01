@@ -1,20 +1,34 @@
-/* Service worker: MỞ NGAY từ bản đã lưu (không chờ mạng – mạng chập chờn/Wi-Fi không ra Internet trên iPhone có thể treo rất lâu), cập nhật bản mới ngầm cho lần mở sau.
-   Kho dữ liệu 'kt-store-v1' (lưu dự phòng) và 'kt-data-v1' (bản gốc dữ liệu Kinh Thánh) KHÔNG bị xóa ở đây. */
-const CACHE = 'kt-20261101-aa5', KEEP = ['kt-store-v1', 'kt-data-v1', 'kt-fallback-v1'];
+/* Service worker: ưu tiên bản MỚI NHẤT từ mạng, nhưng KHÔNG bắt người dùng chờ mạng chậm, và luôn mở được khi mất mạng.
+   - Cài đặt (install): trang chính PHẢI lưu được thì bản này mới được cài. Nếu lưu lỗi (mạng chập chờn) thì bản cũ (và kho lưu cũ) giữ nguyên,
+     lần mở sau trình duyệt tự thử lại. Nhờ vậy không bao giờ có chuyện “đã cài mà kho lưu trống”.
+   - Mở trang (navigate): có bản đã lưu thì mở NGAY (không chờ mạng); bản mới tải ngầm và dùng từ lần mở sau.
+   - Tệp dữ liệu .json KHÔNG đi qua đây: Kinh Thánh nằm trong IndexedDB của app, không nằm trong Cache Storage.
+   - Kho 'kt-store-v1' (kho dự phòng cũ) và 'kt-fallback-v1' (kho dự phòng dùng khi IndexedDB của máy hỏng) KHÔNG bị xóa ở đây: do app tự quản.
+   - Khóa lưu sẵn bỏ phần “?…”: mở trang với tham số khác nhau (?kho=…) vẫn dùng chung một bản lưu. */
+const CACHE = 'kt-20261101-f';
+const LEGACY_STORE = 'kt-store-v1', FALLBACK_STORE = 'kt-fallback-v1', DATA_STORE = 'kt-data-v1';
+const NAV_WAIT_MS = 2500;
+const ESSENTIAL = ['./', './index.html'];
+const OPTIONAL = ['./manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 async function cacheShell(){
   const c = await caches.open(CACHE);
-  await Promise.all(['./', './index.html'].map(u => c.add(new Request(u, { cache:'reload' }))));     // lỗi → không cài → lần mở sau thử lại
-  await Promise.all(['./manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'].map(u => c.add(new Request(u, { cache:'reload' })).catch(() => {})));
+  await Promise.all(ESSENTIAL.map(u => c.add(new Request(u, { cache:'reload' }))));        // lỗi → ném ra → không cài
+  await Promise.all(OPTIONAL.map(u => c.add(new Request(u, { cache:'reload' })).catch(() => {})));
 }
-self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(cacheShell()); });
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(cacheShell());
+});
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     const ks = await caches.keys();
-    await Promise.all(ks.filter(k => k !== CACHE && !KEEP.includes(k)).map(k => caches.delete(k)));
+    await Promise.all(ks.filter(k => k !== CACHE && k !== LEGACY_STORE && k !== FALLBACK_STORE && k !== DATA_STORE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
-self.addEventListener('message', e => { if (e.data === 'cache-shell') e.waitUntil(cacheShell().catch(() => {})); });
+self.addEventListener('message', e => {                  // trang yêu cầu lưu lại vỏ app (khi kiểm tra thấy chưa có)
+  if (e.data === 'cache-shell') e.waitUntil(cacheShell().catch(() => {}));
+});
 self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
@@ -26,7 +40,15 @@ self.addEventListener('fetch', e => {
     if (res.status === 200){ const cp = res.clone(); caches.open(CACHE).then(c => c.put(key, cp)).catch(() => {}); }
     return res;
   });
-  const cachedP = caches.match(key).then(m => m || (r.mode === 'navigate' ? caches.match('./index.html') : undefined));
-  e.waitUntil(net.catch(() => {}));
-  e.respondWith(cachedP.then(m => m || net).catch(() => net).catch(() => Response.error()));
+  const fallback = () => caches.match(key).then(m => m || (r.mode === 'navigate' ? caches.match('./index.html') : undefined));
+  if (r.mode === 'navigate'){
+    e.waitUntil(net.catch(() => {}));                    // luôn tải bản mới ngầm để lần mở sau dùng
+    e.respondWith((async () => {
+      const cached = await fallback();
+      if (cached) return cached;                         // có bản đã lưu → mở NGAY, không chờ mạng (nhanh, và chạy offline)
+      return net.catch(() => Response.error());          // lần đầu tiên chưa có gì → bắt buộc chờ mạng
+    })());
+    return;
+  }
+  e.respondWith(net.catch(() => fallback().then(m => m || Response.error())));
 });
