@@ -273,7 +273,6 @@ details{font-size:13px;color:var(--muted);margin-top:8px}
 details summary{cursor:pointer;color:var(--accent);font-weight:600}
 details pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:12px;color:var(--fg)}
 details ol{padding-left:20px;line-height:1.7}
-details pre.bkcode{white-space:pre;max-height:260px;-webkit-user-select:text;user-select:text}
 details a{color:var(--accent)}
 .lbl{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 .chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
@@ -549,17 +548,6 @@ html[data-paper] .reader.print{text-align:justify}
 .ctrule{width:56px;height:1px;border:0;margin:16px auto 14px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.7}
 .cthi{margin:0;font:700 17px/1.4 var(--serif);color:var(--fg)}
 .ctmsg{margin:8px auto 0;max-width:290px;font:italic 14px/1.65 var(--serif);color:var(--muted)}
-.phsheet{max-width:440px;text-align:center;padding:26px 22px calc(20px + env(safe-area-inset-bottom))}
-.phico{font-size:50px;line-height:1.15;margin:0 0 6px}
-.pht{font:700 25px/1.3 var(--serif)!important;margin:0 0 10px!important}
-.phd{font-size:19px;line-height:1.65;margin:0 0 16px;color:var(--fg)}
-.phin{width:100%;height:66px;font-size:30px;letter-spacing:.05em;text-align:center;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg)}
-.phin:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.pherr{min-height:26px;margin:8px 0 6px;font-size:16px;line-height:1.4;color:var(--danger)}
-.phbtn{display:block;width:100%;min-height:58px;margin:0 0 10px;padding:0 14px;font-size:19px;border-radius:14px}
-.phno{border-color:transparent;background:none;color:var(--muted);font-weight:600}
-.gdProfile{font-size:16px;line-height:1.85;text-align:left}
-.gdProfile b{font-weight:700}
 </style>
 </head>
 <body>
@@ -618,18 +606,6 @@ html[data-paper] .reader.print{text-align:justify}
   <div class="sheet">
     <div class="sgrab"></div>
     <div class="shead"><h3>Cài đặt</h3><button class="sdone" id="closeSettings">Xong</button></div>
-
-    <div class="slabel">Sao lưu &amp; khôi phục</div>
-    <div class="sgroup">
-      <div class="srow col" style="gap:12px">
-        <div class="gdProfile"><div class="gdPhoneTxt"></div><div class="gdLastTxt"></div></div>
-        <button class="btn primary phbtn gdBackup">☁️ Sao lưu ngay</button>
-        <button class="btn phbtn gdRestore">🔄 Khôi phục dữ liệu</button>
-        <button class="sbtn gdChange" style="align-self:center">Đổi số điện thoại</button>
-        <div class="srow" style="padding:4px 0 0"><div class="stxt"><b>Tự động sao lưu</b><span>Tự lưu mỗi khi mở app có mạng, không cần đăng nhập Google</span></div><div class="seg gdAutoSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div></div>
-        <div class="bmhint gdMsg" style="margin:0"></div>
-      </div>
-    </div>
 
     <div class="slabel">Giao diện đọc</div>
     <div class="sgroup">
@@ -852,36 +828,6 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>Sao lưu dữ liệu người dùng (lên Drive của Admin)</h4>
-      <p class="hint">Ghi chú, hành trình đọc và dấu trang của người dùng tự động được lưu vào Google Drive của bạn (thư mục “KinhThanh-UserBackups”), mỗi người một file theo số điện thoại. Người dùng không phải đăng nhập Google, chỉ nhập số điện thoại một lần. Bạn dựng máy chủ sao lưu một lần rồi dán địa chỉ vào đây.</p>
-      <label class="lbl" for="bkUrlIn">Địa chỉ máy chủ sao lưu (Web app URL)</label>
-      <input type="text" id="bkUrlIn" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <div class="btns">
-        <button class="btn primary" id="gcSave">Lưu cấu hình</button>
-        <button class="btn" id="bkTest">Kiểm tra kết nối</button>
-      </div>
-      <div class="btns">
-        <button class="btn gdBackup" id="gdBackupA">☁️ Sao lưu</button>
-        <button class="btn gdRestore" id="gdRestoreA">🔄 Khôi phục</button>
-      </div>
-      <div class="row" style="margin:10px 0 0"><div class="stxt"><b>Tự động sao lưu</b><span>Mỗi khi mở app có mạng, chạy ngầm trên máy người dùng</span></div><div class="seg gdAutoSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div></div>
-      <div class="log" id="gcLog"></div>
-      <details>
-        <summary>Cách dựng máy chủ sao lưu (làm một lần, khoảng 3 phút)</summary>
-        <ol>
-          <li>Mở <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> bằng <b>tài khoản Google của Admin</b> (tài khoản có Drive sẽ chứa dữ liệu) → tạo <b>Dự án mới</b>.</li>
-          <li>Xóa mã mẫu, bấm <b>Chép mã</b> bên dưới rồi dán vào, bấm <b>Lưu</b>.</li>
-          <li>Bấm <b>Triển khai → Tùy chọn triển khai mới → Ứng dụng web</b>. Chọn “Thực thi dưới tên: <b>Tôi</b>” và “Ai có quyền truy cập: <b>Bất kỳ ai</b>”. Bấm Triển khai, rồi cấp quyền khi Google hỏi (nếu có cảnh báo, chọn Nâng cao → Tiếp tục).</li>
-          <li>Sao chép <b>URL ứng dụng web</b> (kết thúc bằng <b>/exec</b>), dán vào ô phía trên, bấm <b>Lưu cấu hình</b> rồi <b>Kiểm tra kết nối</b>. Địa chỉ này tự chuyển sang máy người dùng qua đồng bộ GitHub.</li>
-          <li>Sau này nếu sửa mã: Triển khai → <b>Quản lý bản triển khai</b> → biểu tượng bút → Phiên bản <b>Mới</b> → Triển khai (URL giữ nguyên).</li>
-        </ol>
-        <p>Lưu ý: bản lưu của người dùng nằm trong Drive của bạn nên bạn xem được; ai biết số điện thoại của người khác cũng khôi phục được dữ liệu của số đó, vì vậy chỉ nên dùng cho dữ liệu đọc Kinh Thánh, không lưu thông tin nhạy cảm. Máy chủ giữ thêm một bản cũ (file .prev.json) để bạn cứu được khi có sự cố.</p>
-        <button class="btn" id="bkCopy" style="margin:8px 0">📋 Chép mã</button>
-        <pre class="bkcode" id="bkCode"></pre>
-      </details>
-    </div>
-
-<div class="card">
       <h4>Sao lưu &amp; xóa</h4>
       <div class="btns" style="margin-top:0">
         <button class="btn" id="doExport">⬇️ Tải tệp sao lưu</button>
@@ -1000,7 +946,7 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
 /* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
 try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
-const APP_VERSION = '2026.11.01-AB10';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.01-AB6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2435,7 +2381,7 @@ async function buildBooks(){
   const map = new Map(recs.map(b => [b.name, b]));
   return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
-const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT, bkurl:bkUrl() });
+const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
 
 /* =========================================================
  *  LỚP LƯU TRỮ (ADAPTER) – tách rời giao diện khỏi nơi lưu dữ liệu
@@ -2514,7 +2460,7 @@ async function restoreFromDataCache(){
   const text = await dataCacheGet(); if (!text) return false;
   try {
     const j = parseRemote(text), books = normBible(j.bible || j); if (!books.length) return false;
-    await importBible(books, 'replace'); applyAbout(j.about); bkFromRemote(j.bkurl);
+    await importBible(books, 'replace'); applyAbout(j.about);
     SY = { sha:sigOf(text), dirty:false, at:Date.now(), store:'github' }; saveSY();
     await reloadAll(); return bibleMeta.length > 0;
   } catch(e){ return false; }
@@ -2567,7 +2513,7 @@ Store.active = 'myserver';
 async function applyRemote(A, r){
   const j = r.payload || {}, books = normBible(j.bible || j);
   if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
-  await importBible(books, 'replace'); applyAbout(j.about); bkFromRemote(j.bkurl);
+  await importBible(books, 'replace'); applyAbout(j.about);
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
   const y = SCR.scrollTop, kb = curBook && curBook.name, kc = S.chapter, kn = parseInt(curVerseNo(), 10) || 0;
   await reloadAll(); SCR.scrollTop = y;
@@ -2976,7 +2922,7 @@ async function refreshStats(){
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
 }
-function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGc(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
+function openAdmin(){ if (!isAdmin()) return; fillAbout(); fillGhFields(); updateSyncUI(); show('#admin'); refreshStats(); }
 async function reloadAll(){ await initBible(); await refreshStats(); }
 
 function setLog(msg, ok){ const l = $('#impLog'); l.textContent = msg; l.className = 'log ' + (ok ? 'ok' : 'err'); }
@@ -4691,7 +4637,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, profile:gdProfInfo(), reads:RD, lessons:LS, marks:BM, plan:PLAN, resume:RESUME };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, resume:RESUME };
 }
 function dtDownload(name){
   const blob = new Blob([JSON.stringify(dtPayload(), null, 2)], { type:'application/json' });
@@ -4717,13 +4663,13 @@ function dtExport(){
   document.body.appendChild(o); setTimeout(() => { nm.focus(); nm.select(); }, 60);
 }
 const dtKeyL = x => `${x.book}|${x.ch}|${compressRange(x.ns || [x.n])}`;
-async function dtImport(file, auto){
+async function dtImport(file){
   let j; try { j = JSON.parse(await file.text()); } catch(e){ return toast('File không đọc được (không phải JSON hợp lệ)'); }
   if (!j || j.app !== 'kinhthanh' || j.kind !== 'user-data') return toast('Đây không phải file sao lưu của app này');
   const reads = j.reads && typeof j.reads === 'object' && !Array.isArray(j.reads) ? j.reads : {}, lessons = Array.isArray(j.lessons) ? j.lessons : [], marks = Array.isArray(j.marks) ? j.marks : [];
   const days = Object.keys(reads).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(reads[k]));
   const L = lessons.filter(x => x && x.book && x.ch >= 1 && typeof x.text === 'string'), M = marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1);
-  const i = auto ? 0 : await choose('Khôi phục dữ liệu', `File có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
+  const i = await choose('Khôi phục dữ liệu', `File có ${days.length} ngày đọc, ${L.length} ghi chú, ${M.length} dấu trang.\n\nGộp: giữ dữ liệu hiện tại và thêm từ file.\nThay thế: xóa dữ liệu hiện tại, dùng đúng như file.`,
     [{ t:'Gộp (khuyên dùng)', cls:'primary' }, { t:'Thay thế toàn bộ', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   if (i === 1){ RD = {}; LS = []; BM = []; }
@@ -4736,7 +4682,7 @@ async function dtImport(file, auto){
   BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
   try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
   saveLS(); saveBM(); markBookmarks();
-  toast(auto ? '☁️ Đã lấy lại dữ liệu từ bản sao lưu' : '✔ Đã khôi phục dữ liệu');
+  toast('✔ Đã khôi phục dữ liệu');
 }
 async function dtReset(){
   const n = Object.keys(RD).length;
@@ -4752,304 +4698,6 @@ $('#dtExport').onclick = dtExport;
 $('#dtImport').onclick = () => $('#dtFile').click();
 $('#dtFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) dtImport(f); };
 $('#dtReset').onclick = dtReset;
-
-/* =========================================================
- *  HỒ SƠ THEO SỐ ĐIỆN THOẠI + SAO LƯU LÊN GOOGLE DRIVE CỦA ADMIN
- *  - Người dùng chỉ nhập SỐ ĐIỆN THOẠI một lần, KHÔNG phải đăng nhập Google. Số này được đổi thành mã băm (SHA-256) làm "tên hồ sơ".
- *  - Dữ liệu cá nhân (hành trình đọc, ghi chú, dấu trang, kế hoạch, chỗ đọc tiếp) được gửi tới "máy chủ sao lưu" do Admin dựng
- *    bằng Google Apps Script (chạy dưới tên Admin) và lưu thành file kt-user-<mã>.json trong thư mục KinhThanh-UserBackups trên Drive của Admin.
- *  - Tự sao lưu: mỗi lần mở app khi có mạng, và mỗi khi dữ liệu thay đổi.
- *  - Khôi phục: bấm "Khôi phục", nhập lại số điện thoại → tải bản lưu về và GỘP vào máy (không xóa gì của máy).
- *  - Địa chỉ máy chủ sao lưu do Admin nhập một lần ở Quản lý dữ liệu; app tự chuyển sang máy người dùng qua đồng bộ GitHub.
- * ========================================================= */
-const BK_DEFAULT = '';                                       // có thể điền sẵn địa chỉ Web app (…/exec) tại đây để mọi máy dùng được ngay
-const BK_KEY = 'kt.bkurl', PH_KEY = 'kt.phone';
-const kvGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
-const kvSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} };
-const bkUrl = () => (kvGet(BK_KEY) || '').trim() || BK_DEFAULT;
-const bkUrlOK = v => /^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/.test(String(v || '').trim());
-function bkFromRemote(v){                                    // máy người dùng nhận địa chỉ do Admin đặt (qua tệp dữ liệu GitHub)
-  if (bkUrlOK(v) && String(v).trim() !== kvGet(BK_KEY)) kvSet(BK_KEY, String(v).trim());
-}
-/* Mã Google Apps Script cho Admin dán vào script.google.com (hiện trong Quản lý dữ liệu) */
-const BK_SCRIPT = [
-  'var FOLDER = "KinhThanh-UserBackups";',
-  'function folder_() {',
-  '  var it = DriveApp.getFoldersByName(FOLDER);',
-  '  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER);',
-  '}',
-  'function put_(f, name, text) {',
-  '  var it = f.getFilesByName(name);',
-  '  if (it.hasNext()) it.next().setContent(text); else f.createFile(name, text, MimeType.PLAIN_TEXT);',
-  '}',
-  'function out_(o) {',
-  '  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);',
-  '}',
-  'function doGet() { return out_({ ok: true, ping: true }); }',
-  'function doPost(e) {',
-  '  var lock = LockService.getScriptLock();',
-  '  try {',
-  '    var r = JSON.parse(e.postData.contents);',
-  '    if (r.action === "ping") return out_({ ok: true, ping: true });',
-  '    if (!/^[a-f0-9]{20}$/.test(String(r.id || ""))) return out_({ ok: false, error: "ma ho so khong hop le" });',
-  '    var name = "kt-user-" + r.id + ".json", prev = "kt-user-" + r.id + ".prev.json";',
-  '    lock.waitLock(20000);',
-  '    var f = folder_(), it = f.getFilesByName(name);',
-  '    if (r.action === "save") {',
-  '      var data = String(r.data || "");',
-  '      if (data.length > 4000000) return out_({ ok: false, error: "du lieu qua lon" });',
-  '      if (it.hasNext()) {',
-  '        var file = it.next();',
-  '        // giữ thêm 1 bản cũ (tối đa mỗi ngày 1 lần) để Admin cứu được khi có sự cố',
-  '        if (Date.now() - file.getLastUpdated().getTime() > 86400000) put_(f, prev, file.getBlob().getDataAsString());',
-  '        file.setContent(data);',
-  '      } else f.createFile(name, data, MimeType.PLAIN_TEXT);',
-  '      return out_({ ok: true, at: Date.now() });',
-  '    }',
-  '    if (r.action === "load") {',
-  '      if (!it.hasNext()) return out_({ ok: true, found: false });',
-  '      var fl = it.next();',
-  '      return out_({ ok: true, found: true, data: fl.getBlob().getDataAsString(), at: fl.getLastUpdated().getTime() });',
-  '    }',
-  '    return out_({ ok: false, error: "yeu cau khong hop le" });',
-  '  } catch (err) {',
-  '    return out_({ ok: false, error: String(err) });',
-  '  } finally {',
-  '    try { lock.releaseLock(); } catch (x) {}',
-  '  }',
-  '}'
-].join('\n');
-function gcSay(m, ok){ const l = $('#gcLog'); if (l){ l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); } }
-function fillGc(){ const i = $('#bkUrlIn'); if (i) i.value = kvGet(BK_KEY) || ''; const c = $('#bkCode'); if (c) c.textContent = BK_SCRIPT; }
-$('#gcSave').onclick = () => {
-  const v = $('#bkUrlIn').value.trim();
-  if (v && !bkUrlOK(v)) return gcSay('✖ Địa chỉ chưa đúng. Phải có dạng https://script.google.com/macros/s/…/exec (lấy ở bước Triển khai → Ứng dụng web).', false);
-  kvSet(BK_KEY, v || null);
-  if (v){ markDirty(); gdAutoSoon(1500); }                    // đẩy địa chỉ lên GitHub để các máy người dùng tự nhận
-  gcSay(v ? '✔ Đã lưu địa chỉ máy chủ sao lưu.' + (ghCanPush() ? ' Các máy người dùng sẽ tự nhận qua GitHub.' : ' Lưu ý: máy này chưa kết nối GitHub với quyền ghi nên máy người dùng chưa tự nhận được địa chỉ.') : 'Đã xóa địa chỉ máy chủ sao lưu.', true);
-  toast(v ? '✔ Đã lưu cấu hình sao lưu' : 'Đã xóa địa chỉ');
-};
-$('#bkTest').onclick = async () => {
-  const v = $('#bkUrlIn').value.trim() || bkUrl();
-  if (!v) return gcSay('Hãy dán địa chỉ máy chủ sao lưu trước.', false);
-  if (!bkUrlOK(v)) return gcSay('✖ Địa chỉ chưa đúng dạng https://script.google.com/macros/s/…/exec', false);
-  if (!navigator.onLine) return gcSay('✖ Máy đang không có mạng.', false);
-  gcSay('Đang kiểm tra…', true);
-  try { await bkCall({ action:'ping' }, v); gcSay('✔ Kết nối thành công: máy chủ sao lưu đang hoạt động.', true); }
-  catch(e){ gcSay('✖ ' + (e.message || e), false); }
-};
-$('#bkCopy').onclick = async () => {
-  try { await navigator.clipboard.writeText(BK_SCRIPT); toast('✔ Đã chép mã'); }
-  catch(e){ const r = document.createRange(); r.selectNodeContents($('#bkCode')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Hãy chọn “Chép” trong menu'); }
-};
-
-/* --- Số điện thoại → mã hồ sơ --- */
-function normPhone(v){                                       // "0912 345 678", "+84 912 345 678", "84912345678" → "0912345678"
-  let d = String(v || '').replace(/[^\d+]/g, '');
-  if (d.startsWith('+84')) d = '0' + d.slice(3); else if (/^84\d{9,10}$/.test(d)) d = '0' + d.slice(2);
-  d = d.replace(/\D/g, '');
-  if (/^[35789]\d{8}$/.test(d)) d = '0' + d;                  // người dùng quên số 0 đầu
-  return /^0\d{9,10}$/.test(d) ? d : '';
-}
-const fmtPhone = p => p ? (p.slice(0, 4) + ' ' + p.slice(4, 7) + ' ' + p.slice(7)).trim() : '';
-const maskPhone = p => p ? p.slice(0, 2) + '•• ••• ' + p.slice(-3) : '';
-const gdPhone = () => normPhone(kvGet(PH_KEY));
-const profId = p => sha256js('kt-phone|' + p).slice(0, 20);
-function gdProfInfo(){ const p = gdPhone(); return p ? { id:profId(p), hint:maskPhone(p) } : null; }
-const bkIsLinked = p => !!p && kvGet('kt.bkLink') === profId(p);     // máy này đã đối chiếu/gộp với bản lưu của số này chưa
-const bkSetLink = p => kvSet('kt.bkLink', profId(p));
-function setPhone(p){
-  if (gdPhone() !== p){ kvSet('kt.gdSig', null); kvSet('kt.gdAt', null); }
-  kvSet(PH_KEY, p); gdStatusUI();
-}
-function gdStatusUI(){
-  const p = gdPhone(), at = +kvGet('kt.gdAt') || 0;
-  $$('.gdPhoneTxt').forEach(e => { e.innerHTML = p ? `📱 Số điện thoại: <b>${esc(fmtPhone(p))}</b>` : '📱 Chưa đặt số điện thoại'; });
-  $$('.gdLastTxt').forEach(e => { e.textContent = at ? '🕒 Sao lưu lần cuối: ' + new Date(at).toLocaleString('vi-VN') : '🕒 Chưa sao lưu lần nào'; });
-}
-
-/* --- Gọi máy chủ sao lưu (Google Apps Script). Dùng text/plain để không bị trình duyệt chặn bước kiểm tra CORS --- */
-async function bkCall(body, urlOverride){
-  const url = urlOverride || bkUrl();
-  if (!url) throw new Error('Ứng dụng chưa được cấu hình sao lưu. Vui lòng liên hệ người quản lý.');
-  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 30000);
-  let res;
-  try { res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(body), redirect:'follow', cache:'no-store', signal:ac.signal }); }
-  catch(e){ throw new Error(e && e.name === 'AbortError' ? 'Máy chủ sao lưu phản hồi quá chậm. Hãy thử lại sau.' : 'Không kết nối được máy chủ sao lưu. Hãy kiểm tra mạng.'); }
-  finally { clearTimeout(tm); }
-  if (!res.ok) throw new Error('Máy chủ sao lưu báo lỗi ' + res.status + '.');
-  let j; try { j = await res.json(); } catch(e){ throw new Error('Máy chủ sao lưu trả về dữ liệu lạ. Người quản lý cần kiểm tra lại bản triển khai (Ứng dụng web, thực thi dưới tên “Tôi”, quyền truy cập “Bất kỳ ai”).'); }
-  if (!j || !j.ok) throw new Error(j && j.error ? 'Máy chủ sao lưu: ' + j.error : 'Máy chủ sao lưu từ chối yêu cầu.');
-  return j;
-}
-const bkEmpty = () => !Object.keys(RD).length && !LS.length && !BM.length && !PLAN && !RESUME;
-async function bkPush(){
-  const p = gdPhone(); if (!p) throw new Error('Chưa có số điện thoại.');
-  const sig = gdSig();
-  await bkCall({ action:'save', id:profId(p), data:JSON.stringify(dtPayload()) });
-  kvSet('kt.gdSig', sig); kvSet('kt.gdAt', String(Date.now()));
-  return { days:Object.keys(RD).length, notes:LS.length, marks:BM.length };
-}
-async function bkPull(p){                                    // tải bản lưu của số p rồi GỘP vào máy (chỉ thêm, không xóa)
-  const j = await bkCall({ action:'load', id:profId(p) });
-  if (!j.found) return { found:false };
-  let d; try { d = JSON.parse(j.data); } catch(e){ throw new Error('Bản sao lưu bị lỗi, không đọc được.'); }
-  if (!d || d.app !== 'kinhthanh' || d.kind !== 'user-data') throw new Error('Dữ liệu tìm thấy không phải bản sao lưu của ứng dụng này.');
-  const stat = { days:Object.keys(d.reads || {}).length, notes:(d.lessons || []).length, marks:(d.marks || []).length, when:j.at };
-  await dtImport(new File([j.data], 'sao-luu.json', { type:'application/json' }), true);
-  return { found:true, stat };
-}
-
-function gdMsg(t, ok){ $$('.gdMsg').forEach(e => { e.textContent = t; e.style.color = ok === false ? 'var(--danger)' : ''; }); gcSay(t, ok !== false); }
-function setBusyUI(on){ $$('.gdBackup,.gdRestore,.gdChange').forEach(b => { b.disabled = on; }); }
-let gdBusy = false;
-async function gdGuard(fn){
-  if (gdBusy) return { err:'Đang xử lý, vui lòng chờ một chút rồi thử lại.' };
-  if (!navigator.onLine) return { err:'Điện thoại đang không có mạng. Hãy bật Wi-Fi hoặc dữ liệu di động rồi thử lại.' };
-  gdBusy = true; setBusyUI(true);
-  try { return await fn(); } catch(e){ return { err:(e && e.message) || String(e) }; }
-  finally { gdBusy = false; setBusyUI(false); }
-}
-const gdBackupCore = () => gdGuard(async () => {
-  const p = gdPhone(); let merged = null;
-  if (!bkIsLinked(p)){                                       // lần đầu số này dùng trên máy này: gộp bản lưu cũ (nếu có) trước, tránh ghi đè mất dữ liệu cũ
-    const r = await bkPull(p); if (r.found) merged = r.stat; bkSetLink(p);
-  }
-  if (bkEmpty()) return { empty:true };
-  return { ok:true, r:await bkPush(), merged };
-});
-const gdRestoreCore = phone => gdGuard(async () => {
-  const r = await bkPull(phone);
-  if (!r.found) return { none:true };
-  setPhone(phone); bkSetLink(phone); gdAutoDefault();         // không đặt dấu "đã sao lưu" → app sẽ đẩy bản đã gộp lên ngay
-  return { ok:true, stat:r.stat };
-});
-
-/* --- Hộp thoại chữ lớn cho người lớn tuổi --- */
-function bigDialog(o){
-  return new Promise(res => {
-    const d = document.createElement('div'); d.className = 'overlay'; d.style.zIndex = 96;
-    d.innerHTML = `<div class="sheet phsheet"><div class="phico">${o.ico || ''}</div><h3 class="pht">${esc(o.title)}</h3><div class="phd">${o.html || esc(o.text || '').replace(/\n/g, '<br>')}</div>`
-      + (o.btns || [{ t:'Đóng' }]).map((b, i) => `<button class="btn phbtn ${b.cls || ''}" data-i="${i}">${esc(b.t)}</button>`).join('') + '</div>';
-    d.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b){ d.remove(); res(+b.dataset.i); } });
-    document.body.appendChild(d);
-  });
-}
-function phoneModal(o){
-  return new Promise(res => {
-    const d = document.createElement('div'); d.className = 'overlay'; d.style.zIndex = 96;
-    d.innerHTML = `<div class="sheet phsheet"><div class="phico">📱</div><h3 class="pht">${esc(o.title)}</h3><div class="phd">${esc(o.text)}</div>
-      <input class="phin" id="phIn" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" placeholder="09xx xxx xxx" aria-label="Số điện thoại" value="${esc(o.initial || '')}">
-      <div class="pherr" id="phErr" aria-live="polite"></div>
-      <button class="btn primary phbtn" id="phGo">${esc(o.btn)}</button>
-      <button class="btn phbtn phno" id="phNo">Để sau</button></div>`;
-    const inp = d.querySelector('#phIn'), err = d.querySelector('#phErr');
-    inp.addEventListener('input', () => { const dg = inp.value.replace(/\D/g, '').slice(0, 11); inp.value = (dg.slice(0, 4) + ' ' + dg.slice(4, 7) + ' ' + dg.slice(7)).trim(); err.textContent = ''; });
-    const go = () => {
-      const p = normPhone(inp.value);
-      if (!p){ err.textContent = 'Số điện thoại chưa đúng. Hãy nhập đủ 10 số, bắt đầu bằng số 0.'; inp.focus(); return; }
-      d.remove(); res(p);
-    };
-    d.querySelector('#phGo').onclick = go;
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } });
-    d.querySelector('#phNo').onclick = () => { d.remove(); res(null); };
-    document.body.appendChild(d); setTimeout(() => inp.focus(), 80);
-  });
-}
-const notReady = () => bigDialog({ ico:'🛠️', title:'Chưa sẵn sàng', text:'Tính năng sao lưu chưa được bật trong ứng dụng này.\nVui lòng liên hệ người quản lý ứng dụng.' });
-const errDialog = (title, msg) => bigDialog({ ico:'⚠️', title, text:msg });
-
-async function backupFlow(){
-  const r = await gdBackupCore();
-  if (r.err){ gdMsg('✖ ' + r.err, false); return errDialog('Chưa sao lưu được', r.err); }
-  gdStatusUI();
-  if (r.empty){ gdMsg('Chưa có gì để sao lưu.', true); return bigDialog({ ico:'📖', title:'Chưa có dữ liệu để lưu', text:'Bạn chưa có ghi chú, dấu trang hay lịch sử đọc nào.\nHãy đọc một vài chương rồi quay lại nhé.\n\nSố điện thoại của bạn đã được ghi nhớ, ứng dụng sẽ tự động sao lưu khi bạn có dữ liệu.' }); }
-  const m = `✔ Đã sao lưu: ${r.r.days} ngày đọc · ${r.r.notes} ghi chú · ${r.r.marks} dấu trang.`;
-  gdMsg(m, true);
-  const extra = r.merged ? `<br><br>Ứng dụng tìm thấy bản lưu cũ của số này (${r.merged.days} ngày đọc, ${r.merged.notes} ghi chú) và đã gộp vào máy.` : '';
-  await bigDialog({ ico:'✅', title:'Đã lưu an toàn', html:`${esc(m.slice(2))}${extra}<br><br>Từ nay ứng dụng <b>tự động lưu</b> mỗi khi bạn mở app và có mạng.<br><br>📝 Hãy ghi nhớ <b>số điện thoại</b> này để lấy lại dữ liệu khi đổi máy hoặc lỡ xóa.`, btns:[{ t:'Tôi đã hiểu', cls:'primary' }] });
-}
-async function profileSetup(){
-  if (!bkUrl()) return notReady();
-  let p = gdPhone();
-  if (!p){
-    p = await phoneModal({ title:'Nhập số điện thoại của bạn', text:'Số này là “tên hồ sơ” để tìm lại ghi chú và hành trình đọc của bạn khi đổi điện thoại hoặc lỡ xóa. Hãy nhớ kỹ số này.', btn:'Lưu và sao lưu' });
-    if (!p) return; setPhone(p);
-  }
-  return backupFlow();
-}
-async function restoreFlow(p){
-  const r = await gdRestoreCore(p);
-  if (r.err){ gdMsg('✖ ' + r.err, false); return errDialog('Chưa khôi phục được', r.err); }
-  if (r.none){
-    const i = await bigDialog({ ico:'🔍', title:'Không tìm thấy dữ liệu', text:`Chưa có bản sao lưu nào của số ${fmtPhone(p)}.\n\nHãy kiểm tra lại số điện thoại bạn đã dùng khi sao lưu.`, btns:[{ t:'Nhập lại số điện thoại', cls:'primary' }, { t:'Đóng' }] });
-    if (i === 0) return profileRestore();
-    return;
-  }
-  const s = r.stat, when = new Date(s.when).toLocaleString('vi-VN');
-  gdMsg(`✔ Đã khôi phục (${s.days} ngày đọc · ${s.notes} ghi chú · ${s.marks} dấu trang).`, true);
-  await bigDialog({ ico:'✅', title:'Khôi phục xong', html:`Đã lấy lại <b>${s.days}</b> ngày đọc, <b>${s.notes}</b> ghi chú, <b>${s.marks}</b> dấu trang.<br>Bản lưu lúc ${esc(when)}.<br><br>Từ nay ứng dụng tự động lưu cho số <b>${esc(fmtPhone(p))}</b>.`, btns:[{ t:'Tuyệt vời', cls:'primary' }] });
-}
-async function profileRestore(){
-  if (!bkUrl()) return notReady();
-  const p = await phoneModal({ title:'Khôi phục dữ liệu của bạn', text:'Nhập số điện thoại bạn đã dùng khi sao lưu. Ứng dụng sẽ tải lại ghi chú và hành trình đọc của bạn.', btn:'Khôi phục', initial:fmtPhone(gdPhone()) });
-  if (p) return restoreFlow(p);
-}
-async function changePhone(){
-  if (!bkUrl()) return notReady();
-  const p = await phoneModal({ title:'Đổi số điện thoại', text:'Dữ liệu hiện có sẽ được lưu vào hồ sơ của số mới. Hồ sơ của số cũ vẫn được giữ nguyên.', btn:'Lưu số mới', initial:fmtPhone(gdPhone()) });
-  if (!p || p === gdPhone()) return;
-  setPhone(p); return backupFlow();
-}
-async function backupBtn(){ if (!bkUrl()) return notReady(); if (!gdPhone()) return profileSetup(); return backupFlow(); }
-async function askProfile(){                                  // lần đầu mở app: hỏi một lần
-  if (!bkUrl() || gdPhone() || kvGet('kt.profAsk')) return;
-  kvSet('kt.profAsk', '1');
-  const i = await bigDialog({ ico:'☁️', title:'Giữ an toàn ghi chú của bạn', text:'Chỉ cần nhập số điện thoại một lần, ứng dụng sẽ tự động lưu ghi chú và hành trình đọc của bạn.\nKhi đổi điện thoại hoặc lỡ xóa, bấm “Khôi phục” và nhập lại số này là có lại tất cả.', btns:[{ t:'Bật sao lưu', cls:'primary' }, { t:'Tôi đã dùng app trước đây: Khôi phục' }, { t:'Để sau' }] });
-  if (i === 0) profileSetup(); else if (i === 1) profileRestore();
-}
-$$('.gdBackup').forEach(b => b.onclick = backupBtn);
-$$('.gdRestore').forEach(b => b.onclick = profileRestore);
-$$('.gdChange').forEach(b => b.onclick = changePhone);
-
-/* ---- TỰ ĐỘNG SAO LƯU (chạy ngầm, không cần đăng nhập gì) ----
-   Điều kiện: có địa chỉ máy chủ sao lưu + đã đặt số điện thoại + công tắc đang Bật + có mạng.
-   Mỗi lần mở app: đẩy dữ liệu lên (phiên đầu luôn đẩy). Sau đó: dữ liệu đổi là đẩy lại (tối đa ~45 giây một lần).
-   Lần đầu số này gặp máy này: gộp bản lưu cũ về trước rồi mới đẩy, và không bao giờ đẩy dữ liệu rỗng. */
-const gdAutoOn = () => kvGet('kt.gdAuto') === '1';
-function gdAutoDefault(){ if (kvGet('kt.gdAuto') === null) kvSet('kt.gdAuto', '1'); gdAutoUI(); gdAutoSoon(2000); }
-function gdAutoUI(){ $$('.gdAutoSeg').forEach(sg => $$('button', sg).forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === gdAutoOn()))); }
-function gdSig(){ const r = RESUME ? { b:RESUME.book, c:RESUME.ch } : null; return sigOf(JSON.stringify([RD, LS, BM, PLAN, r])); }
-let gdNextOK = 0, gdAutoT = 0, gdOpenDone = false;
-const gdAutoSoon = ms => { clearTimeout(gdAutoT); gdAutoT = setTimeout(gdAutoRun, ms); };
-async function gdAutoRun(){
-  const p = gdPhone();
-  if (!gdAutoOn() || !bkUrl() || !p || gdBusy || !navigator.onLine || Date.now() < gdNextOK) return;
-  const linked = bkIsLinked(p);
-  if (linked && gdOpenDone && gdSig() === (kvGet('kt.gdSig') || '')) return;
-  gdBusy = true;
-  try {
-    if (!linked){ await bkPull(p); bkSetLink(p); }
-    if (!bkEmpty()){
-      const r = await bkPush();
-      gdStatusUI(); gdMsg('☁ Tự động sao lưu lúc ' + new Date().toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' }) + ' (' + r.days + ' ngày đọc · ' + r.notes + ' ghi chú).', true);
-    }
-    gdOpenDone = true; gdNextOK = Date.now() + 45000;
-  } catch(e){ gdNextOK = Date.now() + 2 * 60000; }
-  finally { gdBusy = false; }
-}
-$$('.gdAutoSeg button').forEach(b => b.onclick = () => {
-  const on = b.dataset.v === '1';
-  kvSet('kt.gdAuto', on ? '1' : '0'); gdAutoUI();
-  if (!on) return toast('Đã tắt tự động sao lưu');
-  if (!gdPhone()) return profileSetup();                      // cần số điện thoại trước
-  gdNextOK = 0; gdAutoSoon(800); toast('Đã bật tự động sao lưu');
-});
-gdAutoUI(); gdStatusUI();
-setInterval(() => gdAutoRun(), 30000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden'){ gdNextOK = 0; gdAutoRun(); } else gdAutoSoon(1500); });
-addEventListener('online', () => { gdNextOK = 0; gdAutoSoon(1500); });
-setTimeout(() => gdAutoRun(), 3000);
 
 /* =========================================================
  *  CHỮ LỚN · HƯỚNG DẪN LẦN ĐẦU · CHIA SẺ CÂU THÀNH ẢNH
@@ -5075,7 +4723,7 @@ function showOnboard(){
   if ($('#obOverlay')) return;
   const o = document.createElement('div'); o.className = 'overlay'; o.id = 'obOverlay'; o.style.zIndex = 75;
   let i = 0;
-  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); setTimeout(askProfile, 600); };
+  const done = () => { try { localStorage.setItem('kt.onboard', '1'); } catch(e){} o.remove(); };
   const draw = () => {
     const s = OB[i], last = i === OB.length - 1;
     const sizes = s.size ? `<div class="obsizes">${[[20, 'Vừa'], [24, 'Lớn'], [28, 'Rất lớn']].map(([n, l]) => `<button class="btn${S.fs === n ? ' primary' : ''}" data-fs="${n}" style="font-size:${n - 4}px">${l}</button>`).join('')}</div><div class="obprev">Hôm nay bạn đã đọc Lời CHÚA chưa?</div>` : '';
@@ -5376,7 +5024,7 @@ planSum();
     return;
   }
   updateSyncUI();
-  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800); else setTimeout(askProfile, 3500);      // lần đầu mở app: hiện hướng dẫn ngắn
+  if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
