@@ -64,6 +64,28 @@ body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* Mở từ biểu tượng Màn hình chính (iPhone): thanh trên nằm trong lớp 3D khiến chữ/biểu tượng bị vẽ mờ → ở chế độ này bỏ ép lớp; thanh vẫn cố định bằng position:fixed. Safari giữ nguyên. */
+html.sa body:not(.pg) .top{transform:none;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa .top,html.sa .top *{-webkit-transform:none;will-change:auto;-webkit-font-smoothing:antialiased}
+/* iPhone mở từ Màn hình chính (sửa lỗi menu mờ nhòe trên SE 3): thanh trên KHÔNG còn position:fixed nữa mà nằm trong luồng bố cục (body = cột flex: thanh trên + vùng đọc).
+   Thanh cố định chồng lên các lớp tăng tốc phía dưới (sân khấu lật trang dựng sẵn, vùng đọc fixed…) bị WebKit vẽ thành lớp riêng độ phân giải thấp → chữ/biểu tượng mờ.
+   Nằm trong luồng thì không còn lớp nào bị ép tách riêng, chữ luôn sắc nét; thanh vẫn đứng yên vì vùng đọc mới là phần cuộn. Chỉ áp dụng cho chế độ thường (chế độ Trang giấy giữ cách cũ). */
+html.sa body:not(.pg){display:flex;flex-direction:column}
+html.sa body:not(.pg)::before{display:none}
+html.sa body:not(.pg) .top{position:relative;top:auto;left:auto;right:auto;width:100%;flex:none;transform:none!important;-webkit-transform:none!important;-webkit-backface-visibility:visible;backface-visibility:visible}
+html.sa body:not(.pg) main{position:relative;top:auto;bottom:auto;left:auto;right:auto;flex:1 1 auto;min-height:0;height:auto}
+/* Bản AB3: iOS mới (iOS 26 trở lên) tự phủ một lớp mờ dần (“scroll edge effect”) lên mép trên khi thấy phần tử position:fixed bám sát mép trên màn hình (thân trang body, khung Trang giấy, thanh dưới…).
+   iPhone 8 Plus không lên được iOS đó nên không bị. Ở chế độ Màn hình chính: bỏ hết position:fixed bám mép trên → dùng position:absolute trong thân trang cao đúng bằng màn hình (trang vẫn đứng yên, không cuộn). */
+html.sa body{position:absolute;left:0;top:0;right:auto;bottom:auto;width:100%;height:100%}
+html.sa body.pg:not(.searching) .top{position:absolute}
+html.sa body.pg .pgv{position:absolute}
+html.sa body.pg #pgFoot{position:absolute}
+/* Bản AB4: ở chế độ Màn hình chính, thanh menu chuyển XUỐNG DƯỚI (mép trên chỉ còn nội dung, không còn thanh nào bị iOS làm mờ) */
+html.sa body{padding-top:env(safe-area-inset-top);padding-bottom:0}
+html.sa .top,html.sa body:not(.pg) .top{order:2;height:calc(48px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom) 10px;border-top:1px solid var(--line);border-bottom:0}
+html.sa body.pg:not(.searching) .top{top:auto;bottom:0;left:0;right:0}
+html.sa .copybar{bottom:calc(64px + env(safe-area-inset-bottom))}
+html.sa .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 html{overflow-anchor:none}
 body{overflow-anchor:none}
 
@@ -440,8 +462,9 @@ body.pg:not(.searching) #pgFoot{display:flex}
 body.pg:not(.searching){overflow:hidden}
 body.pg:not(.searching) main{position:static;perspective:none;overflow:visible;min-height:0;max-width:none;padding:0;height:0}
 body.pg:not(.searching) #chapNav{display:none!important}
-body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:translateY(-100%)}
-body.pg.pgchrome:not(.searching) .top{transform:none}
+/* Trang giấy: ẩn/hiện thanh trên bằng visibility (KHÔNG dùng transform) → chữ thanh trên luôn sắc nét */
+body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:none!important;transition:none!important;visibility:hidden}
+body.pg.pgchrome:not(.searching) .top{visibility:visible}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
 body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
 body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none}
@@ -602,6 +625,9 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Không tự tắt khi đang đọc</span></div>
         <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      </div>
+      <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
+        <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
       <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Phóng to chữ cho dễ đọc</span></div>
         <div class="seg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
@@ -892,6 +918,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
       <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
+      <button class="btn" id="edWord">📄 Xuất Word</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -917,7 +944,9 @@ const RECOVERY_CODE_HASH  = 'ac985ab98aabd8f7fcc3f3610062d254f0e28fbdf8b50b09506
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
 /* (Không gắn bộ chặn touchmove không-thụ-động trên toàn trang: nó bắt trình duyệt chờ JS cho từng cú vuốt, làm cuộn trang kém mượt trên iPhone. Chặn gesture* ở trên là đủ cho Safari, còn Chrome Android đã khóa bằng khai báo viewport.) */
 /* chạm đúp không zoom: đã có touch-action:manipulation ở CSS, không cần chặn thêm (chặn sẽ làm mất cú chạm nhanh liên tiếp) */
-const APP_VERSION = '2026.10.31-AB';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+/* Nhận biết app chạy từ biểu tượng Màn hình chính (standalone) để áp dụng CSS riêng (html.sa) */
+try { if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('sa'); } catch(e){}
+const APP_VERSION = '2026.11.01-AB6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -954,8 +983,10 @@ function choose(title, msg, opts){
 
 /* ============ CÀI ĐẶT (localStorage) ============ */
 const PAPER_PAGED = true;   // true: Trang giấy chia trang ngang, cạnh trên/dưới đứng yên, chỉ lật trái–phải. false: cuộn dọc như trang chủ
-const S = { theme:'auto', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false };
+const S = { theme:'light', fs:20, font:'Lora', book:null, chapter:1, wake:false, view:'print', paper:false, fullauto:true };
 try { Object.assign(S, JSON.parse(localStorage.getItem('kt.settings') || '{}')); } catch(e){}
+/* Mở app luôn ở giao diện sáng: người dùng cũ đang để 'Tự động' (theo máy, hay bị tối) được chuyển về 'Sáng' một lần; muốn tối vẫn chọn trong Cài đặt */
+try { if (!localStorage.getItem('kt.themeLight')){ if (S.theme === 'auto') S.theme = 'light'; localStorage.setItem('kt.themeLight', '1'); localStorage.setItem('kt.settings', JSON.stringify(S)); } } catch(e){}
 const saveS = () => { try { localStorage.setItem('kt.settings', JSON.stringify(S)); } catch(e){} };
 
 function applyTheme(){
@@ -1018,8 +1049,13 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyThe
 /* ============ INDEXEDDB ============ */
 let db;
 function openDB(){
+  /* Kho trên máy có thể đã được nâng lên phiên bản CAO hơn bởi bản app khác (VersionError: "lower version than the existing version").
+     Khi đó mở lại KHÔNG chỉ định phiên bản để dùng đúng kho hiện có – dữ liệu cũ vẫn còn nguyên, không xóa gì. */
+  return openDBv(1).catch(e => (e && e.name === 'VersionError') ? openDBv(0) : Promise.reject(e));
+}
+function openDBv(ver){
   return new Promise((res, rej) => {
-    const r = indexedDB.open(DB_NAME, 1);
+    const r = ver ? indexedDB.open(DB_NAME, ver) : indexedDB.open(DB_NAME);
     r.onupgradeneeded = () => {
       const d = r.result;   // giữ nguyên cấu trúc cũ để không mất dữ liệu đã có
       if (!d.objectStoreNames.contains('bookMeta')) d.createObjectStore('bookMeta', { keyPath:'name' });
@@ -1031,12 +1067,50 @@ function openDB(){
     r.onerror = () => rej(r.error);
   });
 }
+/* iPhone (nhất là app thêm vào Màn hình chính) thỉnh thoảng báo “Unable to open database file on disk” ngay lúc vừa khởi động,
+   nhất là khi vừa cập nhật hoặc vừa mở lại: lỗi tạm thời của Safari, thử lại sau một lát là mở được. */
+async function openDBRetry(onWait){
+  let last;
+  for (let i = 0; i < 3; i++){            // thử nhanh (~0,75 giây); không được thì chuyển ngay sang lưu dự phòng, không bắt người dùng chờ
+    try { return await openDB(); }
+    catch(e){ last = e; if (onWait && i === 0) try { onWait(); } catch(err){} await new Promise(r => setTimeout(r, Math.min(250 * Math.pow(2, i), 2000))); }
+  }
+  throw last;
+}
 const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-const dbAll   = st => reqP(db.transaction(st).objectStore(st).getAll());
-const dbGet   = (st, k) => reqP(db.transaction(st).objectStore(st).get(k));
-const dbClear = st => reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
-const dbDel   = (st, k) => reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
+/* ===== CHẾ ĐỘ LƯU DỰ PHÒNG =====
+   Có iPhone không mở được IndexedDB trong app thêm vào Màn hình chính (lỗi “Unable to open database file on disk”, thử lại vẫn lỗi).
+   Khi đó app chuyển sang lưu trong bộ nhớ (RAM) và sao một bản vào Cache Storage (kho riêng, không dùng IndexedDB) để mở lại không cần tải lại.
+   Nội dung Kinh Thánh luôn tải lại được từ GitHub; lịch sử đọc, dấu trang, ghi chú nằm ở localStorage nên không bị ảnh hưởng. */
+const MEM = { on:false, data:{ bookMeta:new Map(), books:new Map(), hymns:new Map(), readings:new Map() }, key:{ bookMeta:'name', books:'name', hymns:'id', readings:'id' }, t:0 };
+const MEM_CACHE = 'kt-store-v1';
+async function memActivate(){
+  MEM.on = true; window.ktMemMode = true;
+  try {
+    if (!('caches' in window)) return;
+    const c = await caches.open(MEM_CACHE);
+    for (const st of Object.keys(MEM.data)){
+      const r = await c.match('./__kt_store__/' + st); if (!r) continue;
+      try { (await r.json()).forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); } catch(e){}
+    }
+  } catch(e){}
+}
+function memSave(){
+  clearTimeout(MEM.t);
+  MEM.t = setTimeout(async () => {
+    try {
+      if (!('caches' in window)) return;
+      const c = await caches.open(MEM_CACHE);
+      for (const st of Object.keys(MEM.data)) await c.put('./__kt_store__/' + st, new Response(JSON.stringify([...MEM.data[st].values()]), { headers:{ 'Content-Type':'application/json' } }));
+    } catch(e){}
+  }, 600);
+}
+const dbAll   = st => MEM.on ? Promise.resolve([...MEM.data[st].values()]) : reqP(db.transaction(st).objectStore(st).getAll());
+const dbGet   = (st, k) => MEM.on ? Promise.resolve(MEM.data[st].get(k)) : reqP(db.transaction(st).objectStore(st).get(k));
+const dbClear = st => MEM.on ? (MEM.data[st].clear(), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).clear());
+const dbDel   = (st, k) => MEM.on ? (MEM.data[st].delete(k), memSave(), Promise.resolve()) : reqP(db.transaction(st, 'readwrite').objectStore(st).delete(k));
 function dbPut(st, items){
+  if (MEM.on){ items.forEach(i => MEM.data[st].set(i[MEM.key[st]], i)); memSave(); return Promise.resolve(); }
   return new Promise((res, rej) => {
     const tx = db.transaction(st, 'readwrite'), os = tx.objectStore(st);
     items.forEach(i => os.put(i));
@@ -1158,7 +1232,7 @@ function curVerseNo(){
     const v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
     return v.dataset.n;
   }
-  const hb = $('.top') ? $('.top').getBoundingClientRect().bottom : 0;
+  const hb = SCR.getBoundingClientRect().top;
   /* Câu đang đọc = câu đầu tiên có DÒNG ĐẦU nằm trọn dưới thanh đầu trang.
      (Trước đây tính theo đáy của câu nên đuôi câu trước vẫn lấp ló dưới thanh đầu trang bị tính nhầm → nhập câu 13 lại hiện 12.) */
   let v = vs.find(x => { const r = x.getClientRects()[0]; return r && r.top >= hb - 2; });
@@ -2338,6 +2412,7 @@ const syncCanWrite = () => { const a = Store.cur(); return !!(a && a.configured(
    tệp dữ liệu nằm ngay cạnh trang → tải cùng nguồn, không phụ thuộc raw.githubusercontent.com (dễ bị chặn, khác tên miền). */
 function ownPagesRepo(){
   try {
+    return '';   // KHÔI PHỤC bản AA: không tải cùng nguồn, dùng đường tải như cũ
     const m = location.hostname.match(/^([^.]+)\.github\.io$/i); if (!m) return '';
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     return (seg && !/\.html?$/i.test(seg) ? m[1] + '/' + decodeURIComponent(seg) : m[1] + '/' + m[1] + '.github.io').toLowerCase();
@@ -2362,7 +2437,33 @@ async function rawFetch(){
   catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
   if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
   if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
-  return res.text();
+  const text = await res.text(); dataCachePut(text); return text;
+}
+/* ===== BẢN GỐC DỰ PHÒNG trong Cache Storage (độc lập IndexedDB): tải xong là cất nguyên tệp; mở app thấy kho trống thì khôi phục từ đây, không cần mạng ===== */
+const DATA_CACHE = 'kt-data-v1', dataKeyUrl = () => new URL('./__ktdata__.json', location.href).href;
+async function dataCachePut(text){
+  try { if (!('caches' in self) || !text || !GH.repo) return;
+    const c = await caches.open(DATA_CACHE);
+    await c.put(dataKeyUrl(), new Response(text, { headers:{ 'content-type':'application/json', 'x-kt-repo':GH.repo } }));
+  } catch(e){}
+}
+async function dataCacheGet(){
+  try { if (!('caches' in self)) return null;
+    const c = await Promise.race([caches.open(DATA_CACHE), new Promise(r => setTimeout(() => r(null), 4000))]); if (!c) return null;
+    const r = await c.match(dataKeyUrl()); if (!r) return null;
+    if (GH.repo && r.headers.get('x-kt-repo') && r.headers.get('x-kt-repo') !== GH.repo) return null;
+    return (await r.text()) || null;
+  } catch(e){ return null; }
+}
+async function restoreFromDataCache(){
+  if (bibleMeta.length || SY.dirty) return false;
+  const text = await dataCacheGet(); if (!text) return false;
+  try {
+    const j = parseRemote(text), books = normBible(j.bible || j); if (!books.length) return false;
+    await importBible(books, 'replace'); applyAbout(j.about);
+    SY = { sha:sigOf(text), dirty:false, at:Date.now(), store:'github' }; saveSY();
+    await reloadAll(); return bibleMeta.length > 0;
+  } catch(e){ return false; }
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
 const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
@@ -2434,9 +2535,10 @@ async function pushTo(A, auto){
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
 }
 async function syncReadOnly(A, o){
+  if (o.auto && bibleMeta.length && SY.sha && !SY.dirty && Date.now() - SY.at < 6 * 3600 * 1000){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }   // đã kiểm tra trong 6 giờ qua → mở app nhanh, không tải lại vài MB
   const r = await A.read(), hasLocal = bibleMeta.length > 0;
   if (!r){ setSync('ok', `Trên ${A.label} chưa có dữ liệu.`); return; }
-  if (r.version === SY.sha && hasLocal){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
+  if (r.version === SY.sha && hasLocal){ SY.at = Date.now(); saveSY(); setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
   if (!normBible((r.payload || {}).bible || r.payload || {}).length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
   if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
     if (o.auto){ setSync('conflict', `Máy này đã có dữ liệu riêng khác với ${A.label}. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); toast(`Dữ liệu máy này khác ${A.label} – vào Quản lý dữ liệu → Đồng bộ ngay để chọn`); return; }
@@ -3965,6 +4067,84 @@ async function exportBook(name){
 }
 $('#exGo').onclick = () => exportBook($('#exBook').value);
 $('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
+
+/* ---- Xuất Word (.docx) từ trình soạn thảo: chương đang soạn hoặc cả sách ---- */
+function wRun(t, o){
+  o = o || {};
+  const rpr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}<w:sz w:val="${o.sz || 26}"/><w:szCs w:val="${o.sz || 26}"/>${o.sup ? '<w:vertAlign w:val="superscript"/>' : ''}</w:rPr>`;
+  return String(t).split('\n').map((ln, k) => `<w:r>${rpr}${k ? '<w:br/>' : ''}<w:t xml:space="preserve">${wx(ln)}</w:t></w:r>`).join('');
+}
+function wParaX(runs, o){
+  o = o || {};
+  return `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.brk ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 340}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'both'}"/></w:pPr>${runs}</w:p>`;
+}
+function docxBookFile(bookName, sub, chapters, fname){        // chapters: [{ch, vs}]
+  const SZ = 26; let body = '';
+  const subL = String(sub || '').split('\n').map(x => x.trim()).filter(Boolean);
+  chapters.forEach((c, ci) => {
+    const first = ci === 0;
+    if (subL.length && c.ch === 1) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
+    body += wParaX(wRun(bookName.toUpperCase(), { b:true, sz:36 }), { align:'center', after:40, before:first || (subL.length && c.ch === 1) ? 0 : 0, brk:!first && !(subL.length && c.ch === 1), keep:true });
+    body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true });
+    let para = null, lastPoem = false;
+    const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
+    c.vs.forEach(v => {
+      if (v.h){
+        flush();
+        String(v.h).split('\n').map(x => x.trim()).filter(Boolean).forEach((l, k) => {
+          const ref = /^\([^()]*\)$/.test(l);
+          body += wParaX(wRun(l, ref ? { i:true, sz:22, color:'7A6E60' } : { b:true, sz:k ? 26 : 28 }), { align:'center', before:k ? 0 : 200, after:80, keep:true });
+        });
+      }
+      const poem = Array.isArray(v.q) && v.q.length;
+      if (poem){
+        flush();
+        String(v.t).split('\n').forEach((ln, k) => {
+          const r = (k === 0 ? wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ', { sz:SZ }) : '') + wRun(ln, { sz:SZ });
+          body += wParaX(r, { align:'left', left:360 * (v.q[k] || 1), after:20, line:320 });
+        });
+        lastPoem = true;
+      } else {
+        if (lastPoem){ body += wParaX('', { after:60 }); lastPoem = false; }
+        if (!para || v.p){ flush(); para = ''; }
+        para += wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ' + String(v.t) + ' ', { sz:SZ });
+      }
+    });
+    flush();
+    const fns = c.vs.flatMap(v => v.fn || []);
+    fns.forEach((f, k) => { body += wParaX(wRun(f, { i:true, sz:20, color:'6B6150' }), { align:'left', before:k ? 0 : 200, after:60, line:300 }); });
+  });
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const enc = new TextEncoder();
+  const zip = zipStore([
+    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
+    { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
+    { name:'word/document.xml', data:enc.encode(doc) }
+  ]);
+  return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+$('#edWord').onclick = async () => {
+  await edAuto();
+  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
+  if (!name) return toast('Hãy nhập hoặc chọn tên sách');
+  const base = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
+  const curVs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+  const rec = await dbGet('books', name);
+  const nFilled = rec ? rec.chapters.filter(c => c && c.length).length : 0;
+  let mode = 0;
+  if (curVs.length && nFilled > 1){
+    mode = await choose('Xuất file Word', 'Bạn muốn xuất phần nào?', [{ t:`📄 Chương đang soạn (${name} ${ch})`, cls:'primary' }, { t:`📚 Cả sách ${name} (${nFilled} chương)` }, { t:'Hủy' }]);
+    if (mode !== 0 && mode !== 1) return;
+  } else if (!curVs.length && nFilled) mode = 1;
+  else if (!curVs.length) return toast('Chưa có nội dung để xuất');
+  let chapters, fname;
+  if (mode === 0){ chapters = [{ ch, vs:curVs }]; fname = `${base}-${ch}.docx`; }
+  else { chapters = rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length); fname = base + '.docx'; }
+  try {
+    const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname);
+    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
+  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
+};
 $('#exRestore').onclick = () => $('#exFile').click();
 $('#exFile').onchange = async e => {
   const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
@@ -3991,16 +4171,22 @@ function paperFullscreen(on){
     const de = document.documentElement, fs = document.fullscreenElement || document.webkitFullscreenElement;
     if (on && !fs && matchMedia('(pointer:coarse)').matches){
       const r = de.requestFullscreen ? de.requestFullscreen({ navigationUI:'hide' }) : (de.webkitRequestFullscreen && de.webkitRequestFullscreen());
-      if (r && r.catch) r.catch(() => {});
+      if (r && r.then) r.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch(e){} }, () => {});   // vào được toàn màn hình thì khóa xoay dọc (Android)
     } else if (!on && fs){
+      try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch(e){}
       const r = document.exitFullscreen ? document.exitFullscreen() : (document.webkitExitFullscreen && document.webkitExitFullscreen());
       if (r && r.catch) r.catch(() => {});
     }
   } catch(e){}
 }
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen(PAPER_PAGED && S.paper); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen((PAPER_PAGED && S.paper) || S.fullauto); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
 // Mở app đang ở chế độ Trang giấy: chạm lần đầu để vào toàn màn hình (trình duyệt chỉ cho phép sau một cú chạm)
-document.addEventListener('click', () => { if (PAPER_PAGED && S.paper) paperFullscreen(true); }, { once:true, capture:true });
+document.addEventListener('click', () => {
+  if ((PAPER_PAGED && S.paper) || S.fullauto) paperFullscreen(true);
+  /* iPhone Safari không có toàn màn hình: nhắc một lần cách dùng toàn màn hình thật */
+  try { if (S.fullauto && IS_IOS && !document.documentElement.classList.contains('sa') && !localStorage.getItem('kt.iosFsHint')){ localStorage.setItem('kt.iosFsHint', '1'); setTimeout(() => toast('iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính" để đọc toàn màn hình'), 600); } } catch(e){}
+}, { once:true, capture:true });
+$$('#fullSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === '1') === !!S.fullauto); b.onclick = () => { S.fullauto = b.dataset.v === '1'; saveS(); $$('#fullSeg button').forEach(x => x.classList.toggle('on', (x.dataset.v === '1') === S.fullauto)); paperFullscreen(S.fullauto || (PAPER_PAGED && S.paper)); }; });
 $$('#themeSeg button').forEach(b => b.onclick = () => { S.theme = b.dataset.v; saveS(); applyTheme(); });
 let wakeLock = null;
 async function setWake(on){
@@ -4045,10 +4231,11 @@ function setupPWA(){
     const i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.href = 'icon-192.png'; document.head.appendChild(i);
     const t = document.createElement('link'); t.rel = 'apple-touch-icon'; t.href = 'apple-touch-icon.png'; document.head.appendChild(t);
   };
-  if (/^https?:$/.test(location.protocol)){
-    fetch('manifest.webmanifest', { method:'HEAD', cache:'no-store' })
-      .then(r => r.ok ? addStaticManifest() : addDynamicManifest()).catch(addDynamicManifest);
-  } else addDynamicManifest();
+  /* iPhone/iPad: KHÔNG khai báo manifest. Từ iOS 26, nếu lúc "Thêm vào Màn hình chính" trang có manifest (display:standalone) thì iOS cài thành "web app" kiểu mới,
+     có lớp mờ "scroll edge" ở mép trên và bám cứng cấu hình đó trong biểu tượng. Không manifest thì iOS dùng chế độ cổ điển (apple-mobile-web-app-capable) – mép trên sắc nét như trước.
+     Android/máy tính vẫn dùng manifest tạo bằng mã để cài được. */
+  if (IS_IOS){ try { const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = makeIcon(180); document.head.appendChild(l); } catch(e){} }
+  else addDynamicManifest();
   // Xin trình duyệt giữ dữ liệu vĩnh viễn (IndexedDB + cache không bị tự dọn)
   const persist = async () => {
     try {
@@ -4076,6 +4263,36 @@ addEventListener('online', updateOnline); addEventListener('offline', updateOnli
 /* Về đầu chương khi đổi sách/chương: chỉ đặt lại vị trí của khung đọc; thanh đầu trang cố định nên không có gì nhảy */
 function ktTop(){ if (SCR.scrollTop !== 0) SCR.scrollTop = 0; }
 
+/* Báo cáo tình trạng bộ nhớ của máy: mỗi nơi lưu (IndexedDB, Cache Storage, localStorage) đang giữ gì – để biết chính xác nơi nào hỏng */
+async function ktDiag(){
+  const L = [], add = (k, v) => L.push(k + ': ' + v);
+  add('Bản app', APP_VERSION);
+  add('Chạy từ Màn hình chính', (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) ? 'có' : 'không (đang ở Safari)');
+  add('iOS / trình duyệt', (navigator.userAgent.match(/OS ([\d_]+)/) || [])[1] || navigator.userAgent.slice(0, 60));
+  add('Mạng', navigator.onLine ? 'có' : 'không');
+  add('IndexedDB mở được', db ? 'có' : 'KHÔNG');
+  if (db){ try { add('  số sách trong IndexedDB', (await dbAll('bookMeta')).length); } catch(e){ add('  đọc IndexedDB', 'lỗi: ' + (e.message || e)); } }
+  add('Chế độ lưu tạm (RAM)', MEM.on ? 'ĐANG BẬT' : 'tắt');
+  add('Tự sửa kho đã chạy', window.ktHealed ? 'có' : 'không');
+  try {
+    if (!('caches' in self)) add('Cache Storage', 'không hỗ trợ');
+    else {
+      const ks = await caches.keys(); add('Cache Storage', ks.length ? ks.join(', ') : '(trống)');
+      const t = await dataCacheGet(); add('  bản gốc dữ liệu (kt-data-v1)', t ? (t.length / 1048576).toFixed(1) + ' MB' : 'chưa có');
+    }
+  } catch(e){ add('Cache Storage', 'lỗi: ' + (e.message || e)); }
+  try { let n = 0, c = 0; for (let i = 0; i < localStorage.length; i++){ n++; c += (localStorage.getItem(localStorage.key(i)) || '').length; } add('localStorage', n + ' khóa, ' + (c / 1024).toFixed(0) + ' KB'); } catch(e){ add('localStorage', 'lỗi: ' + (e.message || e)); }
+  try { add('Xin lưu vĩnh viễn', navigator.storage && navigator.storage.persisted ? (await navigator.storage.persisted() ? 'được' : 'chưa') : 'không hỗ trợ'); } catch(e){}
+  try { if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); add('Dung lượng', ((e.usage || 0) / 1048576).toFixed(1) + ' MB / ' + ((e.quota || 0) / 1048576).toFixed(0) + ' MB'); } } catch(e){}
+  add('Service worker điều khiển trang', ('serviceWorker' in navigator && navigator.serviceWorker.controller) ? 'có' : 'chưa');
+  add('Đồng bộ gần nhất', SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa');
+  const txt = L.join('\n');
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = `<div class="sheet"><h3>Tình trạng bộ nhớ máy</h3><pre style="white-space:pre-wrap;font-size:13px;line-height:1.5;margin:0 0 12px;user-select:text;-webkit-user-select:text">${esc(txt)}</pre><div class="btns" style="flex-direction:column"><button class="btn primary" data-k="c">Chép nội dung</button><button class="btn" data-k="x">Đóng</button></div></div>`;
+  o.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b){ if (e.target === o) o.remove(); return; } if (b.dataset.k === 'x') return o.remove(); try { navigator.clipboard.writeText(txt); toast('Đã chép'); } catch(_){} });
+  document.body.appendChild(o);
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#diagBtn')) ktDiag(); });
 async function dropDemoBook(){
   try {
     const d = await dbGet('books', 'Sách Mẫu');
@@ -4752,6 +4969,17 @@ function openPlan(opts){
 }
 planSum();
 
+/* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở, thân trang co theo vùng nhìn thấy để ô nhập không bị bàn phím che */
+(function(){
+  if (!document.documentElement.classList.contains('sa') || !window.visualViewport) return;
+  const vv = window.visualViewport, b = document.body;
+  const fit = () => {
+    if (vv.height >= innerHeight - 1){ b.style.height = ''; b.style.top = ''; return; }
+    b.style.height = vv.height + 'px'; b.style.top = vv.offsetTop + 'px';
+  };
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+})();
+
 /* ============ KHỞI ĐỘNG ============ */
 (async function init(){
   applyTheme(); applyFont(); applyFs(); applyView(); updateOnline();
@@ -4767,8 +4995,34 @@ planSum();
     const dr = guessRepo();
     if (!GH.repo && dr && !localStorage.getItem('kt.nodefault')){ GH = { repo:dr, token:'', branch:'', path:DEFAULT_FILE, auto:true }; saveGH(); }
   } catch(e){}
-  try { db = await openDB(); await dropDemoBook(); await reloadAll(); await restoreResume(); }
-  catch(e){ $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ trình duyệt</b>${esc(e.message || e)}<br>Hãy tắt chế độ Duyệt web riêng tư.</div>`; return; }
+  try {
+    try { db = await openDBRetry(() => { $('#bibleText').innerHTML = '<div class="empty"><b>Đang mở bộ nhớ của app…</b>Vui lòng chờ vài giây.</div>'; }); }
+    catch(idbErr){
+      console.warn('IndexedDB không mở được:', idbErr);
+      /* KHÔNG xóa kho (tránh mất dữ liệu do lỗi tạm lúc khởi động) – chuyển sang lưu dự phòng, kho chính vẫn được thử lại ngầm */
+      await memActivate(); setTimeout(() => toast('Máy chưa mở được bộ nhớ chính: app đang dùng chế độ lưu tạm'), 1500);
+    }
+    await dropDemoBook(); await reloadAll(); await restoreResume();
+    if (!bibleMeta.length && await restoreFromDataCache()){ await restoreResume(); toast('Đã khôi phục Kinh Thánh từ bản lưu trong máy'); }
+    window.ktReady = true;
+  }
+  catch(e){
+    $('#bibleText').innerHTML = `<div class="empty"><b>Không mở được bộ nhớ của app</b>${esc(e.message || e)}<br>
+      Hãy thử theo thứ tự:<br>1) Bấm “Thử lại” bên dưới.<br>2) Vuốt đóng hẳn app rồi mở lại (hoặc khởi động lại iPhone).<br>
+      3) Kiểm tra iPhone còn dung lượng trống; nếu đang bật Duyệt web riêng tư thì tắt đi.<br>
+      <span style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+        <button class="btn primary" id="dbRetry">Thử lại</button><button class="btn" id="dbReset">Đặt lại bộ nhớ app</button><button class="btn" id="diagBtn">🔍 Kiểm tra</button></span>
+      <small style="display:block;margin-top:10px;color:var(--muted)">“Đặt lại” chỉ xóa nội dung Kinh Thánh đã tải trong máy (tự tải lại khi có mạng). Lịch sử đọc, dấu trang, ghi chú, kế hoạch vẫn được giữ.</small></div>`;
+    const rt = $('#dbRetry'), rs = $('#dbReset');
+    if (rt) rt.onclick = () => location.reload();
+    if (rs) rs.onclick = () => {
+      if (!confirm('Xóa nội dung Kinh Thánh đã tải trong máy để mở lại từ đầu? Lịch sử đọc, ghi chú, dấu trang được giữ nguyên.')) return;
+      let done = false; const go = () => { if (!done){ done = true; location.reload(); } };
+      try { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = go; } catch(e){ go(); }
+      setTimeout(go, 3000);
+    };
+    return;
+  }
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
