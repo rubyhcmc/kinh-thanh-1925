@@ -424,6 +424,10 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 /* Câu đang được chạm giữ (menu hiện ra): in đậm bằng nét viền chữ – chỉ đổi cách vẽ, không đổi độ rộng nên trang/dòng không bị dàn lại */
 .v.hold{-webkit-text-stroke:.55px currentColor;paint-order:stroke fill}
 .v.hold .vn{-webkit-text-stroke:0}
+/* Đang giữ ngón tay trên câu: câu in đậm và nhấp nháy nền (bật/tắt bằng JS nên chế độ Trang giấy cũng nhấp nháy) */
+.v.holding{-webkit-text-stroke:.55px currentColor;paint-order:stroke fill;border-radius:4px}
+.v.holding .vn{-webkit-text-stroke:0}
+.v.holding.hb{background:var(--hl);box-shadow:0 0 0 4px var(--hl)}
 /* Chỗ đọc tiếp (📍): số câu được tô đặc – không đổi độ rộng nên không làm dàn lại trang */
 .v.rs .vn{background:var(--accent);color:var(--card);border-radius:3px;outline:2px solid var(--accent);outline-offset:0}
 .vmenu button.on{color:var(--accent);font-weight:700}
@@ -1094,7 +1098,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1721,7 +1725,13 @@ let RESUME = null;
 try { RESUME = JSON.parse(localStorage.getItem(RS_KEY) || 'null'); } catch(e){ RESUME = null; }
 if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null;
 const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stringify(RESUME)) : localStorage.removeItem(RS_KEY); } catch(e){} };
+/* NHẬT KÝ ĐỌC ĐẾN (kt.rshist): mỗi ngày giữ một dòng “hôm nay bạn đọc đến đâu”. Hôm sau đọc tới chỗ khác thì chỗ đọc tiếp dời đi và thêm một dòng mới. */
+let RSH = []; try { RSH = JSON.parse(localStorage.getItem('kt.rshist') || '[]'); if (!Array.isArray(RSH)) RSH = []; } catch(e){ RSH = []; }
+const saveRsh = () => { try { localStorage.setItem('kt.rshist', JSON.stringify(RSH)); } catch(e){} };
+function rsLog(book, ch, n){ const k = dayKey(); RSH = RSH.filter(x => dayKey(x.at) !== k); RSH.unshift({ book, ch, n, at:Date.now() }); if (RSH.length > 60) RSH.length = 60; saveRsh(); }
+const rsRef = r => `${r.book} ${r.ch}${r.n > 1 ? ':' + r.n : ''}`;
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
+const rsDate = t => new Date(t).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' }) + ' · ' + rsAgo(t);
 const rsAgo = t => { if (!t) return ''; const d = Math.round((Date.parse(dayKey()) - Date.parse(dayKey(t))) / 864e5); return d <= 0 ? 'hôm nay' : d === 1 ? 'hôm qua' : d + ' ngày trước'; };
 function markResume(flip){                                          // tô số câu của chỗ đọc tiếp
   $$('#bibleText .v.rs').forEach(e => e.classList.remove('rs'));
@@ -1732,12 +1742,14 @@ function toggleResumeAt(n){                                         // 📍 Đ�
   if (!curBook) return;
   const book = curBook.name, ch = S.chapter, prev = RESUME ? { ...RESUME } : null, off = rsIsOff();
   const was = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
-  const undo = () => { RESUME = prev; saveResume(); rsSetOff(off); markResume(true); };
+  const prevH = RSH.map(x => ({ ...x }));
+  const undo = () => { RESUME = prev; saveResume(); rsSetOff(off); RSH = prevH; saveRsh(); markResume(true); };
   hideResumeChip();
-  if (was){ RESUME = null; saveResume(); rsSetOff(true); markResume(true); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', undo); return; }
-  setResume(book, ch, n); markResume(true);
+  if (was){ RESUME = null; saveResume(); rsSetOff(true); RSH = RSH.filter(x => !(dayKey(x.at) === dayKey() && x.book === book && x.ch === ch && x.n === n)); saveRsh(); markResume(true); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', undo); return; }
+  setResume(book, ch, n); rsLog(book, ch, n); markResume(true);
   try { navigator.vibrate && navigator.vibrate(25); } catch(e){}
-  toastAct(`📍 Đã ghi nhớ ${book} ${ch}:${n}. Lần sau mở app sẽ tiếp tục từ đây`, 'Hoàn tác', undo);
+  const moved = prev && (prev.book !== book || prev.ch !== ch || (prev.n || 0) !== n);
+  toastAct(moved ? `📍 Đã dời chỗ đọc tiếp: ${rsRef(prev)} → ${book} ${ch}:${n} (đã lưu vào nhật ký 🔖)` : `📍 Đã ghi nhớ ${book} ${ch}:${n} và lưu vào nhật ký 🔖`, 'Hoàn tác', undo);
 }
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
@@ -1760,6 +1772,7 @@ function rsTrackNow(){
      Nhảy xa (tra cứu, tìm kiếm) hay lùi lại xem câu trước KHÔNG làm mất chỗ bạn đã ghi nhớ. */
   if (!(n >= 1) || n <= RESUME.n || n - RESUME.n > 30) return;
   RESUME.n = n; RESUME.at = Date.now(); saveResume(); markResume(true);
+  if (RSH[0] && dayKey(RSH[0].at) === dayKey()){ RSH[0] = { book:RESUME.book, ch:RESUME.ch, n:RESUME.n, at:Date.now() }; saveRsh(); }   // nhật ký hôm nay đi theo chỗ đang đọc
 }
 const rsTrack = () => { clearTimeout(rsT); rsT = setTimeout(rsTrackNow, 1500); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') rsTrackNow(); });
@@ -1783,13 +1796,13 @@ async function restoreResume(){                                  // gọi khi m�
   if (!RESUME || !bibleMeta.some(m => m.name === RESUME.book)) return;
   const r = { book:RESUME.book, ch:RESUME.ch, n:RESUME.n || 0 };      // chụp lại vị trí lúc mở app (cuộn sau đó không làm đổi lối tắt)
   if (curBook && curBook.name === r.book && S.chapter === r.ch && r.n <= 1) return;   // đang ở đúng đầu chương đó rồi → không cần lối tắt
-  rsHold = Date.now() + 20000;                                     // trong lúc lối tắt còn hiện, không ghi đè chỗ đọc cũ
+  rsHold = Date.now() + 25000;                                     // trong lúc lối tắt còn hiện, không ghi đè chỗ đọc cũ
   const c = document.createElement('div'); c.id = 'rsChip'; c.className = 'rschip';
-  c.innerHTML = `<button type="button" class="rsgo"><span class="rsl">📍 Tiếp tục đọc từ:</span> <b>${esc(r.book)} ${r.ch}${r.n > 1 ? ':' + r.n : ''}</b>${rsAgo(RESUME.at) ? ` <span class="rsl">· ${rsAgo(RESUME.at)}</span>` : ''}</button><button type="button" class="rsx" aria-label="Ẩn">✕</button>`;
+  c.innerHTML = `<button type="button" class="rsgo"><span class="rsl">📍 ${(() => { const a = rsAgo(RESUME.at); return a ? a.charAt(0).toUpperCase() + a.slice(1) + ' bạn đọc đến:' : 'Tiếp tục đọc từ:'; })()}</span> <b>${esc(r.book)} ${r.ch}${r.n > 1 ? ':' + r.n : ''}</b> <span class="rsl">›</span></button><button type="button" class="rsx" aria-label="Ẩn">✕</button>`;
   c.querySelector('.rsgo').onclick = async () => { hideResumeChip(); await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); };
   c.querySelector('.rsx').onclick = hideResumeChip;
   document.body.appendChild(c);
-  setTimeout(() => { if (document.getElementById('rsChip') === c) hideResumeChip(); }, 20000);
+  setTimeout(() => { if (document.getElementById('rsChip') === c) hideResumeChip(); }, 25000);
 }
 
 function markBookmarks(){
@@ -1843,6 +1856,7 @@ function openMarks(){
     o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
       <p class="bmhint">Chạm giữ một câu: <b>📍 Đọc đến đây</b> để lần sau app tiếp tục từ đó, <b>🔖 Đánh dấu</b> để lưu câu vào danh sách này.</p>
       ${(RESUME && bibleMeta.some(m => m.name === RESUME.book)) ? `<div class="bmitem rsitem"><button class="bmmain" data-rsgo="1"><b>📍 Chỗ đọc tiếp · ${esc(RESUME.book)} ${RESUME.ch}${RESUME.n > 1 ? ':' + RESUME.n : ''}</b><span class="bmt">Chạm để mở đúng chỗ đang đọc dở</span><small>${esc(rsAgo(RESUME.at))}</small></button><button class="iconbtn" data-rsdel="1" aria-label="Bỏ chỗ đọc tiếp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ''}
+      ${RSH.length ? `<div class="sth" style="margin-top:6px">📅 Nhật ký đọc đến</div>` + RSH.slice(0, 15).map((x, i) => `<div class="bmitem"><button class="bmmain" data-rh="${i}"><b>${esc(x.book)} ${x.ch}${x.n > 1 ? ':' + x.n : ''}</b><small>${esc(rsDate(x.at))}</small></button><button class="iconbtn" data-rhdel="${i}" aria-label="Xóa dòng này"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('') + (BM.length ? `<div class="sth" style="margin-top:14px">🔖 Câu đã đánh dấu</div>` : '') : ''}
       ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
         : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
       <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
@@ -1853,6 +1867,9 @@ function openMarks(){
     const g = e.target.closest('[data-go]'), d = e.target.closest('[data-del]');
     if (e.target.closest('[data-rsdel]')){ const prev = RESUME ? { ...RESUME } : null, off = rsIsOff(); RESUME = null; saveResume(); rsSetOff(true); markResume(true); draw(); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', () => { RESUME = prev; saveResume(); rsSetOff(off); markResume(true); }); return; }
     if (e.target.closest('[data-rsgo]')){ const r = RESUME; o.remove(); if (r) await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); return; }
+    const rh = e.target.closest('[data-rh]'), rhd = e.target.closest('[data-rhdel]');
+    if (rhd){ RSH.splice(+rhd.dataset.rhdel, 1); saveRsh(); draw(); return; }
+    if (rh){ const x = RSH[+rh.dataset.rh]; o.remove(); if (x) await goBookmark({ book:x.book, ch:x.ch, n:x.n || 1 }); return; }
     if (d){ BM.splice(+d.dataset.del, 1); saveBM(); markBookmarks(); draw(); return; }
     if (e.target.closest('[data-clear]')){ if (confirm('Xóa toàn bộ vị trí đã đánh dấu?')){ BM = []; saveBM(); markBookmarks(); draw(); } return; }
     if (g){ const b = BM[+g.dataset.go]; o.remove(); if (b) await goBookmark(b); }
@@ -2214,13 +2231,16 @@ function showVerseMenu(n, x, y){
 (function(){
   const root = $('#bibleText'), HOLD = 550;
   let timer = null, sx = 0, sy = 0, fired = false, lastTouch = 0;
-  const cancel = () => { clearTimeout(timer); timer = null; };
+  let hEl = null, hDelay = 0, hInt = 0;
+  const stopBlink = () => { clearTimeout(hDelay); clearInterval(hInt); if (hEl){ hEl.classList.remove('holding', 'hb'); hEl = null; } };
+  const cancel = () => { clearTimeout(timer); timer = null; stopBlink(); };
   const start = (el, x, y) => {
     const p = el.closest && el.closest('.v'); fired = false; cancel();
     if (!p || !curBook) return;
     sx = x; sy = y;
+    hEl = p; hDelay = setTimeout(() => { p.classList.add('holding', 'hb'); hInt = setInterval(() => p.classList.toggle('hb'), 220); }, 160);
     timer = setTimeout(() => {
-      timer = null; fired = true;
+      timer = null; fired = true; stopBlink();
       if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
         selected.add(+p.dataset.n);
         const ns = [...selected].sort((a, b) => a - b);
@@ -4853,7 +4873,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, planCustom:PCUST, resume:RESUME };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, planCustom:PCUST, resume:RESUME, rshist:RSH };
 }
 async function dtDownload(name){          // → true nếu đã xuất; false nếu người dùng hủy ở bảng Chia sẻ
   const json = JSON.stringify(dtPayload(), null, 2);
@@ -4889,10 +4909,11 @@ async function dtApply(j, srcName){          // khôi phục từ một đối t
     [{ t:'Khôi phục (khuyên dùng)', cls:'primary' }, { t:'Thay hoàn toàn bằng bản này', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   await PStore.safety('Lưu tạm trước khi khôi phục');      // giữ lại bản hiện tại phòng khi chọn nhầm
-  if (i === 1){ RD = {}; LS = []; BM = []; }
+  if (i === 1){ RD = {}; LS = []; BM = []; RSH = []; saveRsh(); }
   if (planOK(j.plan) && (i === 1 || !PLAN)){ PLAN = planNorm(j.plan); savePlan(); }
   if (j.planCustom && (i === 1 || !PCUST) && (j.planCustom.mode === 'days' || j.planCustom.mode === 'chapters')){ PCUST = { mode:j.planCustom.mode, val:j.planCustom.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){} }
   if (j.resume && j.resume.book && j.resume.ch >= 1 && (i === 1 || !RESUME)){ RESUME = { book:String(j.resume.book), ch:+j.resume.ch, n:+j.resume.n || 0, at:+j.resume.at || Date.now() }; saveResume(); }
+  if (Array.isArray(j.rshist)){ const m = new Map(RSH.map(x => [dayKey(x.at), x])); j.rshist.forEach(x => { if (x && x.book && x.ch >= 1 && x.at){ const k = dayKey(x.at), c = m.get(k); if (!c || x.at > c.at) m.set(k, x); } }); RSH = [...m.values()].sort((a, b) => b.at - a.at).slice(0, 60); saveRsh(); }
   days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
   const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -5327,7 +5348,7 @@ planSum();
  *  localStorage vẫn là bộ nhớ làm việc đồng bộ của app (toàn bộ code hiện có đọc ngay lúc khởi động); PStore là lớp bảo hiểm.
  * ========================================================= */
 const PStore = (() => {
-  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume'];
+  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist'];
   const SOFT = ['kt.resume'];                                      // đổi liên tục khi cuộn đọc → chép thưa hơn
   const META_KEY = 'kt.pstore.meta', EMPTY_KEY = 'kt.pstore.empty', RELOAD_KEY = 'kt.pstore.reloaded';
   const MIRROR_MS = 1500, MIRROR_SOFT_MS = 30000, PERIOD_MS = 24 * 3600e3, TICK_MS = 15 * 60e3;
@@ -5358,14 +5379,14 @@ const PStore = (() => {
   const readJ = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch(e){ return d; } };
   const snapshot = () => ({ app:'kinhthanh', kind:'user-data', version:1, appVersion:APP_VERSION,
     reads:readJ('kt.reads', {}), lessons:readJ('kt.lessons', []), marks:readJ('kt.marks', []),
-    plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null) });
+    plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []) });
   const hashOf = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + '-' + (h >>> 0).toString(16); };
   const hasData = s => !!(s && ((s.lessons && s.lessons.length) || (s.reads && Object.keys(s.reads).length) || (s.marks && s.marks.length) || s.plan));
   const counts = s => ({ lessons:s.lessons.length, days:Object.keys(s.reads).length, marks:s.marks.length, plan:!!s.plan });
   const clean = d => (d && d.app === 'kinhthanh' && d.kind === 'user-data') ? {
     reads:(d.reads && typeof d.reads === 'object' && !Array.isArray(d.reads)) ? d.reads : {},
     lessons:Array.isArray(d.lessons) ? d.lessons : [], marks:Array.isArray(d.marks) ? d.marks : [],
-    plan:d.plan || null, planCustom:d.planCustom || null, resume:d.resume || null } : null;
+    plan:d.plan || null, planCustom:d.planCustom || null, resume:d.resume || null, rshist:Array.isArray(d.rshist) ? d.rshist : [] } : null;
 
   /* ---------- 1) Phản chiếu localStorage → IndexedDB ---------- */
   function syncMarker(s){          // dấu "người dùng chủ động xóa hết": để lần mở sau không tự khôi phục lại thứ đã xóa
@@ -5403,7 +5424,7 @@ const PStore = (() => {
       if (!hasData(d)) return false;
       const put = (k, v) => { if (v != null) rawSet.call(localStorage, k, JSON.stringify(v)); };
       put('kt.reads', d.reads); put('kt.lessons', d.lessons); put('kt.marks', d.marks);
-      put('kt.plan', d.plan); put('kt.planCustom', d.planCustom); put('kt.resume', d.resume);
+      put('kt.plan', d.plan); put('kt.planCustom', d.planCustom); put('kt.resume', d.resume); put('kt.rshist', d.rshist);
       try { rawRemove.call(localStorage, EMPTY_KEY); sessionStorage.setItem(RELOAD_KEY, '1'); } catch(e){}
       toast('♻ Đã khôi phục dữ liệu cá nhân từ ' + src); setTimeout(() => location.reload(), 900);
       return true;
@@ -5517,7 +5538,7 @@ const PStore = (() => {
 const USYNC_ENDPOINT = '';      // ví dụ: 'https://kinhthanh-sync.ten-ban.workers.dev'
 const UserSync = (() => {
   const CODE_KEY = 'kt.usersync.code', META_KEY = 'kt.usersync.meta';
-  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume'];
+  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist'];
   const SOFT = ['kt.resume'];                                   // đổi liên tục khi cuộn đọc → gom lại, đẩy thưa hơn
   const DEBOUNCE = 4000, DEBOUNCE_SOFT = 90000, ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const LABEL = { off:'Chưa có bản sao lưu', ok:'Đã sao lưu', busy:'Đang đồng bộ…', dirty:'Có thay đổi, sắp sao lưu', err:'Lỗi sao lưu', conflict:'Cần khôi phục', offline:'Chưa có mạng' };
@@ -5542,7 +5563,7 @@ const UserSync = (() => {
   function snapshot(){
     return { app:'kinhthanh', kind:'user-data', version:1,
       reads:readJ('kt.reads', {}), lessons:readJ('kt.lessons', []), marks:readJ('kt.marks', []),
-      plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null) };
+      plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []) };
   }
   const hashOf = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + '-' + (h >>> 0).toString(16); };
   const hasData = s => !!(s.lessons.length || Object.keys(s.reads).length || s.marks.length || s.plan);
@@ -5637,7 +5658,8 @@ const UserSync = (() => {
       marks:Array.isArray(j.marks) ? j.marks.filter(x => x && x.book && x.ch >= 1 && x.n >= 1) : [],
       plan:(j.plan && /^\d{4}-\d{2}-\d{2}$/.test(j.plan.start || '')) ? j.plan : null,
       planCustom:j.planCustom || null,
-      resume:(j.resume && j.resume.book && j.resume.ch >= 1) ? j.resume : null
+      resume:(j.resume && j.resume.book && j.resume.ch >= 1) ? j.resume : null,
+      rshist:Array.isArray(j.rshist) ? j.rshist.filter(x => x && x.book && x.ch >= 1 && x.at) : []
     };
   }
   const lk = x => `${x.book}|${x.ch}|${(x.ns || [x.n]).join(',')}`;
@@ -5647,7 +5669,7 @@ const UserSync = (() => {
       const put = (k, v) => { if (v == null) rawRemove.call(localStorage, k); else rawSet.call(localStorage, k, JSON.stringify(v)); };
       if (mode === 'replace'){
         put('kt.reads', r.reads); put('kt.lessons', r.lessons); put('kt.marks', r.marks);
-        put('kt.plan', r.plan); put('kt.planCustom', r.planCustom); put('kt.resume', r.resume);
+        put('kt.plan', r.plan); put('kt.planCustom', r.planCustom); put('kt.resume', r.resume); put('kt.rshist', r.rshist);
       } else {
         const cur = snapshot(), reads = Object.assign({}, cur.reads);
         Object.keys(r.reads).forEach(d => { if (Array.isArray(r.reads[d])) reads[d] = [...new Set([...(reads[d] || []), ...r.reads[d]])]; });
@@ -5661,6 +5683,7 @@ const UserSync = (() => {
         if (!cur.plan && r.plan) put('kt.plan', r.plan);
         if (!cur.planCustom && r.planCustom) put('kt.planCustom', r.planCustom);
         if (!cur.resume && r.resume) put('kt.resume', r.resume);
+        { const m = new Map(); [...(cur.rshist || []), ...r.rshist].forEach(x => { const k = dayKey(x.at), c = m.get(k); if (!c || x.at > c.at) m.set(k, x); }); put('kt.rshist', [...m.values()].sort((a, b) => b.at - a.at).slice(0, 60)); }
       }
     } finally { suppress--; }
   }
