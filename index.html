@@ -394,6 +394,8 @@ details a{color:var(--accent)}
 .lgbtns .lgcancel{border-color:transparent;background:none;color:var(--muted);font-weight:600}
 /* ===== Chú thích bấm để bung/ẩn ===== */
 :root[data-theme=dark] .fnm{color:#ffb454}
+.hd .fnx{font-size:15px;font-family:var(--serif);letter-spacing:0;text-transform:none;font-weight:400;text-align:left}
+.hd .fnm{font-size:.6em}
 .fnk{cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
 .fnk::after{content:'';position:absolute;inset:-12px -8px}
 .fnk:active{opacity:.55}
@@ -1109,6 +1111,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edPasteBtn" title="Dán từ bộ nhớ tạm vào vị trí con trỏ (tự nhận dạng số câu, tiêu đề, thơ)">📥 Dán</button>
           <button class="btn" id="edDelBtn" title="Xóa phần đang bôi chọn; không chọn gì thì xóa dòng đang đứng">⌫ Xóa</button>
           <button class="btn" id="edH">＃ Tiêu đề</button>
+          <button class="btn" id="edNote" title="Gắn chú thích tại vị trí con trỏ (trong câu, tiêu đề, tiểu mục… bất kỳ đâu)">📝 Chú thích</button>
           <button class="btn" id="edQ1">＞ Thơ</button>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
@@ -1172,7 +1175,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3615,7 +3618,7 @@ function detectVerses(raw, o){
   // gắn chú thích vào câu có dấu [n] tương ứng (không thấy thì gắn vào câu cuối)
   const taken = new Set();
   defs.forEach(d => {
-    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && v.t.includes('[' + d.k + ']'));
+    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && (v.t.includes('[' + d.k + ']') || String(v.h || '').includes('[' + d.k + ']')));
     if (idx < 0) idx = vs.length - 1;
     if (idx < 0) return;
     taken.add(d.k + ':' + idx);
@@ -3642,7 +3645,7 @@ function serializeVerses(vs){
 }
 // Văn bản soạn thảo → câu
 function parseMarkup(text, startAt){
-  const vs = []; let pendH = null, pendP = false, lastFn = null;     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
+  const vs = []; let pendH = null, pendP = false, lastFn = null, pendFn = [];     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
   const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
   for (let li = 0; li < lines.length; li++){
@@ -3653,6 +3656,9 @@ function parseMarkup(text, startAt){
     m = line.match(/^(>{1,2})\s*(.*)$/);
     const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
     const fm = !lvl && body.match(/^\[(\d{1,3})\][\s:.)\-–]*(\S.*)$/);      // chấp nhận cả "[1]Nội dung", "[1]: Nội dung"          // "[1] chú thích" → gắn vào câu liền trước
+    if (fm && (!vs.length || pendH !== null)){            // chú thích của dấu [n] nằm trong TIÊU ĐỀ (hoặc trước câu 1): giữ lại, gắn vào câu liền sau tiêu đề
+      pendFn.push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; continue;
+    }
     if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
     const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
     const nn = nm ? +(nm[1] || nm[2]) : 0;
@@ -3663,6 +3669,7 @@ function parseMarkup(text, startAt){
       const v = { n:nn, t:(nm[3] || '').trim() };
       if (lvl) v.q = [lvl];
       if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
+      if (pendFn.length){ v.fn = pendFn; pendFn = []; }
       pendH = null; pendP = false; vs.push(v);
     } else if (!lvl && (isHeadLine(body) || isRefLine(body)) && ((pendH !== null && !pendP) || !vs.length)){
       pendH = pendH ? pendH + '\n' + body : body;
@@ -3673,7 +3680,7 @@ function parseMarkup(text, startAt){
     } else if (!lvl && body.length <= 200 && lines.slice(li + 1).some(x => /^(?:>{1,2}\s*)?(?:\((\d{1,3})\)|(\d{1,3}))(?:[.:]|\s)/.test(x.trim()))){
       pendH = pendH ? pendH + '\n' + body : body;        // dòng trước câu 1 (kể cả không viết hoa) → tiêu đề / dẫn nhập
     } else {
-      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; pendH = null; pendP = false; vs.push(v);
+      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; if (pendFn.length){ v.fn = pendFn; pendFn = []; } pendH = null; pendP = false; vs.push(v);
     }
   }
   return vs;
@@ -3737,7 +3744,8 @@ function cleanVerseText(t){
 }
 
 // Dựng HTML: "print" = đoạn liền, số câu nhỏ, số chương chữ lớn như sách giấy; "verse" = mỗi câu một dòng
-function secHTML(h){
+function secHTML(h, fm){
+  const tx = x => richText(x, fm || {});                     // tiêu đề cũng hiểu dấu chú thích [1], [chữ…] như trong câu
   const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
   const isRef = l => /^\([^()]*\)$/.test(l);
   const multi = ls.filter(l => !isRef(l)).length > 1;        // nhiều dòng: dòng đầu = mục lớn, các dòng sau = tiểu mục
@@ -3747,8 +3755,8 @@ function secHTML(h){
     const big = !multi || k === 0; k++;                      // tiêu đề một dòng = mục lớn
     const tag = big ? 'h3' : 'h4', cls = big ? 'sec' : 'sec2';
     const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    return m && m[1] ? `<${tag} class="${cls}">${esc(m[1])}<span class="ref">${esc(m[2])}</span></${tag}>`
-                     : `<${tag} class="${cls}">${esc(l)}</${tag}>`;
+    return m && m[1] ? `<${tag} class="${cls}">${tx(m[1])}<span class="ref">${esc(m[2])}</span></${tag}>`
+                     : `<${tag} class="${cls}">${tx(l)}</${tag}>`;
   }).join('') + '</div>';
 }
 function subOf(book){
@@ -3759,7 +3767,7 @@ function paperHTML(book, ch, verses, view, idp){
   idp = idp || 'v';
   const print = view !== 'verse';
   const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
-  verses.forEach(v => String(v.t).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));
+  verses.forEach(v => (String(v.t) + '\n' + String(v.h || '')).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));   // dấu [n] nằm trong tiêu đề cũng tính là đã gắn
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
   let out = `<div class="chhead">${sub.length && +ch === 1 ? `<div class="bksub">${sub.map(esc).join('<br>')}</div>` : ''}<div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
@@ -3769,7 +3777,7 @@ function paperHTML(book, ch, verses, view, idp){
   verses.forEach((v, i) => {
     const isPoem = Array.isArray(v.q) && v.q.length;
     const vm = Object.assign({}, fm, fnMapOf(v.fn));
-    if (v.h){ close(); out += secHTML(v.h); }
+    if (v.h){ close(); out += secHTML(v.h, vm); }
     const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
     const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
     const num = `<sup class="vn">${v.n}</sup>`;
@@ -3941,7 +3949,7 @@ const edSel = { s:0, e:0 };
   document.addEventListener('selectionchange', keep);
   t.addEventListener('blur', () => { edSel.s = t.selectionStart; edSel.e = t.selectionEnd; });
   // giữ tiêu điểm khi bấm nút công cụ (không bàn phím nhảy, không mất vùng chọn)
-  ['#edPasteBtn', '#edDelBtn'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
+  ['#edPasteBtn', '#edDelBtn', '#edNote'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
 }
 const edRange = () => { const n = ed.Text.value.length; let s = Math.min(edSel.s, n), e = Math.min(edSel.e, n); if (s > e) [s, e] = [e, s]; return [s, e]; };
 // Thay đoạn [s,e) bằng txt. Ưu tiên execCommand (giữ Hoàn tác); nếu trình duyệt không làm thật thì ghi trực tiếp vào ô.
@@ -4032,6 +4040,28 @@ function edLines(fn){
 }
 const stripPre = l => l.replace(/^(#\s?|>{1,2}\s?)/, '');
 $('#edH').onclick  = () => edLines(l => /^#\s/.test(l) ? stripPre(l) : '# ' + stripPre(l));
+/* Nút 📝 Chú thích: chèn dấu [n] (n = số kế tiếp chưa dùng) tại con trỏ – trong câu, tiêu đề hay tiểu mục đều được – rồi tự thêm dòng "[n] …" ngay sau
+   đoạn đang viết và bôi sẵn phần nội dung để gõ thay vào. */
+$('#edNote').onclick = () => {
+  const t = ed.Text, v = t.value; if (!v.trim()) return toast('Hãy nhập nội dung trước, rồi đặt con trỏ vào chỗ cần chú thích');
+  const [, e] = edRange(), lines = v.split('\n');
+  let li = 0, off = 0; while (li < lines.length - 1 && off + lines[li].length < e){ off += lines[li].length + 1; li++; }
+  if (!lines[li].trim()) return toast('Hãy đặt con trỏ vào chỗ cần gắn chú thích (không phải dòng trống)');
+  if (/^\s*\[\d{1,3}\]/.test(lines[li])) return toast('Hãy đặt con trỏ trong câu hoặc tiêu đề cần chú thích (không phải trong dòng chú thích)');
+  let mx = 0; (v.match(/\[(\d{1,3})\]/g) || []).forEach(x => { mx = Math.max(mx, +x.slice(1, -1)); });
+  const n = mx + 1;
+  const isHead = l => /^\s*#\s/.test(l), isDef = l => /^\s*\[\d{1,3}\]/.test(l), isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s|$)/.test(l);
+  let k = li;                                                                  // dòng cuối của đoạn đang viết: dòng chú thích chèn ngay sau đó
+  if (isHead(lines[li])){ while (k + 1 < lines.length && isHead(lines[k + 1])) k++; }
+  else { while (k + 1 < lines.length && lines[k + 1].trim() && !isHead(lines[k + 1]) && !isDef(lines[k + 1]) && !isVerse(lines[k + 1])) k++; }
+  let endK = 0; for (let i = 0; i <= k; i++) endK += lines[i].length + (i < k ? 1 : 0);
+  const ph = 'Nội dung chú thích', tail = '\n[' + n + '] ' + ph;
+  edReplace(e, endK, '[' + n + ']' + v.slice(e, endK) + tail);
+  const c = e + 2 + String(n).length + (endK - e) + tail.length;
+  try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); }
+  t.setSelectionRange(c - ph.length, c); edSel.s = c - ph.length; edSel.e = c;
+  toast('Đã gắn chú thích [' + n + '] – gõ nội dung thay cho dòng được bôi chọn');
+};
 $('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' + stripPre(l));
 $('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
 $('#edPara').onclick = () => edLines((l, i) => i === 0 ? '\n' + l : l);
@@ -4300,7 +4330,7 @@ function pdfHeading(L, h){
     if (isRef(l)){ ref(l); return; }
     const big = !multi || k === 0; k++;
     const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    L.flow([{ s:(m && m[1]) ? m[1] : l, k:'n' }], { size:big ? 11.5 : 10, lh:big ? 15.5 : 14, align:'center', st:'b' });
+    L.flow(pdfRuns((m && m[1]) ? m[1] : l), { size:big ? 11.5 : 10, lh:big ? 15.5 : 14, align:'center', st:'b' });
     if (m && m[1]) ref(m[2]);
   });
   L.gap(5);
@@ -4557,7 +4587,8 @@ function docxBookFile(bookName, sub, chapters, fname){        // chapters: [{ch,
         flush();
         String(v.h).split('\n').map(x => x.trim()).filter(Boolean).forEach((l, k) => {
           const ref = /^\([^()]*\)$/.test(l);
-          body += wParaX(wRun(l, ref ? { i:true, sz:22, color:'7A6E60' } : { b:true, sz:k ? 26 : 28 }), { align:'center', before:k ? 0 : 200, after:80, keep:true });
+          const hr = ref ? wRun(l, { i:true, sz:22, color:'7A6E60' }) : l.split(/(\[\d{1,3}\])/).filter(Boolean).map(pc => /^\[\d{1,3}\]$/.test(pc) ? wRun(pc, { b:true, sz:18, color:'8A5A1F', sup:true }) : wRun(pc, { b:true, sz:k ? 26 : 28 })).join('');
+          body += wParaX(hr, { align:'center', before:k ? 0 : 200, after:80, keep:true });
         });
       }
       const poem = Array.isArray(v.q) && v.q.length;
