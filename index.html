@@ -1098,7 +1098,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1297,7 +1297,7 @@ function renderBibleEmpty(){
   updateSyncUI();
 }
 async function initBible(){
-  await loadBibleMeta(); bs.idx = null; bsFillScope();
+  await loadBibleMeta(); bs.idx = null; bs.gen = (bs.gen || 0) + 1; bsFillScope();
   if (!bibleMeta.length){ curBook = null; return renderBibleEmpty(); }
   $('#selBook').innerHTML = bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
   const name = bibleMeta.some(m => m.name === S.book) ? S.book : bibleMeta[0].name;
@@ -2339,17 +2339,27 @@ function bsFillScope(){
 async function bsBuild(){
   if (bs.idx) return bs.idx;
   if (!bs.building) bs.building = (async () => {
+    const gen = bs.gen || 0;
     const recs = new Map((await dbAll('books')).map(b => [b.name, b]));
-    const out = [];
-    bibleMeta.forEach(m => {
-      const rec = recs.get(m.name); if (!rec) return;
-      rec.chapters.forEach((vs, ci) => vs.forEach(v => {
-        const t = String(v.t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').normalize('NFC');
-        // Bản cổ dùng gạch nối giữa các tiếng ("của-lễ", "khoảng-không"): đổi thành khoảng trắng (cùng độ dài) để gõ "của lễ" / "cua le" đều khớp
-        const s = t.replace(/(?<=\p{L})[-\u2010\u2011](?=\p{L})/gu, ' ');
-        out.push({ b:m.name, c:ci + 1, n:v.n, t, l:s.toLowerCase(), f:Array.from(s, ch => fold(ch) || ' ').join('') });
-      }));
-    });
+    const out = [], FC = /[\u0300-\u036f]/;
+    let t0 = performance.now();
+    /* Lập chỉ mục theo từng lát ngắn (~6ms) và nhường luồng chính giữa các lát: không còn đứng máy vài giây trên iPhone cũ
+       (trước đây khối việc này chạy đúng lúc bàn phím đang trượt lên nên bị giật). Tìm dấu: cả chuỗi một lần thay vì từng ký tự. */
+    for (const m of bibleMeta){
+      const rec = recs.get(m.name); if (!rec) continue;
+      for (let ci = 0; ci < rec.chapters.length; ci++){
+        for (const v of rec.chapters[ci]){
+          const t = String(v.t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').normalize('NFC');
+          // Bản cổ dùng gạch nối giữa các tiếng ("của-lễ", "khoảng-không"): đổi thành khoảng trắng (cùng độ dài) để gõ "của lễ" / "cua le" đều khớp
+          const s2 = t.replace(/(?<=\p{L})[-\u2010\u2011](?=\p{L})/gu, ' ');
+          let f = fold(s2);
+          if (f.length !== s2.length || FC.test(s2)) f = Array.from(s2, ch => fold(ch) || ' ').join('');
+          out.push({ b:m.name, c:ci + 1, n:v.n, t, l:s2.toLowerCase(), f });
+        }
+        if (performance.now() - t0 > 6){ await new Promise(r => setTimeout(r, 0)); t0 = performance.now(); }
+      }
+    }
+    if (gen !== (bs.gen || 0)){ bs.building = null; return bsBuild(); }   // dữ liệu vừa đổi giữa chừng → lập lại
     bs.idx = out; bs.building = null; return out;
   })();
   return bs.building;
@@ -2408,7 +2418,7 @@ function setSearch(on){
   $('#tab-bible').classList.toggle('searching', on); document.body.classList.toggle('searching', on);
   $('#bSearch').hidden = !on;
   SCR.scrollTop = 0;
-  if (on){ $('#bsQ').focus(); clearSelection(); bsFillScope(); bsBuild(); }   // focus() phải chạy ngay trong cú chạm thì iPhone mới bật bàn phím
+  if (on){ $('#bsQ').focus(); clearSelection(); setTimeout(() => { if (document.body.classList.contains('searching')){ bsFillScope(); bsBuild(); } }, 900); }   // việc nặng chờ bàn phím trượt lên xong mới chạy → không giật   // focus() phải chạy ngay trong cú chạm thì iPhone mới bật bàn phím
   else $('#bsQ').blur();
 }
 $('#btnSearch').onclick = () => { if (document.body.classList.contains('searching')){ $('#bsQ').focus(); $('#bsQ').select(); } else setSearch(true); };
@@ -5801,6 +5811,7 @@ PStore.init();
   updateSyncUI();
   if (!localStorage.getItem('kt.onboard')) setTimeout(showOnboard, 800);      // lần đầu mở app: hiện hướng dẫn ngắn
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
+  setTimeout(() => { try { if (bibleMeta.length) bsBuild(); } catch(e){} }, 8000);   // lập sẵn chỉ mục tìm kiếm lúc rảnh (từng lát nhỏ) để lần mở tìm kiếm sau không phải chờ
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
 })();
 </script>
