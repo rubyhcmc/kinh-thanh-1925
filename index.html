@@ -421,6 +421,10 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .reader .v,#bibleText,#bibleText *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #bibleText ::selection{background:transparent}
 .v.bm{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
+/* Câu đang được chạm giữ (menu hiện ra): in đậm bằng nét viền chữ – chỉ đổi cách vẽ, không đổi độ rộng nên trang/dòng không bị dàn lại */
+.v.hold{-webkit-text-stroke:.55px currentColor;paint-order:stroke fill}
+.v.hold .vn{-webkit-text-stroke:0}
+html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .v.bm .vn{text-decoration:underline;text-underline-offset:2px}
 .v.bm.sel{background:var(--hl)}
 .lsbadge{position:absolute;top:2px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--accent);color:#fff;font:700 10px/16px var(--sans);text-align:center;box-sizing:border-box}
@@ -1084,7 +1088,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02-AB21';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02-AB22';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2125,7 +2129,8 @@ function showVerseMenu(n, x, y){
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
   const below = y + 24, top = below + r.height > H - 10 ? Math.max(10, y - r.height - 24) : below;
   m.style.top = top + 'px';
-  const opened = Date.now(), close = () => bg.remove();
+  const hv = $('#v' + n); if (hv) hv.classList.add('hold');          // in đậm câu đang thao tác
+  const opened = Date.now(), close = () => { bg.remove(); $$('#bibleText .v.hold').forEach(e => e.classList.remove('hold')); };
   const onScroll = () => { close(); SCR.removeEventListener('scroll', onScroll); };
   SCR.addEventListener('scroll', onScroll, { passive:true });
   bg.addEventListener('click', e => {
