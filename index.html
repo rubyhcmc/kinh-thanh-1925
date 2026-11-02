@@ -1098,7 +1098,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5261,7 +5261,13 @@ planSum();
     if (inp.disabled) return;
     const prev = vT; vT = inp; proxy.value = inp.value;
     if (actGet.call(doc) !== proxy) nativeFocus.call(proxy, { preventScroll: true });
-    if (prev !== inp){ mark(prev, false); mark(inp, true); inp.dispatchEvent(new Event('focus')); proxy.value = inp.value; }
+    if (prev !== inp){
+      mark(prev, false); mark(inp, true);
+      /* Chuyển thẳng từ ô Chương sang ô Câu (hoặc ngược lại): ô cũ phải được “rời đi” đúng cách để số vừa gõ (vd chương 1) được chốt NGAY,
+         rồi ô mới mới lấy danh sách câu theo chương đó. Trước đây bước này bị bỏ qua nên chương không được chốt, câu 8 nhảy vào chương cũ. */
+      if (prev) prev.dispatchEvent(new Event('blur'));
+      inp.dispatchEvent(new Event('focus')); proxy.value = inp.value;
+    }
   }
   function vBlur(){
     if (!vT) return;
