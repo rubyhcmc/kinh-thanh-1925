@@ -476,7 +476,11 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abfeat li.abh::before{display:none}
 .abfeat li.abh:first-child{margin-top:0}
 /* Cài đặt dễ đọc cho người lớn tuổi */
-#settings .shead{position:sticky;top:0;z-index:6;background:var(--card);margin:0 -18px 6px;padding:6px 20px 8px;border-bottom:1px solid var(--line)}
+#settings .sheet{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}   /* chỉ vuốt lên xuống, không cuộn ngang */
+#settings .sheet>*{max-width:100%}
+#settings .shead{position:sticky;top:0;z-index:6;background:var(--bg);margin:0 -16px 6px;padding:6px 18px 8px;border-bottom:1px solid var(--line)}
+#settings #sbSeg button{padding:10px 2px;font-size:14px;min-width:0}
+#settings .seg{max-width:100%}
 #settings .sdone{font-size:18px;padding:10px 8px}
 #settings .stxt b{font-size:16.5px}
 #settings .stxt span{font-size:13.5px;line-height:1.45;color:var(--muted);color:color-mix(in srgb,var(--fg) 72%,var(--card))}
@@ -1244,7 +1248,33 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+/* Mở trên trình duyệt (Safari, Chrome…): KHÔNG để bàn phím tự bật lên.
+   Trước cú chạm/gõ đầu tiên của người dùng, mọi ô nhập đều không được nhận con trỏ (chặn cả focus() bằng mã lẫn autofocus).
+   Chỉ áp dụng khi mở trong trình duyệt; mở từ biểu tượng Màn hình chính (chế độ app) giữ nguyên như cũ. */
+(function(){
+  let inApp = false;
+  try { inApp = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches; } catch(e){}
+  if (inApp) return;
+  let touched = false;
+  const isText = el => !!el && el.tagName && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file|image|reset)$/i.test(el.type)));
+  const nativeFocus = HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus = function(){ if (!touched && isText(this)) return; return nativeFocus.apply(this, arguments); };
+  const drop = () => { if (touched) return; try { const a = document.activeElement; if (isText(a)) HTMLElement.prototype.blur.call(a); } catch(e){} };
+  /* Lớp chặn thứ hai: trước cú chạm đầu tiên, mọi ô nhập có sẵn đều ở dạng chỉ-đọc → iOS không bao giờ bật bàn phím, dù mã nào gọi focus()/select()/click().
+     Ngay khi người dùng chạm lần đầu (touchstart xảy ra trước lúc ô nhận con trỏ) thì mở khóa, nên bấm vào ô Chương / Câu / Tìm kiếm vẫn gõ bình thường. */
+  const lock = () => { try { document.querySelectorAll('input,textarea').forEach(el => { if (isText(el) && !el.readOnly){ el.setAttribute('readonly', ''); el.setAttribute('data-kl', '1'); } }); } catch(e){} };
+  const unlock = () => { try { document.querySelectorAll('[data-kl]').forEach(el => { el.removeAttribute('readonly'); el.removeAttribute('data-kl'); }); } catch(e){} };
+  const mine = () => { touched = true; unlock(); };
+  lock(); addEventListener('DOMContentLoaded', lock);
+  ['touchstart', 'pointerdown', 'mousedown', 'keydown'].forEach(ev => addEventListener(ev, mine, { capture:true, passive:true, once:true }));
+  document.addEventListener('focusin', e => { if (!touched && isText(e.target)) drop(); }, true);
+  try { document.querySelectorAll('[autofocus]').forEach(el => el.removeAttribute('autofocus')); } catch(e){}
+  drop(); [0, 150, 400, 900, 1800, 3500].forEach(t => setTimeout(drop, t));
+  addEventListener('DOMContentLoaded', drop); addEventListener('load', drop);
+  addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
+})();
+
+const APP_VERSION = '2026.11.02w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1436,7 +1466,7 @@ async function loadBibleMeta(){
 }
 function renderBibleEmpty(){
   $('#bibleText').className = 'reader';
-  $('#bibleText').innerHTML = `<div class="empty"><b>Chưa có dữ liệu Kinh Thánh</b>Bấm <b style="display:inline">Aa</b> → "Quản lý dữ liệu" để soạn hoặc nhập nội dung,<br>hoặc kết nối GitHub để tự tải nội dung về.</div>`;
+  $('#bibleText').innerHTML = `<div class="empty"><b>Đang tải dữ liệu về máy của bạn</b></div>`;
   $('#selBook').innerHTML = $('#selChap').innerHTML = $('#selVerse').innerHTML = ''; syncNav();
   $('#chapNav').hidden = true;
   $('#bibleText').insertAdjacentHTML('beforeend', '<div class="log" id="emptySync" style="text-align:center;padding:0 20px 30px"></div>');
@@ -2880,10 +2910,10 @@ const ghRef = noRef => '?' + (GH.branch && !noRef ? 'ref=' + encodeURIComponent(
 
 function ghMsg(s, m){
   if (s === 401) return 'Token sai hoặc đã hết hạn. Hãy tạo token mới.';
-  if (s === 403) return /rate limit/i.test(m) ? 'GitHub tạm giới hạn số lần truy cập, hãy thử lại sau ít phút.' : 'Token chưa đủ quyền (cần quyền "repo") hoặc bị từ chối.';
-  if (s === 404) return 'Không tìm thấy kho hoặc tệp trên GitHub (kho riêng tư cần có token).';
-  if (s === 409 || s === 422) return 'Dữ liệu trên GitHub vừa thay đổi, hãy bấm "Đồng bộ ngay" lần nữa.';
-  return 'Lỗi GitHub ' + s + (m ? ': ' + m : '');
+  if (s === 403) return /rate limit/i.test(m) ? 'Máy chủ tạm giới hạn số lần truy cập, hãy thử lại sau ít phút.' : 'Token chưa đủ quyền (cần quyền "repo") hoặc bị từ chối.';
+  if (s === 404) return 'Không tìm thấy kho hoặc tệp trên máy chủ (kho riêng tư cần có token).';
+  if (s === 409 || s === 422) return 'Dữ liệu trên máy chủ vừa thay đổi, hãy bấm "Đồng bộ ngay" lần nữa.';
+  return 'Lỗi máy chủ ' + s + (m ? ': ' + m : '');
 }
 async function ghReq(path, o = {}){
   const h = { Accept: o.raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
@@ -2891,7 +2921,7 @@ async function ghReq(path, o = {}){
   if (o.body) h['Content-Type'] = 'application/json';
   let res;
   try { res = await fetch(GH_API + path, { method:o.method || 'GET', headers:h, body:o.body, cache:'no-store' }); }
-  catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
+  catch(e){ throw new Error('Không kết nối được máy chủ. Hãy kiểm tra mạng.'); }
   if (!res.ok){
     let m = ''; try { m = (await res.json()).message || ''; } catch(e){}
     const err = new Error(ghMsg(res.status, m)); err.status = res.status; throw err;
@@ -2980,9 +3010,9 @@ async function rawFetch(){
   const url = `https://raw.githubusercontent.com/${GH.repo}/${ref}/${ghFile()}?_=${Date.now()}`;
   let res;
   try { res = await fetch(url, { cache:'no-store' }); }
-  catch(e){ throw new Error('Không kết nối được GitHub. Hãy kiểm tra mạng.'); }
+  catch(e){ throw new Error('Không kết nối được máy chủ. Hãy kiểm tra mạng.'); }
   if (res.status === 404) throw new Error(`Không tìm thấy tệp dữ liệu "${GH.path || DEFAULT_FILE}" trong kho "${GH.repo}". Kho phải ở chế độ Công khai (hoặc nhập token), đúng tên kho và đã có tệp dữ liệu.`);
-  if (!res.ok) throw new Error('Lỗi tải dữ liệu từ GitHub (' + res.status + ').');
+  if (!res.ok) throw new Error('Lỗi tải dữ liệu từ máy chủ (' + res.status + ').');
   const text = await res.text(); dataCachePut(text); return text;
 }
 /* ===== BẢN GỐC DỰ PHÒNG trong Cache Storage (độc lập IndexedDB): tải xong là cất nguyên tệp; mở app thấy kho trống thì khôi phục từ đây, không cần mạng ===== */
@@ -3012,9 +3042,9 @@ async function restoreFromDataCache(){
   } catch(e){ return false; }
 }
 const sigOf = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'h' + t.length + '-' + (h >>> 0).toString(16); };
-const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên GitHub không đúng định dạng.'); } };
+const parseRemote = text => { try { return JSON.parse(String(text).replace(/^﻿/, '')); } catch(e){ throw new Error('Tệp trên máy chủ không đúng định dạng.'); } };
 const GitHubStore = Store.register({
-  id:'github', label:'GitHub',
+  id:'github', label:'máy chủ',
   configured: () => !!GH.repo,
   canWrite: () => !!(GH.repo && GH.token),
   autoSync: () => GH.auto !== false,
@@ -3068,7 +3098,7 @@ async function applyRemote(A, r){
   }
 }
 async function pullFrom(A){
-  const r = await A.read(); if (!r) throw new Error(`${A.label} chưa có dữ liệu.`);
+  const r = await A.read(); if (!r) throw new Error('Máy chủ chưa có dữ liệu.');
   await applyRemote(A, r);
 }
 async function pushTo(A, auto){
@@ -3110,7 +3140,7 @@ function updateSyncUI(){
   l.textContent = on ? `${A.describe()}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${A.canWrite() ? 'đọc & ghi (có quyền ghi)' : 'chỉ đọc'}` : 'Chưa kết nối nơi lưu trữ.';
   l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
   const es = $('#emptySync');
-  if (es) es.innerHTML = on ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
+  if (es) es.innerHTML = (on && (st === 'err' || st === 'offline' || st === 'conflict')) ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
   const sh = $('#ghShare'); sh.hidden = !(on && A.shareUrl);
   if (on && A.shareUrl) $('#ghShareUrl').value = A.shareUrl();
 }
