@@ -297,6 +297,7 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-wei
 .bsitem{display:block;padding:12px 14px 13px;border-bottom:1px solid var(--line);background:var(--card);font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.55;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:0}
 .bsitem:active,.bsitem:focus-visible{background:var(--accent-soft)}
 .bs-ref{display:flex;align-items:center;gap:8px;font-family:var(--sans);margin-bottom:3px}
+.bs-no{font-weight:700;color:var(--fg);font-size:14px;min-width:1.6em}
 .bs-ref b{display:inline;font-size:13.5px;color:var(--accent);margin:0}
 .bs-cp{margin-left:auto;border:0;background:none;color:var(--muted);width:36px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-top:-4px;margin-bottom:-4px;margin-right:-6px}
 .bs-cp:active{background:var(--accent-soft);color:var(--accent)}
@@ -723,7 +724,6 @@ html[data-paper] .reader.print{text-align:justify}
     </div>
     <div class="bs-in bs-opts">
       <div class="bs-seg" id="bsModeSeg" role="group" aria-label="Kiểu tìm"><button type="button" data-v="phrase">Đúng cụm từ</button><button type="button" data-v="all">Có đủ các từ</button></div>
-      <button type="button" class="bs-chip" id="bsWordChip" aria-pressed="true">Nguyên từ</button>
     </div>
     <select id="bsMode" hidden aria-hidden="true"><option value="phrase">Đúng cụm từ</option><option value="all">Có đủ các từ</option></select>
     <input type="checkbox" id="bsWord" hidden aria-hidden="true" checked>
@@ -1172,7 +1172,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2458,7 +2458,7 @@ async function bsBuild(){
           const s2 = t.replace(/(?<=\p{L})[-\u2010\u2011](?=\p{L})/gu, ' ');
           let f = fold(s2);
           if (f.length !== s2.length || FC.test(s2)) f = Array.from(s2, ch => fold(ch) || ' ').join('');
-          out.push({ b:m.name, c:ci + 1, n:v.n, t, l:s2.toLowerCase(), f });
+          out.push({ b:m.name, c:ci + 1, n:v.n, t, l:bsTone(s2.toLowerCase()), f });
         }
         if (performance.now() - t0 > 6){ await new Promise(r => setTimeout(r, 0)); t0 = performance.now(); }
       }
@@ -2468,10 +2468,13 @@ async function bsBuild(){
   })();
   return bs.building;
 }
+/* Thống nhất cách đặt dấu thanh (hoà/hòa, thuý/thúy…) để gõ kiểu nào cũng khớp; độ dài chữ không đổi nên tô sáng vẫn đúng chỗ */
+const BS_TONE = { 'oà':'òa','oá':'óa','oả':'ỏa','oã':'õa','oạ':'ọa','uà':'ùa','uá':'úa','uả':'ủa','uã':'ũa','uạ':'ụa','uỳ':'ùy','uý':'úy','uỷ':'ủy','uỹ':'ũy','uỵ':'ụy' };
+const bsTone = t => t.replace(/[ou][àáảãạỳýỷỹỵ]/g, m => BS_TONE[m] || m);
 function bsRegexes(q){
-  q = q.normalize('NFC').toLowerCase().replace(/[-\u2010\u2011]+/g, ' ').trim();   // gõ "của-lễ" hay "của lễ" đều như nhau
-  const plain = fold(q) === q;                       // không có dấu → bỏ qua dấu khi so khớp
-  const word = $('#bsWord').checked;
+  q = bsTone(q.normalize('NFC').toLowerCase().replace(/[-\u2010\u2011]+/g, ' ').trim());   // gõ "của-lễ" hay "của lễ" đều như nhau
+  const plain = false;                               // luôn khớp ĐÚNG DẤU: "toi" chỉ ra "toi", "tội" chỉ ra "tội"
+  const word = true;                                 // luôn khớp nguyên từ: "ác" chỉ ra "ác", không ra "tác"
   const terms = $('#bsMode').value === 'all' ? q.split(/\s+/).filter(Boolean) : [q.replace(/\s+/g, ' ')];
   const mk = (t, w) => {
     let src = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
@@ -2505,9 +2508,8 @@ const BS_ICO_COPY = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
 
 function bsApplyOpts(){
   $('#bsMode').value = BSO.mode === 'all' ? 'all' : 'phrase';
-  $('#bsWord').checked = BSO.word !== false;
+  $('#bsWord').checked = true;
   $$('#bsModeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === $('#bsMode').value));
-  const w = $('#bsWordChip'); w.classList.toggle('on', $('#bsWord').checked); w.setAttribute('aria-pressed', $('#bsWord').checked ? 'true' : 'false');
 }
 
 /* ---- Nhận ra "Gioan 3:16" / "1 Cor 13" / "Thi thiên 23" → thẻ "Đi tới" mở thẳng đoạn đó ---- */
@@ -2522,8 +2524,9 @@ function bsFindBook(lead, name, hasCh){
 function bsRefCard(q){
   const box = $('#bsGo'); bs.go = null;
   const m = q.trim().match(BS_REF);
-  if (m && bibleMeta.length && /[a-z]/.test(fold(m[2]))){
-    const ch0 = m[3] || m[5], bk = bsFindBook(m[1], m[2], !!ch0);
+  const ch0 = m && (m[3] || m[5]);
+  if (m && ch0 && bibleMeta.length && /[a-z]/.test(fold(m[2]))){
+    const bk = bsFindBook(m[1], m[2], !!ch0);
     if (bk){
       let ch = ch0 ? +ch0 : 0, v = m[4] ? +m[4] : 0;
       if (ch < 1 || ch > (bk.chapterCount || 9999)){ ch = 0; v = 0; }
@@ -2540,12 +2543,9 @@ function bsRefCard(q){
 function bsHome(){
   $('#bsInfo').textContent = ''; $('#bsFacets').hidden = true; $('#bsItems').innerHTML = ''; $('#bsMore').innerHTML = '';
   bs.res = bs.all = []; bsCtx = null;
-  const ex = bibleMeta.length ? bibleMeta[0].name + ' 1:1' : 'Sáng Thế 1:1';
   const chips = a => a.map(x => `<button type="button" class="bs-chip" data-q="${esc(x)}">${esc(x)}</button>`).join('');
-  const rec = BSR.length ? `<div class="bs-sec"><span>Đã tìm gần đây</span><button type="button" class="bs-link" data-clr="1">Xóa</button></div><div class="bs-wrap">${chips(BSR)}</div>` : '';
   const h = $('#bsHome'); h.hidden = false;
-  h.innerHTML = rec + `<div class="bs-sec"><span>Gợi ý</span></div><div class="bs-wrap">${chips(['bình an', 'yêu thương', 'đức tin', 'hy vọng', 'tha thứ', 'kính sợ Chúa'])}</div>`
-    + `<div class="bs-sec"><span>Mẹo</span></div><ul class="bs-tips"><li>Gõ <b>không dấu</b> vẫn tìm được, ví dụ “binh an”.</li><li>Gõ tên sách và số, ví dụ <b>${esc(ex)}</b>, để mở thẳng đến đoạn đó.</li><li>Chạm <b>Cựu Ước</b> / <b>Tân Ước</b> ở dưới để thu hẹp phạm vi tìm.</li></ul>`;
+  h.innerHTML = BSR.length ? `<div class="bs-sec"><span>Đã tìm gần đây</span><button type="button" class="bs-link" data-clr="1">Xóa</button></div><div class="bs-wrap">${chips(BSR)}</div>` : '';
 }
 
 /* ---- Chạy tìm ---- */
@@ -2575,16 +2575,10 @@ function bsFacets(){
     + names.map(b => `<button type="button" class="bs-chip${bs.facet === b ? ' on' : ''}" data-fb="${esc(b)}">${esc(b)}<i>${cnt.get(b)}</i></button>`).join('');
   box.hidden = false; box.scrollLeft = left;
 }
-function bsEmptyHtml(q){
-  const acts = [];
-  if ($('#bsWord').checked) acts.push(['word', 'Bỏ “Nguyên từ” (tìm cả khi chữ nằm trong từ khác)']);
-  if ($('#bsMode').value === 'phrase' && /\s/.test(q.trim())) acts.push(['all', 'Tìm các câu có đủ các từ (không cần liền nhau)']);
-  if ($('#bsScope').value) acts.push(['scope', 'Tìm trong cả Kinh Thánh']);
-  return `<div class="bs-empty"><b>Không có kết quả</b><p>Thử gõ ngắn lại hoặc gõ không dấu${acts.length ? ', hoặc:' : '.'}</p>${acts.map(a => `<button type="button" class="bs-chip" data-act="${a[0]}">${a[1]}</button>`).join('')}</div>`;
-}
+function bsEmptyHtml(q){ return '<div class="bs-empty"><b>Không có kết quả</b></div>'; }
 function bsItemsHtml(a, b){
   return bs.res.slice(a, b).map((e, k) => { const i = a + k;
-    return `<div class="bsitem" role="button" tabindex="0" data-i="${i}"><div class="bs-ref"><b>${esc(e.b)} ${e.c}:${e.n}</b><button type="button" class="bs-cp" data-cp="${i}" aria-label="Sao chép câu này">${BS_ICO_COPY}</button></div>${bsHighlight(e, bsCtx.rx, bsCtx.plain)}</div>`; }).join('');
+    return `<div class="bsitem" role="button" tabindex="0" data-i="${i}"><div class="bs-ref"><span class="bs-no">${i + 1}.</span><b>${esc(e.b)} ${e.c}:${e.n}</b><button type="button" class="bs-cp" data-cp="${i}" aria-label="Sao chép câu này">${BS_ICO_COPY}</button></div>${bsHighlight(e, bsCtx.rx, bsCtx.plain)}</div>`; }).join('');
 }
 function bsMoreBtn(){
   const left = bs.res.length - bs.shown;
@@ -2654,7 +2648,6 @@ $('#bsQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeou
 $('#bsClear').onclick = () => { clearTimeout(bsTimer); $('#bsQ').value = ''; bsRun(); $('#bsQ').focus(); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && bsOn()) $('#bsClose').click(); });
 $('#bsModeSeg').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; BSO.mode = b.dataset.v; bsSaveO(); bsApplyOpts(); bsRun(); });
-$('#bsWordChip').onclick = () => { BSO.word = !$('#bsWord').checked; bsSaveO(); bsApplyOpts(); bsRun(); };
 $('#bsDock').addEventListener('click', e => { const b = e.target.closest('button[data-sc]'); if (!b) return; $('#bsScope').value = b.dataset.sc; bsSyncScope(); bsRun(); });
 $('#bsScope').onchange = () => { bsSyncScope(); bsRun(); };
 $('#bsGo').onclick = () => { const g = bs.go; if (g) bsOpen(g.book, g.ch || 1, g.v); };
@@ -5210,7 +5203,7 @@ $$('#bigSeg button').forEach(b => b.onclick = () => {
 
 const OB = [
   { ico:'Aa', aa:true, t:'Chọn cỡ chữ cho dễ đọc', d:'Bấm chọn cỡ chữ bạn thấy thoải mái. Bạn có thể đổi lại bất cứ lúc nào trong Cài đặt (nút Aa ở góc trên).', size:true },
-  { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh (không cần gõ dấu), hoặc gõ thẳng tên sách và số, ví dụ Gioan 3:16, để mở ngay.' },
+  { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh. Gõ đúng dấu: “tội” chỉ ra “tội”, “toi” chỉ ra “toi”.' },
   { ico:'👆', t:'Vuốt để lật chương', d:'Vuốt ngón tay sang trái để sang chương sau, vuốt sang phải để về chương trước, như lật trang sách giấy.' },
   { ico:'✍️', t:'Chạm giữ một câu', d:'Giữ ngón tay lên một câu khoảng nửa giây để đánh dấu chỗ đang đọc, sao chép, chia sẻ thành ảnh hoặc viết bài học cá nhân.' },
   { ico:'📄', t:'Chế độ Trang giấy', d:'Bấm biểu tượng tờ giấy để đọc như sách in: chữ đen trên nền giấy, dễ đọc dưới nắng. Vuốt sang trái hoặc phải để lật trang.' }
