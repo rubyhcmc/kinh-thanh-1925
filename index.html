@@ -1187,7 +1187,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4187,7 +4187,9 @@ async function edMoveChapters(){
       try {
         const cur = (await dbGet('books', name)) || rec;
         cur.chapters = order.map(i => cur.chapters[i] || []);
+        while (cur.chapters.length && !(cur.chapters[cur.chapters.length - 1] || []).length) cur.chapters.pop();   // chương trống thừa ở cuối (vd chương 2–5 sau khi dời chương 5 lên 1) được bỏ, như khi xóa chương
         await dbPut('books', [cur]);
+        { const meta = (await dbAll('bookMeta')).find(m => m.name === name); if (meta){ meta.chapterCount = cur.chapters.length; await dbPut('bookMeta', [meta]); } }
         try { Object.keys(localStorage).filter(k => k.startsWith('kt.draft.' + name + '|')).forEach(k => localStorage.removeItem(k)); } catch(err){}
         await initBible(); await refreshStats(); markDirty();
         o.remove(); await edLoad(); edBookHint();
