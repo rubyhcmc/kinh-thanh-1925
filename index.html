@@ -493,6 +493,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .v.holding .vn{-webkit-text-stroke:0}
 .v.holding{transition:background-color .16s ease-out,box-shadow .16s ease-out}
 .v.holding.hb{background:var(--hl);box-shadow:0 0 0 4px var(--hl)}
+.vmenu-bg,.vmenu,.vmenu *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.vmenu-bg ::selection,.vmenu-bg::selection{background:transparent}
 @keyframes vmIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
 .vmenu{transform-origin:50% 0;animation:vmIn .13s ease-out;will-change:opacity,transform}
 @media (prefers-reduced-motion:reduce){.vmenu{animation:none}}
@@ -1194,7 +1196,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2282,6 +2284,7 @@ function showVerseMenu(n, x, y){
   if (!curBook) return;
   try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
   $$('.vmenu-bg').forEach(e => e.remove());
+  try { getSelection().removeAllRanges(); } catch(e){}
   const bg = document.createElement('div'); bg.className = 'vmenu-bg';
   bg.style.cssText = 'position:fixed;inset:0;z-index:60;background:transparent';
   const m = document.createElement('div'); m.className = 'vmenu';
@@ -2321,6 +2324,7 @@ function showVerseMenu(n, x, y){
     }
   });
   bg.addEventListener('contextmenu', e => e.preventDefault());
+  bg.addEventListener('selectstart', e => e.preventDefault());
 }
 
 /* Chạm giữ (cảm ứng + chuột) — nhạy hơn, mượt hơn, dùng chung cho trang chủ (cuộn) và trang giấy (lật) */
@@ -2367,6 +2371,10 @@ function showVerseMenu(n, x, y){
   root.addEventListener('mousemove', e => { if (timer && (Math.abs(e.clientX - sx) > MOUSE_TOL || Math.abs(e.clientY - sy) > MOUSE_TOL)) cancel(); });
   ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
   root.addEventListener('contextmenu', e => { if (e.target.closest('.v')) e.preventDefault(); });
+  // không để iOS/Android bôi đen chữ (và hiện thanh Sao chép · Tra cứu · Dịch) khi giữ hoặc khi menu đang mở
+  const noSel = () => { try { const g = getSelection(); if (g && g.rangeCount && (timer || fired || document.querySelector('.vmenu-bg'))) g.removeAllRanges(); } catch(e){} };
+  document.addEventListener('selectionchange', noSel);
+  root.addEventListener('selectstart', e => { if (e.target.closest && e.target.closest('.v')) e.preventDefault(); });
   // thả tay sau khi giữ không bị tính là chạm chọn câu
   root.addEventListener('click', e => { if (fired){ fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
