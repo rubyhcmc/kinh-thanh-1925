@@ -322,7 +322,10 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-wei
 /* Thanh sao chép câu */
 .copybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px);z-index:25;
   display:flex;gap:4px;padding:4px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:nowrap}
-.copybar .btn{border-radius:99px;padding:8px 16px;font-size:14px;border-color:transparent}
+.copybar .btn{border-radius:99px;padding:10px 12px;font-size:14px;border-color:transparent}
+.copybar .btn.note{color:var(--accent);font-weight:700}
+/* ô có ghi chú: gạch chấm dưới câu (không đổi độ rộng nên không làm dàn lại trang) */
+.v.ln{text-decoration:underline dotted var(--accent);text-decoration-thickness:1.5px;text-underline-offset:.3em;text-decoration-skip-ink:none}
 .copybar .btn:not(.primary){background:none;color:var(--muted)}
 /* Menu chạm giữ câu */
 .vmenu{position:fixed;z-index:61;min-width:260px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.32);overflow:hidden}
@@ -528,29 +531,67 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .fl-strip{position:absolute;top:0;bottom:0;width:46px;opacity:0;pointer-events:none;
   background:linear-gradient(to right,rgba(0,0,0,.38),rgba(0,0,0,0))}
 
-/* Cửa sổ trượt viết bài học cá nhân */
+/* Cửa sổ trượt viết ghi chú cá nhân (thiết kế lại: chữ to, nút lớn, tự lưu, gợi ý, thẻ, micro) */
 .lssheet{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .22s}
 .lssheet.open{opacity:1}
-.lspanel{width:100%;max-width:560px;height:min(86vh,86dvh);display:flex;flex-direction:column;background:var(--card);border-radius:20px 20px 0 0;overflow:hidden;transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom)}
+.lspanel{--lsfs:20px;width:100%;max-width:560px;height:min(92%,820px);display:flex;flex-direction:column;background:var(--card);border-radius:20px 20px 0 0;overflow:hidden;transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom)}
 .lssheet.open .lspanel{transform:none}
+.lssheet.kbo .lspanel{height:100%;border-radius:0;padding-bottom:0}
 .lsgrip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:9px auto 0;flex:none}
-.lstop{flex:none;padding:14px 20px 14px;background:var(--accent-soft);border-bottom:1px solid var(--line);max-height:38%;overflow:auto;overscroll-behavior:contain}
-.lsref{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.lstop{flex:none;padding:12px 18px 12px;background:var(--accent-soft);border-bottom:1px solid var(--line);max-height:40%;overflow:auto;overscroll-behavior:contain}
+.lssheet.kbo .lstop{max-height:26%;padding:8px 18px}
+.lsref{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.lsref #lsRef{min-width:0;flex:1}
+.lspin{flex:none;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 14px;min-height:38px;font:600 14px var(--sans)}
+.lspin.on{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .lspin.on{color:#1a1409}
+.lsrange{display:flex;gap:8px;margin:0 0 10px}
+.lsrange button{flex:1;min-height:42px;border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:10px;font:600 14px var(--sans)}
+.lsrange button:disabled{opacity:.3}
+.lssheet.kbo .lsrange{display:none}
 .lsverse{margin:0;font-family:var(--serif,Georgia,serif);font-style:italic;font-size:17px;line-height:1.65;color:var(--fg);text-align:justify;text-justify:inter-word;hyphens:auto}
-.lsverse::before{content:'“';color:var(--accent);font-size:1.4em;line-height:0;margin-right:.08em}
-.lsverse::after{content:'”';color:var(--accent);font-size:1.4em;line-height:0;margin-left:.05em}
-.lsbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 20px 8px}
-.lshead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
-.lshead .lslabel{margin:0}
+.lsverse.clamp,.lssheet.kbo .lsverse{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lsverse::before{content:'\201C';color:var(--accent);font-size:1.4em;line-height:0;margin-right:.08em}
+.lsverse::after{content:'\201D';color:var(--accent);font-size:1.4em;line-height:0;margin-left:.05em}
+.lsmore{border:0;background:none;color:var(--accent);font:600 15px var(--sans);padding:8px 0 0;min-height:36px}
+.lssheet.kbo .lsmore{display:none}
+.lsbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 18px 6px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.lshead{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-bottom:8px}
+.lshead .lslabel{margin:0;font-size:15px;color:var(--fg)}
+.lssaved{font:600 13px var(--sans);color:#2e7d32;min-width:0}
+[data-theme=dark] .lssaved{color:#81c784}
+.lshead .sp{flex:1}
+.lstool{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;min-height:42px;padding:0 12px;font:600 15px var(--sans)}
+.lstool.on{background:var(--danger);border-color:var(--danger);color:#fff}
+.lstool.aa{font-family:var(--serif);font-size:18px}
+.lskb{display:none}
+.lssheet.kbo .lskb{display:inline-block}
 .lslabel{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
-.lsbody textarea{flex:1;min-height:120px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;line-height:1.6;resize:none}
-.lsread{flex:1;min-height:120px;overflow:auto;overscroll-behavior:contain;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
-.lsrtxt{font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.7;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
-.lsrmeta{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font:12px var(--sans);color:var(--muted)}
+.lsprompts{flex:none;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 0 8px;margin:0 -18px;padding-left:18px;padding-right:18px}
+.lsprompts::-webkit-scrollbar{display:none}
+.lsprompts button{flex:none;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:999px;min-height:42px;padding:0 15px;font:600 15px var(--sans);white-space:nowrap}
+.lsprompts button:active{background:var(--accent);color:#fff}
+.lsprompts .lsph{flex:none;align-self:center;font:13px var(--sans);color:var(--muted);padding-right:2px}
+.lsbody textarea{flex:1 0 auto;min-height:150px;width:100%;box-sizing:border-box;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font-family:var(--serif);font-size:var(--lsfs);line-height:1.55;resize:none}
+.lssheet.kbo .lsbody textarea{min-height:90px;flex:1 1 auto}
+.lsread{flex:1 0 auto;min-height:120px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.lsrtxt{font-family:var(--serif);font-size:var(--lsfs);line-height:1.7;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
+.lsrmeta{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font:13px var(--sans);color:var(--muted)}
 .lsbody textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
-.lsbtns{flex:none;display:flex;gap:8px;padding:10px 20px 14px}
-.lsbtns .btn{flex:1;white-space:nowrap}
-.lsbtns .primary{flex:1.6}
+.lstags{flex:none;margin:10px 0 0}
+.lstags .lk{font:700 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lstags .row{display:flex;flex-wrap:wrap;gap:8px}
+.lstags button,.lstags span{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;min-height:42px;padding:0 14px;font:600 15px var(--sans);display:inline-flex;align-items:center}
+.lstags span{min-height:32px;padding:0 12px;font-size:14px;background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.lstags button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .lstags button.on{color:#1a1409}
+.lssheet.kbo .lstags,.lssheet.kbo .lslinks,.lssheet.kbo .lsnote{display:none}
+.lsbtns{flex:none;display:flex;gap:8px;padding:10px 18px 14px;border-top:1px solid var(--line);background:var(--card)}
+.lsbtns .btn{flex:1;white-space:nowrap;min-height:52px;font-size:16px;padding:0 8px}
+.lsbtns .primary{flex:1.7}
+.lsbtns .btn[hidden]{display:none}
+.lsnote{flex:none;margin:10px 0 4px;font-size:13px;color:var(--muted);line-height:1.45}
+html.lock-ls,html.lock-ls body{overscroll-behavior:none}
 
 .lstabs{display:flex;gap:6px;margin:0 0 10px}
 .lstabs button{flex:1;padding:8px 6px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--muted);font:600 13px var(--sans)}
@@ -575,6 +616,42 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .lslinks .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .lslinks button{border:1px solid var(--accent);border-radius:99px;background:var(--accent-soft);color:var(--accent);padding:5px 11px;font:600 12.5px var(--sans);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lslinks button.rel{border-color:var(--line);color:var(--fg);background:var(--bg);font-weight:500}
+.lslinks button{min-height:36px}
+/* danh sách ghi chú */
+.lswrite{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:12px 16px;border:0;border-radius:14px;background:var(--accent);color:#fff;text-align:left;font:700 17px/1.3 var(--sans);margin:0 0 12px}
+[data-theme=dark] .lswrite{color:#1a1409}
+.lswrite small{display:block;font-weight:500;font-size:13px;opacity:.9;margin-top:2px}
+.lswrite .ic{font-size:26px;flex:none}
+.lsfil{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:0 -2px 8px;padding:2px}
+.lsfil::-webkit-scrollbar{display:none}
+.lsfil button{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;min-height:42px;padding:0 14px;font:600 15px var(--sans);white-space:nowrap}
+.lsfil button i{font-style:normal;color:var(--muted);font-size:13px;margin-left:4px}
+.lsfil button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.lsfil button.on i{color:var(--accent)}
+.lssort{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}
+.lssort .seg button{padding:8px 12px;font-size:14px}
+.lsgh{font:700 13px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 2px 6px}
+.lscard{display:flex;margin:0 0 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);overflow:hidden}
+.lscard.pin{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.lscm{flex:1;min-width:0;text-align:left;border:0;background:none;padding:12px 6px 12px 14px;color:var(--fg)}
+.lscm b{display:block;font:700 16px var(--sans);color:var(--accent);margin-bottom:4px}
+.lscm .t{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--serif);font-size:max(17px,calc(var(--fs) - 2px));line-height:1.5;overflow-wrap:anywhere}
+.lscm small{display:block;margin-top:6px;font:13px var(--sans);color:var(--muted)}
+.lstg{display:inline-block;margin:6px 6px 0 0;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font:600 13px var(--sans)}
+.lscs{flex:none;display:flex;flex-direction:column;border-left:1px solid var(--line)}
+.lscs button{flex:1;min-width:56px;min-height:48px;border:0;background:none;font-size:22px;color:var(--muted)}
+.lscs button+button{border-top:1px solid var(--line)}
+.lscs button.on{color:var(--accent)}
+.lscs button:active{background:var(--accent-soft)}
+.lsrefl{margin:0 0 12px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--accent-soft),var(--card))}
+.lsrefl h5{margin:0 0 6px;font:700 13px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lsrefl p{margin:0 0 8px;font:italic 17px/1.55 var(--serif)}
+.lsrefl button{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;min-height:42px;padding:0 16px;font:600 15px var(--sans)}
+.lshow{margin:6px 0 0;padding:14px 16px;border:1px dashed var(--line);border-radius:14px;text-align:left;font:16px/1.6 var(--sans);color:var(--fg)}
+.lshow ol{margin:6px 0 0;padding-left:22px}
+.lshow li{margin:4px 0}
+.lsq{font-size:16px!important;min-height:46px}
+
 
 /* Chế độ Giấy: chia trang ngang, lật trang như tờ giấy; ẩn thanh đầu trang (chạm dải trên cùng để hiện) */
 .pgv{display:contents}
@@ -708,7 +785,7 @@ html[data-paper] .reader.print{text-align:justify}
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
     <button class="iconbtn" id="btnMarks" aria-label="Vị trí đã đánh dấu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v17l-6-4.2L6 21z"/></svg></button>
-    <button class="iconbtn" id="btnLessons" aria-label="Bài học cá nhân" style="position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg><span class="lsbadge" id="lsBadge" hidden></span></button>
+    <button class="iconbtn" id="btnLessons" aria-label="Ghi chú cá nhân" title="Ghi chú cá nhân" style="position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg><span class="lsbadge" id="lsBadge" hidden></span></button>
     <button class="iconbtn" id="btnPaper" aria-label="Chế độ Trang giấy" aria-pressed="false" title="Chế độ Trang giấy"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 19h3"/></svg></button>
     <button class="iconbtn aa" id="btnSettings" aria-label="Cài đặt">A<small>a</small></button>
   </div>
@@ -765,6 +842,7 @@ html[data-paper] .reader.print{text-align:justify}
 <div class="copybar" id="copyBar" hidden>
   <button class="btn" id="copyClear">Bỏ chọn</button>
   <button class="btn" id="copyImg">Ảnh</button>
+  <button class="btn note" id="copyNote">✎ Ghi chú</button>
   <button class="btn primary" id="copyGo">Sao chép</button>
 </div>
 
@@ -1065,23 +1143,31 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
   </div>
 </div>
 
-<!-- CỬA SỔ VIẾT BÀI HỌC CÁ NHÂN -->
+<!-- CỬA SỔ VIẾT GHI CHÚ CÁ NHÂN -->
 <div class="lssheet" id="lsSheet" hidden>
-  <div class="lspanel" role="dialog" aria-modal="true" aria-label="Viết bài học cá nhân">
+  <div class="lspanel" role="dialog" aria-modal="true" aria-label="Ghi chú cá nhân">
     <div class="lsgrip"></div>
-    <div class="lstop"><div class="lsref" id="lsRef"></div><p class="lsverse" id="lsVerse"></p></div>
-    <div class="lsbody">
-      <div class="lshead"><label class="lslabel" for="lsText" id="lsLbl">Bài học cá nhân</label><button type="button" class="sbtn" id="lsWord">📄 Xuất Word</button></div>
-      <textarea id="lsText" placeholder="Điều Chúa dạy bạn qua đoạn này…" autocomplete="off"></textarea>
+    <div class="lstop" id="lsTop">
+      <div class="lsref"><span id="lsRef"></span><button type="button" class="lspin" id="lsPin" aria-pressed="false">📌 Ghim</button></div>
+      <div class="lsrange" id="lsRange"><button type="button" id="lsLess">－ Bớt một câu</button><button type="button" id="lsMoreV">＋ Thêm câu kế</button></div>
+      <p class="lsverse" id="lsVerse"></p>
+      <button type="button" class="lsmore" id="lsMore" hidden>Xem hết đoạn ▾</button>
+    </div>
+    <div class="lsbody" id="lsBody">
+      <div class="lshead"><label class="lslabel" for="lsText" id="lsLbl">Ghi chú của bạn</label><span class="lssaved" id="lsSaved" aria-live="polite"></span><span class="sp"></span>
+        <button type="button" class="lstool" id="lsMic" hidden>🎤 Nói</button><button type="button" class="lstool aa" id="lsAa" aria-label="Đổi cỡ chữ ghi chú">Aa</button><button type="button" class="lstool lskb" id="lsKb">⌨ Ẩn</button></div>
+      <div class="lsprompts" id="lsPrompts" aria-label="Gợi ý mở đầu"></div>
+      <textarea id="lsText" placeholder="Bấm vào đây để viết, hoặc chọn một gợi ý ở trên…" autocomplete="off"></textarea>
       <div class="lsread" id="lsRead" hidden></div>
+      <div class="lstags" id="lsTags"></div>
       <div class="lslinks" id="lsLinks" hidden></div>
-      <p class="lsnote">📍 Ghi chú được lưu trong máy, xem lại ở nút <b>✎ Bài học cá nhân</b> trên đầu trang.</p>
+      <p class="lsnote" id="lsNote">💾 Ghi chú tự động lưu ngay khi bạn viết. Xem lại ở nút <b>✎</b> trên đầu trang.</p>
     </div>
     <div class="lsbtns">
-      <button class="btn danger" id="lsDel" hidden>Xóa</button>
-      <button class="btn" id="lsShare">Chia sẻ</button>
-      <button class="btn" id="lsClose">Đóng</button>
-      <button class="btn primary" id="lsSave">Lưu ghi chú</button>
+      <button class="btn danger" id="lsDel" hidden>🗑 Xóa</button>
+      <button class="btn" id="lsShare">↗ Chia sẻ</button>
+      <button class="btn" id="lsClose" hidden>Đóng</button>
+      <button class="btn primary" id="lsSave">✔ Xong</button>
       <button class="btn primary" id="lsEdit" hidden>✎ Sửa</button>
     </div>
   </div>
@@ -1190,7 +1276,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1900,6 +1986,7 @@ async function restoreResume(){                                  // gọi khi m�
 function markBookmarks(){
   if (window.ktFlipDirty) window.ktFlipDirty();
   markResume(false);
+  try { markNotes(); } catch(e){}
   $$('#bibleText .v.bm').forEach(e => e.classList.remove('bm'));
   if (!curBook) return;
   BM.forEach(b => {
@@ -1973,7 +2060,22 @@ $('#btnLessons').onclick = openLessons;
 
 /* Bài học cá nhân: cửa sổ viết ghi chú cho một câu (lưu trong máy: kt.lessons) */
 let LS = []; try { LS = JSON.parse(localStorage.getItem('kt.lessons') || '[]'); } catch(e){}
-const saveLS = () => { try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được bài học'); } lsBadge(); };
+let lnSig = '';
+function markNotes(){                                         // gạch chấm dưới các câu đã có ghi chú
+  $$('#bibleText .v.ln').forEach(e => e.classList.remove('ln'));
+  const ks = [];
+  if (curBook) LS.forEach(x => {
+    if (x.book !== curBook.name || x.ch !== S.chapter) return;
+    (x.ns || [x.n]).forEach(k => { const el = $('#v' + k); if (el){ el.classList.add('ln'); ks.push(k); } });
+  });
+  lnSig = (curBook ? curBook.name + '|' + S.chapter + '|' : '') + ks.sort((a, b) => a - b).join(',');
+}
+const saveLS = () => {
+  try { localStorage.setItem('kt.lessons', JSON.stringify(LS)); } catch(e){ toast('Không lưu được ghi chú: bộ nhớ máy có thể đã đầy'); }
+  lsBadge();
+  const before = lnSig; markNotes();
+  if (lnSig !== before){ try { if (window.ktFlipDirty) window.ktFlipDirty(); pgPrepClear(true); } catch(e){} }
+};
 function lsBadge(){ const b = $('#lsBadge'); if (!b) return; b.hidden = !LS.length; b.textContent = LS.length > 99 ? '99+' : LS.length; }
 lsBadge();
 /* Hành trình đọc: ghi lại chương đã đọc mỗi ngày (kt.reads) */
@@ -2061,22 +2163,113 @@ function lsRender(){                                         // chip liên kết
   if (rel.length) h += `<div class="lk">📝 Ghi chú liên quan</div><div class="chips">${rel.map((x, i) => `<button class="rel" data-rel="${i}">${esc(x.book)} ${x.ch}:${esc(lsKey(x))} · ${esc(x.text.slice(0, 24))}${x.text.length > 24 ? '…' : ''}</button>`).join('')}</div>`;
   box.innerHTML = h; box.hidden = !h;
 }
+const NOTE_TAGS = [
+  { id:'taon',  ico:'💛', t:'Tạ ơn' },
+  { id:'caunguyen', ico:'🙏', t:'Cầu nguyện' },
+  { id:'apdung', ico:'🌱', t:'Áp dụng' },
+  { id:'thacmac', ico:'❓', t:'Thắc mắc' },
+  { id:'giadinh', ico:'👨‍👩‍👧', t:'Gia đình' },
+  { id:'anui', ico:'🕊️', t:'An ủi' }
+];
+const NOTE_PROMPTS = ['Điều con nhận ra:', 'Chúa muốn nói với con:', 'Con xin tạ ơn Chúa vì:', 'Con xin vâng. Hôm nay con sẽ', 'Con xin cầu nguyện cho:', 'Điều con chưa hiểu:'];
+const tagDef = id => NOTE_TAGS.find(t => t.id === id);
+const tagTxt = x => (x.tags || []).map(id => { const t = tagDef(id); return t ? t.ico + ' ' + t.t : ''; }).filter(Boolean);
+const noteRef = x => `${x.book} ${x.ch}:${lsKey(x)}`;
+const quoteOfVerses = (ns, vs) => ns.map(k => { const v = vs.find(x => x.n === k); return v ? String(v.t).replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
+const noteAt = n => curBook && LS.find(x => x.book === curBook.name && x.ch === S.chapter && (x.ns || [x.n]).includes(n));
+/* Mở ghi chú cho một hoặc nhiều câu của chương đang đọc: đã có ghi chú trùng/chạm tới các câu này thì mở lại ghi chú đó */
+function lsOpen(ns, back){
+  if (!curBook) return;
+  const book = curBook.name, ch = S.chapter; ns = [...ns].sort((a, b) => a - b);
+  const key = compressRange(ns);
+  let hit = LS.find(x => x.book === book && x.ch === ch && compressRange(x.ns || [x.n]) === key);
+  if (!hit) hit = LS.find(x => x.book === book && x.ch === ch && (x.ns || [x.n]).some(k => ns.includes(k)));
+  window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book, ch, ns:hit ? (hit.ns || [hit.n]) : ns, back:!!back } }));
+}
+async function lsExportAll(){
+  if (!LS.length) return toast('Chưa có ghi chú nào để xuất');
+  try {
+    const ord = new Map(bibleMeta.map((m, i) => [m.name, i])), cache = new Map(), items = [];
+    const arr = [...LS].sort((a, b) => (ord.has(a.book) ? ord.get(a.book) : 999) - (ord.has(b.book) ? ord.get(b.book) : 999) || a.ch - b.ch || (a.ns || [a.n])[0] - (b.ns || [b.n])[0]);
+    for (const x of arr){
+      if (!cache.has(x.book)) cache.set(x.book, await dbGet('books', x.book));
+      const rec = cache.get(x.book), vs = (rec && rec.chapters[x.ch - 1]) || [], tg = tagTxt(x);
+      items.push({ ref:noteRef(x), quote:quoteOfVerses(x.ns || [x.n], vs), text:x.text + (tg.length ? '\n(' + tg.join(' · ') + ')' : ''), at:x.at });
+    }
+    const st = await saveSmart([docxFile(items, 'Ghi chú Kinh Thánh của tôi', 'ghi-chu-kinh-thanh-' + dayKey() + '.docx')]);
+    if (st === 'default') toast('📄 Đã tạo file Word');
+  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
+}
 function openLessons(){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
-  let tab = 'notes', q = '';
-  o.innerHTML = `<div class="sheet"><h3>✍️ Bài học cá nhân</h3>
+  let tab = 'notes', q = '', fil = 'all', sort = 'new';
+  try { if (localStorage.getItem('kt.lsSort') === 'book') sort = 'book'; } catch(e){}
+  o.innerHTML = `<div class="sheet"><h3>✍️ Ghi chú của tôi</h3>
     <div class="lstabs"><button data-tab="notes" class="on">Ghi chú</button><button data-tab="stats">Hành trình</button></div>
-    <input class="lsq" id="lsQ" type="search" placeholder="Tìm trong ghi chú (không cần gõ dấu)…" autocomplete="off">
+    <div id="lsCtl">
+      <div id="lsWriteBox"></div>
+      <input class="lsq" id="lsQ" type="search" placeholder="🔍 Tìm trong ghi chú (không cần gõ dấu)…" autocomplete="off">
+      <div class="lsfil" id="lsFil"></div>
+      <div class="lssort" id="lsSort"></div>
+    </div>
     <div id="lsList"></div>
-    <div class="btns"><button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
+    <div class="btns"><button class="btn" data-wordall="1" id="lsWordAll">📄 Xuất tất cả ra Word</button><button class="btn primary" data-close="1" style="margin-left:auto;min-height:48px;padding:0 24px">Đóng</button></div></div>`;
   const list = o.querySelector('#lsList'), inp = o.querySelector('#lsQ');
-  const drawNotes = () => {
-    const toks = fold(q).split(/\s+/).filter(Boolean);
-    const rows = LS.map((b, i) => ({ b, i })).filter(({ b }) => { const hay = fold(`${b.book} ${b.ch}:${lsKey(b)} ${b.text}`).replace(/-/g, ' '); return toks.every(t => hay.includes(t)); });
-    list.innerHTML = (q.trim() ? `<p class="lscount">${rows.length} / ${LS.length} ghi chú</p>` : '') + (rows.length
-      ? rows.map(({ b, i }) => `<div class="bmitem"><button class="bmmain" data-edit="${i}"><b>${esc(b.book)} ${b.ch}:${esc(lsKey(b))}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-go="${i}" aria-label="Đến câu" title="Đến câu">📖</button></div>`).join('')
-      : `<div class="empty" style="padding:28px 10px"><b>${LS.length ? 'Không tìm thấy ghi chú nào' : 'Chưa có bài học nào'}</b>${LS.length ? 'Thử từ khóa khác.' : 'Chạm vào câu (hoặc nhiều câu) rồi nhấn giữ để viết.'}</div>`);
+  const here = x => curBook && x.book === curBook.name && x.ch === S.chapter;
+  const drawCtl = () => {
+    const wb = o.querySelector('#lsWriteBox');
+    if (curBook){
+      const n = parseInt(curVerseNo(), 10) || 1;
+      wb.innerHTML = `<button class="lswrite" data-new="${n}"><span class="ic">✍️</span><span>Viết ghi chú mới<small>Cho câu đang đọc: ${esc(curBook.name)} ${S.chapter}:${n}</small></span></button>`;
+    } else wb.innerHTML = '';
+    const chips = [['all', 'Tất cả', LS.length]];
+    const pinC = LS.filter(x => x.pin).length, hereC = LS.filter(here).length;
+    if (pinC) chips.push(['pin', '📌 Đã ghim', pinC]);
+    if (hereC && curBook) chips.push(['here', '📖 Chương đang đọc', hereC]);
+    NOTE_TAGS.forEach(t => { const c = LS.filter(x => (x.tags || []).includes(t.id)).length; if (c) chips.push(['t:' + t.id, t.ico + ' ' + t.t, c]); });
+    if (!chips.some(c => c[0] === fil)) fil = 'all';
+    const fb = o.querySelector('#lsFil'), left = fb.scrollLeft;
+    fb.hidden = chips.length < 2 || LS.length < 2;
+    fb.innerHTML = chips.map(c => `<button data-fb="${esc(c[0])}" class="${fil === c[0] ? 'on' : ''}">${esc(c[1])}<i>${c[2]}</i></button>`).join(''); fb.scrollLeft = left;
+    const sb = o.querySelector('#lsSort'); sb.hidden = LS.length < 2;
+    sb.innerHTML = `<span style="font:600 14px var(--sans);color:var(--muted)">Sắp xếp:</span><div class="seg"><button data-sort="new" class="${sort === 'new' ? 'on' : ''}">Mới nhất</button><button data-sort="book" class="${sort === 'book' ? 'on' : ''}">Theo sách</button></div>`;
+    inp.hidden = LS.length < 2;
   };
+  const reflection = () => {
+    if (q.trim() || fil !== 'all' || LS.length < 3) return '';
+    const old = LS.filter(x => Date.now() - (x.at || 0) > 3 * 864e5); if (!old.length) return '';
+    let h = 7; const k = dayKey(); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+    const x = old[h % old.length], t = String(x.text).replace(/\s+/g, ' ').trim();
+    return `<div class="lsrefl"><h5>🕊️ Nhìn lại · viết ${esc(rsAgo(x.at))}</h5><p>“${esc(t.length > 140 ? t.slice(0, 140).replace(/\s+\S*$/, '') + '…' : t)}”</p><button data-edit="${LS.indexOf(x)}">Mở lại: ${esc(noteRef(x))}</button></div>`;
+  };
+  const card = ({ b, i }) => `<div class="lscard${b.pin ? ' pin' : ''}"><button class="lscm" data-edit="${i}"><b>${b.pin ? '📌 ' : ''}${esc(noteRef(b))}</b><span class="t">${esc(b.text)}</span>${tagTxt(b).map(t => `<span class="lstg">${esc(t)}</span>`).join('')}<small>Viết ${esc(rsAgo(b.at))}</small></button><div class="lscs"><button data-pin="${i}" class="${b.pin ? 'on' : ''}" aria-label="${b.pin ? 'Bỏ ghim' : 'Ghim lên đầu'}">📌</button><button data-go="${i}" aria-label="Đến câu trong Kinh Thánh">📖</button></div></div>`;
+  const drawList = () => {
+    if (!LS.length){
+      list.innerHTML = `<div class="lshow"><b>Chưa có ghi chú nào.</b> Cách viết rất đơn giản:<ol><li>Khi đọc, <b>chạm vào một câu</b> (chạm nhiều câu cũng được).</li><li>Bấm nút <b>✎ Ghi chú</b> hiện ở dưới màn hình.</li><li>Viết hoặc bấm <b>🎤 Nói</b> để đọc cho máy gõ. Máy tự lưu cho bạn.</li></ol></div>`;
+      return;
+    }
+    const toks = fold(q).split(/\s+/).filter(Boolean);
+    let rows = LS.map((b, i) => ({ b, i })).filter(({ b }) => {
+      if (fil === 'pin' && !b.pin) return false;
+      if (fil === 'here' && !here(b)) return false;
+      if (fil.startsWith('t:') && !(b.tags || []).includes(fil.slice(2))) return false;
+      const hay = fold(`${noteRef(b)} ${b.text} ${tagTxt(b).join(' ')}`).replace(/-/g, ' ');
+      return toks.every(t => hay.includes(t));
+    });
+    if (sort === 'book'){
+      const ord = new Map(bibleMeta.map((m, i) => [m.name, i]));
+      rows.sort((a, c) => (ord.has(a.b.book) ? ord.get(a.b.book) : 999) - (ord.has(c.b.book) ? ord.get(c.b.book) : 999) || a.b.ch - c.b.ch || (a.b.ns || [a.b.n])[0] - (c.b.ns || [c.b.n])[0]);
+    } else rows.sort((a, c) => (c.b.pin ? 1 : 0) - (a.b.pin ? 1 : 0) || (c.b.at || 0) - (a.b.at || 0));
+    let html = reflection();
+    if (q.trim() || fil !== 'all') html += `<p class="lscount">${rows.length} / ${LS.length} ghi chú</p>`;
+    if (!rows.length) html += `<div class="empty" style="padding:24px 10px"><b>Không tìm thấy ghi chú nào</b>Thử từ khóa khác, hoặc bấm “Tất cả”.</div>`;
+    else if (sort === 'book'){
+      let last = '';
+      rows.forEach(r => { if (r.b.book !== last){ last = r.b.book; html += `<div class="lsgh">${esc(last)}</div>`; } html += card(r); });
+    } else html += rows.map(card).join('');
+    list.innerHTML = html;
+  };
+  const drawNotes = () => { drawCtl(); drawList(); };
   let hjTok = 0;
   const HJQ = ['Mỗi ngày một chút, Lời CHÚA ở lại trong bạn.', 'Đọc chậm lại, để Lời thấm vào lòng.', 'Một trang hôm nay, một niềm vui lâu bền.', 'Bình an bắt đầu từ một câu Kinh Thánh.', 'Hãy để Lời CHÚA là tiếng đầu tiên trong ngày.', 'Kiên trì từng ngày, bạn đang đi rất xa.'];
   const drawStats = async () => {
@@ -2133,78 +2326,233 @@ function openLessons(){
     const cb = list.querySelector('#hjComm');
     if (cb) ctRender(cb);
   };
-  const draw = () => { inp.hidden = tab !== 'notes'; tab === 'notes' ? drawNotes() : drawStats(); o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab)); };
+  const draw = () => {
+    o.querySelector('#lsCtl').hidden = tab !== 'notes'; o.querySelector('#lsWordAll').hidden = tab !== 'notes';
+    tab === 'notes' ? drawNotes() : drawStats();
+    o.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  };
   draw();
-  inp.addEventListener('input', () => { q = inp.value; drawNotes(); });
+  inp.addEventListener('input', () => { q = inp.value; drawList(); });
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const tb = e.target.closest('[data-tab]'); if (tb){ tab = tb.dataset.tab; draw(); return; }
     if (e.target.closest('[data-plan]')){ openPlan({ onClose:() => { if (o.isConnected && tab === 'stats') draw(); }, onGo:() => o.remove() }); return; }
+    if (e.target.closest('[data-wordall]')){ lsExportAll(); return; }
+    const nw = e.target.closest('[data-new]'); if (nw){ o.remove(); lsOpen([+nw.dataset.new], true); return; }
+    const fb = e.target.closest('[data-fb]'); if (fb){ fil = fb.dataset.fb; drawCtl(); drawList(); return; }
+    const so = e.target.closest('[data-sort]'); if (so){ sort = so.dataset.sort; try { localStorage.setItem('kt.lsSort', sort); } catch(err){} drawCtl(); drawList(); return; }
+    const pn = e.target.closest('[data-pin]');
+    if (pn){ const b = LS[+pn.dataset.pin]; if (b){ if (b.pin) delete b.pin; else b.pin = true; b.at = Date.now(); saveLS(); drawNotes(); toast(b.pin ? '📌 Đã ghim lên đầu danh sách' : 'Đã bỏ ghim'); } return; }
     const ed = e.target.closest('[data-edit]'), g = e.target.closest('[data-go]');
     if (ed){ const b = LS[+ed.dataset.edit]; o.remove(); if (b) window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:b.book, ch:b.ch, ns:b.ns || [b.n], back:true } })); return; }
-    if (g){ const b = LS[+g.dataset.go]; o.remove(); if (b) await goBookmark({ book:b.book, ch:b.ch, n:b.n }); }
+    if (g){ const b = LS[+g.dataset.go]; o.remove(); if (b) await goBookmark({ book:b.book, ch:b.ch, n:(b.ns || [b.n])[0] }); }
   });
   document.body.appendChild(o);
 }
 const lsEl = $('#lsSheet'), lsTa = $('#lsText');
-let lsCur = null;
-function lsClose(){ const back = lsCur && lsCur.back; lsEl.classList.remove('open'); if (back) setTimeout(openLessons, 240); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
-/* Hai chế độ: 'view' = xem bài học hoàn chỉnh · 'edit' = soạn thảo */
-function lsMode(m){
-  const v = m === 'view'; lsCur.mode = m;
-  lsTa.hidden = v; $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
-  $('#lsLbl').textContent = v ? 'Bài học của bạn' : 'Bài học cá nhân';
-  if (v){
-    const o = lsCur.old;
-    $('#lsRead').innerHTML = `<div class="lsrtxt">${esc(lsTa.value.trim())}</div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
-    $('#lsRead').scrollTop = 0; try { lsTa.blur(); } catch(e){}
+let lsCur = null, lsAT = 0, lsRT = 0;
+const LS_FS = [19, 22, 26]; let lsFsI = 0;
+try { lsFsI = Math.max(0, Math.min(LS_FS.length - 1, parseInt(localStorage.getItem('kt.lsfs'), 10) || 0)); } catch(e){}
+const lsApplyFs = () => { $('.lspanel', lsEl).style.setProperty('--lsfs', LS_FS[lsFsI] + 'px'); $('#lsAa').textContent = lsFsI === 0 ? 'Aa' : lsFsI === 1 ? 'Aa+' : 'Aa++'; };
+lsApplyFs();
+const SR_API = window.SpeechRecognition || window.webkitSpeechRecognition;
+let lsRec = null, lsListening = false;
+
+/* Khung ghi chú luôn khít vùng nhìn thấy phía trên bàn phím: ô viết và nút “Xong” không bao giờ bị bàn phím che */
+function lsVV(){
+  const vv = window.visualViewport; if (lsEl.hidden || !vv) return;
+  lsEl.style.top = vv.offsetTop + 'px'; lsEl.style.height = vv.height + 'px'; lsEl.style.bottom = 'auto';
+  lsEl.classList.toggle('kbo', innerHeight - vv.height > 120);
+}
+if (window.visualViewport){ visualViewport.addEventListener('resize', lsVV); visualViewport.addEventListener('scroll', lsVV); }
+
+function lsVoiceStop(){ try { if (lsRec && lsListening) lsRec.stop(); } catch(e){} lsListening = false; const m = $('#lsMic'); if (m){ m.classList.remove('on'); m.textContent = '🎤 Nói'; } }
+function lsClose(){
+  clearTimeout(lsAT);
+  if (lsCur && lsCur.mode === 'edit' && !lsCur.deleted) lsPersist(true);
+  lsVoiceStop();
+  const back = lsCur && lsCur.back;
+  lsEl.classList.remove('open'); try { lsTa.blur(); } catch(e){}
+  if (back) setTimeout(openLessons, 240);
+  setTimeout(() => { lsEl.hidden = true; lsEl.style.top = lsEl.style.height = lsEl.style.bottom = ''; lsEl.classList.remove('kbo'); }, 220);
+}
+function lsSavedUI(){ const d = new Date(); $('#lsSaved').textContent = `✔ Đã lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+const lsAuto = ms => { clearTimeout(lsAT); lsAT = setTimeout(() => lsPersist(true), ms == null ? 800 : ms); };
+function lsOnlyPrompts(t){ return NOTE_PROMPTS.reduce((a, p) => a.split(p).join(''), t).replace(/[\s:–.\-]+/g, '') === ''; }
+function lsPersist(silent){                                   // lưu ghi chú đang soạn; trả về true nếu có nội dung hợp lệ
+  const c = lsCur; if (!c || c.deleted) return false;
+  const t = lsTa.value.trim(); if (!t || lsOnlyPrompts(t)) return false;
+  const tags = c.tags.slice(), pin = !!c.pin; let changed = false;
+  if (c.old){
+    const o = c.old;
+    if (o.text !== t || (o.ns || [o.n]).join(',') !== c.ns.join(',') || (o.tags || []).join(',') !== tags.join(',') || !!o.pin !== pin){
+      o.text = t; o.ns = c.ns.slice(); o.n = c.ns[0]; o.tags = tags; if (pin) o.pin = true; else delete o.pin; o.at = Date.now(); changed = true;
+    }
+  } else {
+    const o = { book:c.book, ch:c.ch, n:c.ns[0], ns:c.ns.slice(), text:t, at:Date.now() };
+    if (tags.length) o.tags = tags; if (pin) o.pin = true;
+    LS.unshift(o); c.old = o; changed = true; $('#lsDel').hidden = false;
   }
+  if (changed){ saveLS(); lsSavedUI(); }
+  return true;
+}
+function lsSetQuote(){
+  const c = lsCur, v = $('#lsVerse'), long = c.quote.length > 170;
+  v.textContent = c.quote; v.classList.toggle('clamp', long && !c.qOpen);
+  const m = $('#lsMore'); m.hidden = !long; m.textContent = c.qOpen ? 'Thu gọn ▴' : 'Xem hết đoạn ▾';
+}
+function lsRangeUI(){
+  const c = lsCur, rg = $('#lsRange'); rg.hidden = c.mode === 'view' || !c.verses.length;
+  if (rg.hidden) return;
+  const max = Math.max(...c.ns), hasNext = c.verses.some(v => v.n > max);
+  $('#lsLess').disabled = c.ns.length < 2; $('#lsMoreV').disabled = !hasNext;
+}
+function lsSetNs(ns){
+  const c = lsCur, key = compressRange(ns);
+  if (LS.some(x => x !== c.old && x.book === c.book && x.ch === c.ch && compressRange(x.ns || [x.n]) === key)) return toast('Đã có một ghi chú khác cho đoạn này');
+  c.ns = ns; c.n = ns[0]; c.key = key; c.quote = quoteOfVerses(ns, c.verses) || c.quote;
+  $('#lsRef').textContent = `${c.book} ${c.ch}:${key}`; lsSetQuote(); lsRangeUI(); lsRender(); lsAuto(0);
+}
+function lsPinUI(){ const p = $('#lsPin'), on = !!lsCur.pin; p.classList.toggle('on', on); p.setAttribute('aria-pressed', on ? 'true' : 'false'); p.textContent = on ? '📌 Đã ghim' : '📌 Ghim'; }
+function lsTagsDraw(){
+  const c = lsCur, box = $('#lsTags');
+  if (c.mode === 'view'){ box.innerHTML = c.tags.length ? `<div class="row">${c.tags.map(id => { const t = tagDef(id); return t ? `<span>${t.ico} ${esc(t.t)}</span>` : ''; }).join('')}</div>` : ''; return; }
+  box.innerHTML = `<div class="lk">Gắn thẻ cho dễ tìm (không bắt buộc)</div><div class="row">${NOTE_TAGS.map(t => `<button type="button" data-tag="${t.id}" class="${c.tags.includes(t.id) ? 'on' : ''}" aria-pressed="${c.tags.includes(t.id)}">${t.ico} ${esc(t.t)}</button>`).join('')}</div>`;
+}
+function lsPromptsDraw(){
+  $('#lsPrompts').innerHTML = `<span class="lsph">💡 Gợi ý:</span>` + NOTE_PROMPTS.map((p, i) => `<button type="button" data-p="${i}">${esc(p.replace(/:$/, ''))}</button>`).join('');
+}
+/* Hai chế độ: 'view' = đọc ghi chú đã viết · 'edit' = soạn thảo */
+function lsMode(m){
+  const v = m === 'view', c = lsCur; c.mode = m;
+  lsTa.hidden = v; $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v; $('#lsClose').hidden = !v;
+  $('#lsPrompts').hidden = v; $('#lsMic').hidden = v || !SR_API;
+  if (v){
+    const o = c.old;
+    $('#lsRead').innerHTML = `<div class="lsrtxt">${esc(lsTa.value.trim())}</div>` + (o ? `<div class="lsrmeta">Viết ${esc(rsAgo(o.at))} · cập nhật ${esc(bmWhen(o.at))}</div>` : '');
+    $('#lsRead').scrollTop = 0; $('#lsBody').scrollTop = 0; try { lsTa.blur(); } catch(e){}
+    lsVoiceStop();
+  } else lsPromptsDraw();
+  lsTagsDraw(); lsRangeUI();
 }
 function lsShareText(){
-  const c = lsCur; return `${c.book} ${c.ch}:${c.key}\n“${c.quote}”\n\n${lsTa.value.trim()}`;
+  const c = lsCur, tg = c.tags.map(id => { const t = tagDef(id); return t ? t.ico + ' ' + t.t : ''; }).filter(Boolean);
+  return `${c.book} ${c.ch}:${c.key}\n“${c.quote}”\n\n${lsTa.value.trim()}` + (tg.length ? '\n\n' + tg.join(' · ') : '');
+}
+function lsInsert(txt){
+  let v = lsTa.value; if (v && !/[\s]$/.test(v)) v += ' ';
+  lsTa.value = v + txt; const n = lsTa.value.length; try { lsTa.setSelectionRange(n, n); } catch(e){}
+  lsTa.scrollTop = lsTa.scrollHeight; lsAuto(); clearTimeout(lsRT); lsRT = setTimeout(lsRender, 250);
 }
 window.addEventListener('openLesson', e => {
-  const d = e.detail || {}, book = d.book, ch = d.ch, ns = (d.ns || [d.n]).filter(Boolean);
+  const d = e.detail || {}, book = d.book, ch = d.ch, ns = (d.ns || [d.n]).filter(Boolean).sort((a, b) => a - b);
   if (!ns.length) return;
-  const key = compressRange(ns), n = ns[0];
-  const data = (curBook && curBook.name === book && curBook.chapters[ch - 1]) || [];
-  let quote = ns.map(k => { const v = data.find(x => x.n === k); if (v) return v.t.replace(/\s+/g, ' ').trim(); const el = $('#v' + k); return el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
+  const key = compressRange(ns);
+  const verses = (curBook && curBook.name === book && curBook.chapters[ch - 1]) || [];
+  let quote = quoteOfVerses(ns, verses);
+  if (!quote) quote = ns.map(k => { const el = $('#v' + k); return el ? el.textContent.replace(/^\s*\d+\s*/, '').replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim() : ''; }).filter(Boolean).join(' ');
   const old = LS.find(x => x.book === book && x.ch === ch && compressRange(x.ns || [x.n]) === key);
-  lsCur = { book, ch, n, ns, key, quote, old, back:!!d.back };
+  const me = lsCur = { book, ch, n:ns[0], ns, key, verses, quote, old, back:!!d.back, tags:old ? (old.tags || []).filter(id => tagDef(id)) : [], pin:old ? !!old.pin : false, qOpen:false, deleted:false, mode:'edit' };
+  if (!verses.length) dbGet('books', book).then(rec => {          // mở từ danh sách (không đang ở chương này): nạp câu để có thể “Thêm câu kế”
+    if (lsCur !== me) return;
+    const vs = (rec && rec.chapters[ch - 1]) || []; me.verses = vs;
+    if (!me.quote) me.quote = quoteOfVerses(ns, vs);
+    lsSetQuote(); lsRangeUI();
+  }).catch(() => {});
   $('#lsRef').textContent = `${book} ${ch}:${key}`;
-  $('#lsVerse').textContent = quote;
   lsTa.value = old ? old.text : '';
-  $('#lsDel').hidden = !old;
+  $('#lsDel').hidden = !old; $('#lsSaved').textContent = ''; lsPinUI(); lsSetQuote(); lsApplyFs();
   lsRender();
-  lsMode(old ? 'view' : 'edit');                                // bài học cũ: mở chế độ xem · bài học mới: mở chế độ soạn
-  lsEl.hidden = false; void lsEl.offsetWidth; lsEl.classList.add('open');
-  if (!old) setTimeout(() => lsTa.focus(), 280);
+  lsMode(old ? 'view' : 'edit');                                // ghi chú cũ: mở để ĐỌC · ghi chú mới: mở để VIẾT
+  lsEl.hidden = false; void lsEl.offsetWidth; lsEl.classList.add('open'); lsVV(); setTimeout(lsVV, 120);
+  if (!old) setTimeout(() => { if (lsCur === me && me.mode === 'edit') lsTa.focus(); }, 300);
 });
 lsEl.addEventListener('click', e => { if (e.target === lsEl) lsClose(); });
 $('#lsClose').onclick = lsClose;
-function lsPersist(){                                         // lưu ghi chú đang soạn; trả về true nếu có lưu
-  const t = lsTa.value.trim(); if (!t) return false;
-  const { book, ch, n, ns, old } = lsCur;
-  if (old){ if (old.text === t) return true; old.text = t; old.at = Date.now(); } else { const o = { book, ch, n, ns, text:t, at:Date.now() }; LS.unshift(o); lsCur.old = o; $('#lsDel').hidden = false; }
-  saveLS(); return true;
-}
-$('#lsSave').onclick = () => {
-  if (!lsPersist()){ toast('Hãy viết nội dung ghi chú'); lsTa.focus(); return; }
-  toast('✍️ Đã lưu vào Bài học cá nhân'); lsMode('view'); lsRender();      // lưu xong chuyển ngay sang xem nội dung hoàn chỉnh
+$('#lsSave').onclick = () => {                                // Xong: lưu rồi đóng (luôn tự lưu, không bao giờ mất chữ)
+  clearTimeout(lsAT);
+  if (lsTa.value.trim() && lsPersist(true)) toast('✔ Đã lưu ghi chú');
+  lsClose();
 };
 $('#lsEdit').onclick = () => {
-  lsMode('edit'); lsTa.focus();
+  lsMode('edit'); lsRender(); lsTa.focus();
   try { const n = lsTa.value.length; lsTa.setSelectionRange(n, n); } catch(e){}
 };
-let lsRT; lsTa.addEventListener('input', () => { clearTimeout(lsRT); lsRT = setTimeout(lsRender, 250); });
+$('#lsMore').onclick = () => { lsCur.qOpen = !lsCur.qOpen; lsSetQuote(); };
+$('#lsAa').onclick = () => { lsFsI = (lsFsI + 1) % LS_FS.length; try { localStorage.setItem('kt.lsfs', String(lsFsI)); } catch(e){} lsApplyFs(); };
+$('#lsKb').onclick = () => { try { lsTa.blur(); } catch(e){} };
+$('#lsPin').onclick = () => {
+  lsCur.pin = !lsCur.pin; lsPinUI();
+  if (lsTa.value.trim() && !lsOnlyPrompts(lsTa.value.trim())){ lsAuto(0); toast(lsCur.pin ? '📌 Đã ghim: sẽ nằm đầu danh sách' : 'Đã bỏ ghim'); }
+  else toast(lsCur.pin ? '📌 Sẽ ghim khi bạn viết xong ghi chú' : 'Đã bỏ ghim');
+};
+$('#lsLess').onclick = () => { if (lsCur.ns.length > 1) lsSetNs(lsCur.ns.slice(0, -1)); };
+$('#lsMoreV').onclick = () => {
+  const max = Math.max(...lsCur.ns), nx = lsCur.verses.map(v => v.n).filter(n => n > max).sort((a, b) => a - b)[0];
+  if (nx) lsSetNs([...lsCur.ns, nx]);
+};
+$('#lsTags').addEventListener('click', e => {
+  const b = e.target.closest('[data-tag]'); if (!b || lsCur.mode === 'view') return;
+  const id = b.dataset.tag, i = lsCur.tags.indexOf(id);
+  if (i >= 0) lsCur.tags.splice(i, 1); else lsCur.tags.push(id);
+  lsTagsDraw();
+  if (lsTa.value.trim() && !lsOnlyPrompts(lsTa.value.trim())) lsAuto(0); else toast('Thẻ sẽ được lưu cùng ghi chú của bạn');
+});
+$('#lsPrompts').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  let v = lsTa.value.replace(/\s+$/, ''); v = (v ? v + '\n' : '') + NOTE_PROMPTS[+b.dataset.p] + ' ';
+  lsTa.value = v; lsTa.focus(); const n = v.length; try { lsTa.setSelectionRange(n, n); } catch(err){}
+  lsTa.scrollTop = lsTa.scrollHeight; lsAuto();
+});
+$('#lsMic').onclick = () => {
+  if (!SR_API) return;
+  if (lsListening){ lsVoiceStop(); return; }
+  try {
+    lsRec = new SR_API(); lsRec.lang = 'vi-VN'; lsRec.continuous = true; lsRec.interimResults = false;
+    lsRec.onresult = ev => { let t = ''; for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) t += ev.results[i][0].transcript; t = t.trim(); if (t) lsInsert(t); };
+    lsRec.onerror = ev => {
+      lsVoiceStop();
+      toast(ev.error === 'not-allowed' || ev.error === 'service-not-allowed' ? 'Máy chưa cho dùng micro. Hãy bấm biểu tượng 🎤 trên bàn phím điện thoại để đọc cho máy gõ.' : ev.error === 'no-speech' ? 'Chưa nghe thấy tiếng nói, bấm 🎤 thử lại' : 'Không nghe được, bạn thử lại hoặc dùng micro trên bàn phím');
+    };
+    lsRec.onend = () => { lsListening = false; const m = $('#lsMic'); m.classList.remove('on'); m.textContent = '🎤 Nói'; };
+    lsRec.start(); lsListening = true;
+    const m = $('#lsMic'); m.classList.add('on'); m.textContent = '⏹ Dừng'; toast('🎤 Đang nghe… hãy nói rõ từng câu');
+  } catch(err){ lsVoiceStop(); toast('Máy này chưa hỗ trợ nói để viết. Hãy bấm biểu tượng 🎤 trên bàn phím.'); }
+};
+lsTa.addEventListener('input', () => { clearTimeout(lsRT); lsRT = setTimeout(lsRender, 250); lsAuto(); });
+$('#lsBody').addEventListener('touchstart', e => { if (document.activeElement === lsTa && !e.target.closest('textarea,button,input')) lsTa.blur(); }, { passive:true });   // chạm ra ngoài ô viết: hạ bàn phím
+$('#lsTop').addEventListener('touchstart', e => { if (document.activeElement === lsTa && !e.target.closest('button')) lsTa.blur(); }, { passive:true });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !lsEl.hidden && lsCur && lsCur.mode === 'edit' && !lsCur.deleted){ clearTimeout(lsAT); lsPersist(true); } });
+addEventListener('pagehide', () => { if (!lsEl.hidden && lsCur && lsCur.mode === 'edit' && !lsCur.deleted) lsPersist(true); });
 $('#lsLinks').addEventListener('click', async e => {         // chạm chip: tự lưu rồi mở câu / ghi chú liên quan
   const r = e.target.closest('[data-ref]'), l = e.target.closest('[data-rel]');
-  if (r){ const x = lsCur.refs[+r.dataset.ref]; if (lsPersist()) toast('Đã lưu ghi chú'); lsCur.back = false; lsClose(); await goBookmark({ book:x.book, ch:x.ch, n:x.ns[0] }); }
-  else if (l){ const x = lsCur.rel[+l.dataset.rel]; lsPersist(); window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:x.book, ch:x.ch, ns:x.ns || [x.n] } })); }
+  if (r){ const x = lsCur.refs[+r.dataset.ref]; if (lsPersist(true)) toast('Đã lưu ghi chú'); lsCur.back = false; lsClose(); await goBookmark({ book:x.book, ch:x.ch, n:x.ns[0] }); }
+  else if (l){ const x = lsCur.rel[+l.dataset.rel]; lsPersist(true); window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:x.book, ch:x.ch, ns:x.ns || [x.n] } })); }
 });
-$('#lsDel').onclick = () => {
-  if (!lsCur.old || !confirm('Xóa ghi chú này?')) return;
-  LS = LS.filter(x => x !== lsCur.old); saveLS(); toast('Đã xóa ghi chú'); lsClose();
+$('#lsDel').onclick = async () => {
+  const c = lsCur, o = c && c.old; if (!o) return;
+  const i = await choose('Xóa ghi chú này?', `Ghi chú ${noteRef(o)} sẽ bị xóa khỏi máy.`, [{ t:'🗑 Xóa ghi chú', cls:'danger' }, { t:'Giữ lại' }]);
+  if (i !== 0 || lsCur !== c) return;
+  clearTimeout(lsAT); const idx = LS.indexOf(o);
+  c.deleted = true; LS = LS.filter(x => x !== o); saveLS(); lsClose();
+  toastAct('Đã xóa ghi chú', 'Hoàn tác', () => { if (!LS.includes(o)){ LS.splice(Math.min(idx, LS.length), 0, o); saveLS(); } });
+};
+$('#lsShare').onclick = async () => {
+  const t = lsTa.value.trim(); if (!t || lsOnlyPrompts(t)){ toast('Hãy viết ghi chú trước khi chia sẻ'); return; }
+  lsPersist(true);
+  const c = lsCur, text = lsShareText();
+  const i = await choose('Gửi hoặc lưu ghi chú', `${c.book} ${c.ch}:${c.key}`, [
+    { t:'↗ Gửi qua Zalo, tin nhắn…', cls:'primary' }, { t:'📋 Sao chép chữ' }, { t:'📄 Lưu thành file Word' }, { t:'Hủy' }]);
+  if (i === 0){
+    try { if (navigator.share){ await navigator.share({ title:`${c.book} ${c.ch}:${c.key}`, text }); return; } } catch(err){ if (err && err.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text); toast('📋 Máy chưa mở được bảng gửi, đã sao chép để bạn dán'); } catch(err){ toast('Không chia sẻ được trên máy này'); }
+  } else if (i === 1){
+    try { await navigator.clipboard.writeText(text); toast('📋 Đã sao chép ghi chú'); } catch(err){ prompt('Sao chép ghi chú:', text); }
+  } else if (i === 2){
+    const name = 'ghi-chu-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kinh-thanh');
+    const tg = c.tags.map(id => { const x = tagDef(id); return x ? x.ico + ' ' + x.t : ''; }).filter(Boolean);
+    saveSmart([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t + (tg.length ? '\n(' + tg.join(' · ') + ')' : ''), at:c.old ? c.old.at : Date.now() }], 'Ghi chú', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, err => toast('Không xuất được file Word: ' + (err.message || err)));
+  }
 };
 
 /* Xuất ghi chú ra file Word (.docx) – tự dựng file .docx trong trình duyệt, không cần thư viện */
@@ -2261,17 +2609,6 @@ function docxFile(items, title, fname){                               // items: 
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
-$('#lsWord').onclick = () => {
-  const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
-  const c = lsCur, name = 'bai-hoc-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu');
-  saveSmart([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, e => toast('Không xuất được file Word: ' + (e.message || e)));
-};
-$('#lsShare').onclick = async () => {
-  if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
-  const text = lsShareText();
-  try { if (navigator.share){ await navigator.share({ title:`${lsCur.book} ${lsCur.ch}:${lsCur.key}`, text }); return; } } catch(err){ if (err && err.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text); toast('📋 Đã chép ghi chú để dán chia sẻ'); } catch(err){ toast('Không chia sẻ được trên máy này'); }
-};
 
 /* Menu nhỏ hiện khi chạm giữ một câu */
 function showVerseMenu(n, x, y){
@@ -2289,7 +2626,7 @@ function showVerseMenu(n, x, y){
     <button data-a="copy">📋 Sao chép câu này</button>
     <button data-a="img">🖼️ Chia sẻ thành ảnh</button>
     <button data-a="multi">☑️ Chọn nhiều câu</button>
-    <button data-a="lesson">✍️ Viết bài học cá nhân</button>`;
+    <button data-a="lesson">${noteAt(n) ? '✍️ Xem / sửa ghi chú của câu này' : '✍️ Viết ghi chú cho câu này'}</button>`;
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
@@ -2309,11 +2646,11 @@ function showVerseMenu(n, x, y){
     else if (a === 'resume') toggleResumeAt(n);
     else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
     else if (a === 'img') verseImage([n]);
-    else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns:[n] } }));
+    else if (a === 'lesson') lsOpen([n]);
     else if (a === 'multi'){
       selected.clear(); selected.add(n);
       const el = $('#v' + n); if (el) el.classList.add('sel');
-      $('#copyBar').hidden = false; $('#copyGo').textContent = 'Sao chép (1)';
+      $('#copyBar').hidden = false; copyBarLabels();
     }
   });
   bg.addEventListener('contextmenu', e => e.preventDefault());
@@ -2338,7 +2675,7 @@ function showVerseMenu(n, x, y){
         const ns = [...selected].sort((a, b) => a - b);
         try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
         clearSelection();
-        window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns } }));
+        lsOpen(ns);
         return;
       }
       clearSelection(); showVerseMenu(+p.dataset.n, sx, sy);
@@ -2391,10 +2728,16 @@ $('#bibleText').addEventListener('click', e => {
   selected.has(n) ? selected.delete(n) : selected.add(n);
   p.classList.toggle('sel', selected.has(n));
   $('#copyBar').hidden = !selected.size;
-  $('#copyGo').textContent = `Sao chép (${selected.size})`;
+  copyBarLabels();
 });
+function copyBarLabels(){
+  $('#copyGo').textContent = `Sao chép (${selected.size})`;
+  const has = curBook && LS.some(x => x.book === curBook.name && x.ch === S.chapter && (x.ns || [x.n]).some(k => selected.has(k)));
+  $('#copyNote').textContent = has ? '✎ Mở ghi chú' : '✎ Ghi chú';
+}
 function clearSelection(){ selected.clear(); $$('.v.sel').forEach(e => e.classList.remove('sel')); $('#copyBar').hidden = true; }
 $('#copyClear').onclick = clearSelection;
+$('#copyNote').onclick = () => { const ns = [...selected].sort((a, b) => a - b); clearSelection(); if (ns.length) lsOpen(ns); };
 $('#copyGo').onclick = async () => {
   const verses = curBook.chapters[S.chapter - 1].filter(v => selected.has(v.n));
   const nums = verses.map(v => v.n);
@@ -5415,7 +5758,7 @@ const OB = [
   { ico:'Aa', aa:true, t:'Chọn cỡ chữ cho dễ đọc', d:'Bấm chọn cỡ chữ bạn thấy thoải mái. Bạn có thể đổi lại bất cứ lúc nào trong Cài đặt (nút Aa ở góc trên).', size:true },
   { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh. Gõ đúng dấu: “tội” chỉ ra “tội”, “toi” chỉ ra “toi”.' },
   { ico:'👆', t:'Vuốt để lật chương', d:'Vuốt ngón tay sang trái để sang chương sau, vuốt sang phải để về chương trước, như lật trang sách giấy.' },
-  { ico:'✍️', t:'Chạm giữ một câu', d:'Giữ ngón tay lên một câu khoảng nửa giây để đánh dấu chỗ đang đọc, sao chép, chia sẻ thành ảnh hoặc viết bài học cá nhân.' },
+  { ico:'✍️', t:'Viết ghi chú cho câu', d:'Chạm vào một câu rồi bấm nút “✎ Ghi chú” để viết cảm nhận của bạn (có thể bấm 🎤 để nói). Giữ ngón tay lên câu khoảng nửa giây để đánh dấu chỗ đang đọc, sao chép hoặc chia sẻ thành ảnh.' },
   { ico:'📄', t:'Chế độ Trang giấy', d:'Bấm biểu tượng tờ giấy để đọc như sách in: chữ đen trên nền giấy, dễ đọc dưới nắng. Vuốt sang trái hoặc phải để lật trang.' }
 ];
 function showOnboard(){
