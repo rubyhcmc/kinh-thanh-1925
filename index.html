@@ -459,6 +459,8 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .fl-cast{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 .fl-shade{position:absolute;inset:0;opacity:0;pointer-events:none;
   background:linear-gradient(to right,rgba(0,0,0,.05),rgba(0,0,0,.55))}
+.fl-shade,.fl-cast{will-change:opacity;-webkit-transform:translateZ(0);transform:translateZ(0)}   /* mỗi lớp bóng là một lớp GPU riêng: đổi độ mờ theo từng khung hình KHÔNG làm vẽ lại cả tờ giấy chứa chữ → lật mượt hơn trên iPhone cũ */
+.fl-strip{will-change:transform,opacity}
 .fl-strip{position:absolute;top:0;bottom:0;width:46px;opacity:0;pointer-events:none;
   background:linear-gradient(to right,rgba(0,0,0,.38),rgba(0,0,0,0))}
 
@@ -1098,7 +1100,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
