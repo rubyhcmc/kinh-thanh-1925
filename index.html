@@ -1187,7 +1187,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2261,7 +2261,7 @@ function docxFile(items, title, fname){                               // items: 
 $('#lsWord').onclick = () => {
   const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
   const c = lsCur, name = 'bai-hoc-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu');
-  saveFiles([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(() => toast('📄 Đã tạo file Word'), e => toast('Không xuất được file Word: ' + (e.message || e)));
+  saveSmart([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, e => toast('Không xuất được file Word: ' + (e.message || e)));
 };
 $('#lsShare').onclick = async () => {
   if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
@@ -4617,6 +4617,24 @@ async function verifyExport(pdf, jsonStr, srcChapters, name){
   });
   return R;
 }
+/* Lưu tệp có cửa sổ CHỌN THƯ MỤC: máy tính (Chrome/Edge) mở hộp chọn thư mục rồi ghi thẳng vào đó (lần sau nhớ thư mục gần nhất);
+   điện thoại mở bảng chia sẻ (“Lưu vào Tệp” → chọn thư mục); trình duyệt không hỗ trợ thì tải về thư mục Tải xuống như cũ. */
+const canPickDir = () => typeof window.showDirectoryPicker === 'function' && !matchMedia('(pointer:coarse)').matches;
+const askDirPref = () => { try { return localStorage.getItem('kt.askDir') !== '0'; } catch(e){ return true; } };
+async function saveSmart(files){
+  if (canPickDir() && askDirPref()){
+    let dir = null;
+    try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); }
+    catch(e){ if (e && e.name === 'AbortError'){ toast('Đã hủy – chưa lưu tệp nào'); return 'cancel'; } }
+    if (dir){
+      try {
+        for (const f of files){ const fh = await dir.getFileHandle(f.name, { create:true }); const w = await fh.createWritable(); await w.write(f); await w.close(); }
+        toast(`📁 Đã lưu ${files.length} tệp vào thư mục “${dir.name}”`); return 'dir';
+      } catch(e){ toast('Không ghi được vào thư mục đã chọn, chuyển sang tải về máy: ' + (e.message || e)); }
+    }
+  }
+  await saveFiles(files); return 'default';
+}
 function exportResult(name, pdf, json, pages, rep){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
@@ -4625,17 +4643,20 @@ function exportResult(name, pdf, json, pages, rep){
     ${rep ? `<div class="log ${rep.ok ? 'ok' : 'err'}" style="margin:0 0 8px;white-space:pre-wrap">${esc(rep.text)}</div>` : ''}
     <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn một trong hai tệp.</p>
     <div class="btns" style="flex-direction:column">
-      <button class="btn primary" data-k="both">⬇️ Tải cả hai tệp</button>
-      <button class="btn" data-k="pdf">📕 Chỉ tải PDF</button>
-      <button class="btn" data-k="json">🧾 Chỉ tải JSON</button>
+      ${canPickDir() ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 2px"><input type="checkbox" id="exAsk" ${askDirPref() ? 'checked' : ''}> Hỏi chọn thư mục lưu mỗi lần</label>`
+        : `<p class="hint" style="margin:0;font-size:13px;color:var(--muted)">Điện thoại: bảng chia sẻ sẽ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
+      <button class="btn primary" data-k="both">📁 Lưu cả hai tệp</button>
+      <button class="btn" data-k="pdf">📕 Chỉ lưu PDF</button>
+      <button class="btn" data-k="json">🧾 Chỉ lưu JSON</button>
       <button class="btn" data-k="x">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) o.remove(); return; }
     const k = b.dataset.k;
     if (k === 'x') return o.remove();
-    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
+    await saveSmart(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
   });
+  o.addEventListener('change', e => { if (e.target.id === 'exAsk'){ try { localStorage.setItem('kt.askDir', e.target.checked ? '1' : '0'); } catch(err){} } });
   document.body.appendChild(o);
 }
 async function exportBook(name){
@@ -4756,7 +4777,7 @@ $('#edWord').onclick = async () => {
   else { chapters = rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length); fname = base + '.docx'; }
   try {
     const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname);
-    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
+    const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
   } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 };
 $('#exRestore').onclick = () => $('#exFile').click();
