@@ -1274,7 +1274,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.02w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1297,7 +1297,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // Bỏ dấu tiếng Việt để tìm kiếm không phân biệt dấu
 const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 let toastTimer;
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+function toast(msg, ms){ const t = $('#toast'); t.textContent = msg; t.style.borderRadius = String(msg).length > 44 ? '16px' : ''; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms || 2600); }
+/* Thông báo sau khi khôi phục dữ liệu cá nhân. Với các đường khôi phục phải tải lại app, dặn trước rồi hiện lại sau khi app mở xong. */
+const RESTORED_MSG = '“Nhật Ký Đọc Kinh Thánh” của bạn đã được khôi phục.';
+function notifyRestored(){ toast(RESTORED_MSG, 5000); }
+function notifyRestoredAfterReload(){ try { sessionStorage.setItem('kt.restoredMsg', '1'); } catch(e){ notifyRestored(); } }
+try { if (sessionStorage.getItem('kt.restoredMsg')){ sessionStorage.removeItem('kt.restoredMsg'); setTimeout(notifyRestored, 800); } } catch(e){}
 // Thông báo có nút thao tác (vd. “Hoàn tác”), tự tắt sau 5 giây
 function toastAct(msg, label, fn){
   const t = $('#toast'); t.textContent = msg;
@@ -2369,12 +2374,12 @@ function showVerseMenu(n, x, y){
   const isRs = !!(RESUME && RESUME.book === curBook.name && RESUME.ch === S.chapter && RESUME.n === n);
   const isBm = BM.some(b => b.book === curBook.name && b.ch === S.chapter && b.n === n);
   m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
-    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang là chỗ đọc tiếp' : '📍 Đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghi nhớ' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>
     <button data-a="mark" class="${isBm ? 'on' : ''}">${isBm ? '🔖 Bỏ đánh dấu câu này' : '🔖 Đánh dấu câu này'}<small>${isBm ? 'Đang có trong danh sách 🔖' : 'Lưu vào danh sách 🔖 để xem lại'}</small></button>
-    <button data-a="copy">📋 Sao chép câu này</button>
-    <button data-a="img">🖼️ Chia sẻ thành ảnh</button>
-    <button data-a="multi">☑️ Chọn nhiều câu</button>
-    <button data-a="lesson">✍️ Viết bài học cá nhân</button>`;
+    <button data-a="lesson">✍️ Viết bài học cá nhân</button>
+    <button data-a="copy">📋 Sao chép</button>
+    <button data-a="img">🖼️ Tạo ảnh</button>
+    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang ghim đã đọc đến đây' : '📍 Ghim đã đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghim' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>
+    <button data-a="multi">☑️ Chọn nhiều câu</button>`;
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
@@ -5493,7 +5498,7 @@ async function dtApply(j, srcName){          // khôi phục từ một đối t
   BM = [...mm.values()].sort((a, b) => (b.at || 0) - (a.at || 0)); if (BM.length > BM_MAX) BM.length = BM_MAX;
   try { localStorage.setItem('kt.reads', JSON.stringify(RD)); } catch(e){}
   saveLS(); saveBM(); markBookmarks();
-  toast('✔ Đã khôi phục dữ liệu');
+  notifyRestored();
 }
 async function dtReset(){
   const n = Object.keys(RD).length;
@@ -6019,7 +6024,7 @@ const PStore = (() => {
       put('kt.reads', d.reads); put('kt.lessons', d.lessons); put('kt.marks', d.marks);
       put('kt.plan', d.plan); put('kt.planCustom', d.planCustom); put('kt.resume', d.resume); put('kt.rshist', d.rshist);
       try { rawRemove.call(localStorage, EMPTY_KEY); sessionStorage.setItem(RELOAD_KEY, '1'); } catch(e){}
-      toast('♻ Đã khôi phục dữ liệu cá nhân từ ' + src); setTimeout(() => location.reload(), 900);
+      notifyRestoredAfterReload(); setTimeout(() => location.reload(), 400);
       return true;
     } catch(e){ console.warn('PStore.bootRestore', e); return false; }
   }
@@ -6300,7 +6305,7 @@ const UserSync = (() => {
       }
       applyData(r, mode);
       meta = { sha:remote.sha, hash:hashOf(snapshot()), at:Date.now(), dirty:mode === 'merge' }; saveMeta();   // nhớ SHA mới nhất → lần sao lưu sau cập nhật đúng phiên bản
-      setState(meta.dirty ? 'dirty' : 'ok', 'Đã khôi phục dữ liệu. Đang tải lại app…'); toast('✔ Đã khôi phục dữ liệu – đang tải lại');
+      setState(meta.dirty ? 'dirty' : 'ok', 'Đã khôi phục dữ liệu. Đang tải lại app…'); toast(RESTORED_MSG, 1600); notifyRestoredAfterReload();
       reload = true;
     } catch(e){ setState(e.network ? 'offline' : 'err', e.message || String(e)); toast('Lỗi: ' + (e.message || e)); }
     finally { busy = false; }
