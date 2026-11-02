@@ -1274,7 +1274,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.02x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3116,7 +3116,7 @@ async function pushTo(A, auto){
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
 }
 async function syncReadOnly(A, o){
-  if (o.auto && bibleMeta.length && SY.sha && !SY.dirty && Date.now() - SY.at < 6 * 3600 * 1000){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }   // đã kiểm tra trong 6 giờ qua → mở app nhanh, không tải lại vài MB
+  if (o.auto && !o.force && bibleMeta.length && SY.sha && !SY.dirty && Date.now() - SY.at < 3600 * 1000){ setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }   // đã kiểm tra trong 1 giờ qua → mở app nhanh, không tải lại vài MB (bấm “Kiểm tra cập nhật” thì bỏ qua giới hạn này)
   const r = await A.read(), hasLocal = bibleMeta.length > 0;
   if (!r){ setSync('ok', `Trên ${A.label} chưa có dữ liệu.`); return; }
   if (r.version === SY.sha && hasLocal){ SY.at = Date.now(); saveSY(); setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
@@ -3321,14 +3321,26 @@ function applyAbout(a){
 }
 renderAbout();
 function aboutSay(m, ok){ const l = $('#abeLog'); l.textContent = m; l.className = 'log ' + (ok ? 'ok' : 'err'); }
+/* Sau khi lưu Giới thiệu: đẩy lên máy chủ ngay và báo kết quả thật (trước đây chỉ báo “Đã lưu” dù chưa đồng bộ) */
+async function aboutPush(base){
+  const A = Store.cur();
+  if (!A || !A.configured()){ aboutSay(base + '\n⚠ Mới lưu trên máy này. Chưa kết nối nơi lưu trữ nên người dùng chưa thấy thay đổi.', false); return; }
+  if (!A.canWrite()){ aboutSay(base + '\n⚠ Mới lưu trên máy này. Máy này chưa có quyền ghi (chưa nhập token) nên CHƯA đồng bộ lên máy chủ. Hãy nhập token ở mục “Đồng bộ” rồi lưu lại.', false); return; }
+  aboutSay(base + '\nĐang đồng bộ lên máy chủ…', true);
+  clearTimeout(pushTimer);
+  for (let k = 0; k < 30 && syncBusy; k++) await new Promise(r => setTimeout(r, 500));
+  await syncNow({ auto:true });
+  if (SY.dirty) aboutSay(base + '\n⚠ Chưa đồng bộ được: ' + (syncMsg || 'máy sẽ tự thử lại.'), false);
+  else aboutSay(base + '\n✔ Đã đồng bộ lên máy chủ. Người dùng sẽ thấy khi mở app hoặc bấm “Kiểm tra cập nhật”.', true);
+}
 $('#abeSave').onclick = () => {
   ABOUT = { name:$('#abeName').value.trim() || ABOUT_DEF.name, sub:$('#abeSub').value.trim(), text:$('#abeText').value.trim(),
             feat:$('#abeFeat').value.split('\n').map(s => s.trim()).filter(Boolean) };
-  saveAbout(); renderAbout(); markDirty(); aboutSay('✔ Đã lưu phần giới thiệu.', true);
+  saveAbout(); renderAbout(); markDirty(); aboutPush('✔ Đã lưu phần giới thiệu.');
 };
 $('#abeReset').onclick = () => {
   if (!confirm('Xóa toàn bộ nội dung phần giới thiệu?')) return;
-  ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] }; saveAbout(); renderAbout(); fillAbout(); markDirty(); aboutSay('Đã xóa trống phần giới thiệu.', true);
+  ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] }; saveAbout(); renderAbout(); fillAbout(); markDirty(); aboutPush('Đã xóa trống phần giới thiệu.');
 };
 
 /* Chống "đơ" khi vuốt trong hộp thoại (iPhone): chạm nền mờ không kéo trang phía sau; vuốt quá mép trên/dưới của hộp không truyền ra ngoài */
@@ -3358,24 +3370,34 @@ $('#updBkNow').onclick = async () => { try { await dtExport(); } catch(e){ toast
 $('#btnUpd').onclick = async () => {
   const btn = $('#btnUpd'), msg = $('#updMsg'); if (btn.disabled) return;
   if (!navigator.onLine){ msg.textContent = 'Đang offline – chưa kiểm tra được.'; return; }
-  btn.disabled = true; msg.textContent = 'Đang kiểm tra…';
+  btn.disabled = true; msg.style.whiteSpace = 'pre-line'; let pre = '';
+  const say = t => { msg.textContent = (pre ? pre + '\n' : '') + t; };
+  say('Đang kiểm tra…');
   try {
+    if (syncOn()){                                                        // nội dung Kinh Thánh + phần Giới thiệu đồng bộ cùng nhau
+      say('Đang kiểm tra nội dung mới…');
+      for (let k = 0; k < 30 && syncBusy; k++) await new Promise(r => setTimeout(r, 500));
+      const before = SY.sha; await syncNow({ auto:true, force:true });
+      pre = syncState === 'ok' ? (SY.sha !== before ? '✔ Đã cập nhật nội dung mới (gồm phần Giới thiệu).' : '✔ Nội dung đã là bản mới nhất.')
+          : syncState === 'offline' ? 'Chưa có mạng nên chưa kiểm tra được nội dung.' : '⚠ Nội dung chưa cập nhật được: ' + (syncMsg || 'hãy thử lại sau.');
+      say('Đang kiểm tra phiên bản app…');
+    }
     const u = new URL(location.href); u.hash = ''; u.searchParams.set('_u', Date.now());       // đuôi ngẫu nhiên để vượt bộ nhớ đệm CDN
     const res = await fetch(u.href, { cache:'no-store' }); if (!res.ok) throw new Error('HTTP ' + res.status);
     const m = (await res.text()).match(/const APP_VERSION\s*=\s*'([^']+)'/);
     if (!m) throw new Error('không đọc được số phiên bản');
-    if (m[1] === APP_VERSION){ msg.textContent = '✔ Bạn đang dùng bản mới nhất (' + APP_VERSION + ').'; }
+    if (m[1] === APP_VERSION){ say('✔ App đang là bản mới nhất (' + APP_VERSION + ').'); }
     else {
       let r = { has:false, exportAt:0 }; try { r = PStore.status(); } catch(e){}
       if (r.has && !(r.exportAt && Date.now() - r.exportAt < 864e5)){      // có dữ liệu cá nhân mà chưa sao lưu file trong 24 giờ → hỏi trước khi cập nhật
         const i = await choose('Sao lưu trước khi cập nhật?', 'Có bản mới ' + m[1] + '. Bạn chưa sao lưu dữ liệu ra file JSON gần đây. Nếu cập nhật mà chưa sao lưu, ghi chú, kế hoạch và dấu trang có thể bị mất khi có sự cố.',
           [{ t:'💾 Sao lưu ra file trước (khuyên dùng)', cls:'primary' }, { t:'Cập nhật luôn, không sao lưu', cls:'danger' }, { t:'Để sau' }]);
-        if (i === 0){ try { await dtExport(); } catch(e){} window.updBkRefresh(); msg.textContent = 'Đã sao lưu. Bấm "Kiểm tra cập nhật" lần nữa để cập nhật.'; btn.disabled = false; return; }
-        if (i !== 1){ msg.textContent = 'Đã hoãn cập nhật (có bản mới ' + m[1] + ').'; btn.disabled = false; return; }
+        if (i === 0){ try { await dtExport(); } catch(e){} window.updBkRefresh(); say('Đã sao lưu. Bấm "Kiểm tra cập nhật" lần nữa để cập nhật.'); btn.disabled = false; return; }
+        if (i !== 1){ say('Đã hoãn cập nhật (có bản mới ' + m[1] + ').'); btn.disabled = false; return; }
       }
-      msg.textContent = 'Có bản mới ' + m[1] + ' – đang tải lại…'; setTimeout(() => location.replace(u.href), 700); return;
+      say('Có bản mới ' + m[1] + ' – đang tải lại…'); setTimeout(() => location.replace(u.href), 700); return;
     }
-  } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
+  } catch(e){ say('Không kiểm tra được: ' + (e.message || e)); }
   btn.disabled = false;
 };
 $('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; try { window.updBkRefresh(); } catch(e){} show('#settings'); };
