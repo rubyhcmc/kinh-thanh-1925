@@ -491,7 +491,11 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 /* Đang giữ ngón tay trên câu: câu in đậm và nhấp nháy nền (bật/tắt bằng JS nên chế độ Trang giấy cũng nhấp nháy) */
 .v.holding{-webkit-text-stroke:.55px currentColor;paint-order:stroke fill;border-radius:4px}
 .v.holding .vn{-webkit-text-stroke:0}
+.v.holding{transition:background-color .16s ease-out,box-shadow .16s ease-out}
 .v.holding.hb{background:var(--hl);box-shadow:0 0 0 4px var(--hl)}
+@keyframes vmIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+.vmenu{transform-origin:50% 0;animation:vmIn .13s ease-out;will-change:opacity,transform}
+@media (prefers-reduced-motion:reduce){.vmenu{animation:none}}
 /* Chỗ đọc tiếp (📍): số câu được tô đặc – không đổi độ rộng nên không làm dàn lại trang */
 .v.rs .vn{background:var(--accent);color:var(--card);border-radius:3px;outline:2px solid var(--accent);outline-offset:0}
 .vmenu button.on{color:var(--accent);font-weight:700}
@@ -2319,40 +2323,52 @@ function showVerseMenu(n, x, y){
   bg.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-/* Nhấn 2 lần liên tiếp vào một câu (cảm ứng + chuột) → mở menu ghi chú */
+/* Chạm giữ (cảm ứng + chuột) — nhạy hơn, mượt hơn, dùng chung cho trang chủ (cuộn) và trang giấy (lật) */
 (function(){
-  const root = $('#bibleText'), GAP = 380, DIST = 40;
-  let lastT = 0, lastN = 0, lastX = 0, lastY = 0, lastTouch = 0, dbT = 0;
-  root.style.touchAction = 'manipulation';                // nhấn đúp không bị trình duyệt coi là zoom / chờ 300ms
-  const trigger = (p, x, y) => {
-    clearTimeout(dbT);
-    dbT = setTimeout(() => {                              // chờ 2 lần chạm xử lý chọn câu xong rồi mới mở
-      if (!curBook) return;
-      const n = +p.dataset.n;
-      try { window.getSelection && window.getSelection().removeAllRanges(); } catch(e){}
-      if (selected.size){                                 // đang chọn câu → nhấn đúp mở thẳng cửa sổ viết bài học cho các câu đã chọn
-        selected.add(n);
+  const root = $('#bibleText'), HOLD = 380, TOUCH_TOL = 16, MOUSE_TOL = 8, SCROLL_TOL = 8;
+  let timer = null, sx = 0, sy = 0, fired = false, lastTouch = 0, sTop = 0;
+  let hEl = null, hDelay = 0;
+  const stopBlink = () => { clearTimeout(hDelay); if (hEl){ hEl.classList.remove('holding', 'hb'); hEl = null; } };
+  const cancel = () => { clearTimeout(timer); timer = null; stopBlink(); };
+  const flipping = () => { try { return !!(pg && pg.busy); } catch(e){ return false; } };
+  const start = (el, x, y) => {
+    const p = el.closest && el.closest('.v'); fired = false; cancel();
+    if (!p || !curBook) return;
+    sx = x; sy = y; sTop = SCR.scrollTop;
+    hEl = p; hDelay = setTimeout(() => { if (hEl === p) p.classList.add('holding', 'hb'); }, 90);   // sáng nhẹ rồi giữ nguyên (không nhấp nháy → không vẽ lại liên tục)
+    timer = setTimeout(() => {
+      timer = null;
+      if (flipping()){ stopBlink(); return; }               // đang vuốt lật trang → không mở menu
+      fired = true; stopBlink();
+      if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
+        selected.add(+p.dataset.n);
         const ns = [...selected].sort((a, b) => a - b);
         try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
         clearSelection();
         window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns } }));
         return;
       }
-      clearSelection(); showVerseMenu(n, x, y);
-    }, 0);
+      clearSelection(); showVerseMenu(+p.dataset.n, sx, sy);
+    }, HOLD);
   };
-  root.addEventListener('touchstart', () => { lastTouch = Date.now(); }, { passive:true });
-  root.addEventListener('click', e => {
-    const p = e.target.closest && e.target.closest('.v'); if (!p){ lastT = 0; return; }
-    const now = Date.now(), n = +p.dataset.n, x = e.clientX, y = e.clientY;
-    if (lastT && now - lastT < GAP && lastN === n && Math.abs(x - lastX) < DIST && Math.abs(y - lastY) < DIST){
-      lastT = 0; trigger(p, x, y);
-    } else { lastT = now; lastN = n; lastX = x; lastY = y; }
-  }, true);
-  // chuột: nhấn đúp không bôi đen chữ
-  root.addEventListener('mousedown', e => { if (e.detail > 1 && e.target.closest && e.target.closest('.v')) e.preventDefault(); });
-  // giữ lâu không còn mở menu; chỉ chặn menu hệ thống của trình duyệt
+  root.addEventListener('touchstart', e => {
+    lastTouch = Date.now();
+    if (e.touches.length !== 1){ cancel(); return; }
+    start(e.target, e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive:true });
+  root.addEventListener('touchmove', e => {
+    if (!timer) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - sx) > TOUCH_TOL || Math.abs(t.clientY - sy) > TOUCH_TOL) cancel();
+  }, { passive:true });
+  ['touchend', 'touchcancel'].forEach(k => root.addEventListener(k, cancel, { passive:true }));
+  SCR.addEventListener('scroll', () => { if (timer && Math.abs(SCR.scrollTop - sTop) > SCROLL_TOL) cancel(); }, { passive:true });   // nhích nhẹ do ngón tay run không làm hỏng cú giữ
+  root.addEventListener('mousedown', e => { if (e.button !== 0 || Date.now() - lastTouch < 800) return; start(e.target, e.clientX, e.clientY); });
+  root.addEventListener('mousemove', e => { if (timer && (Math.abs(e.clientX - sx) > MOUSE_TOL || Math.abs(e.clientY - sy) > MOUSE_TOL)) cancel(); });
+  ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
   root.addEventListener('contextmenu', e => { if (e.target.closest('.v')) e.preventDefault(); });
+  // thả tay sau khi giữ không bị tính là chạm chọn câu
+  root.addEventListener('click', e => { if (fired){ fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 
 /* Bấm dấu chú thích → bung/ẩn nội dung; bấm vào khung chú thích → thu lại. Chạy ở pha capture để không bị tính là chạm chọn câu. */
