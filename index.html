@@ -145,14 +145,6 @@ select{min-width:0}
 
 /* Một hàng duy nhất: chọn Sách/Chương/Câu bên trái, biểu tượng bên phải */
 .top h1{display:none}
-.top .sfield{display:none;position:relative;flex:1;min-width:0;align-items:center}
-body.searching #btnSearch{display:none}
-.sico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-#bsClose{position:absolute;right:2px;top:50%;transform:translateY(-50%);min-width:32px!important;height:32px!important;padding:0!important;color:var(--muted)}
-body.searching .top .sfield{display:flex}
-#bsQ::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
-.bsopts{padding-top:10px!important}
-.top .sfield input{flex:1;min-width:0;height:36px;padding:0 36px 0 34px;border-radius:18px;font-size:16px}
 .top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:5px;padding:0;border:0;background:none;transform:none}
 .nf{position:relative;min-width:0}
 .top .navrow .nf input{height:36px;padding:0 6px 0 8px;border-radius:8px;font-size:16px;background:transparent;text-overflow:ellipsis;-webkit-appearance:none;appearance:none}
@@ -256,18 +248,75 @@ html[data-paper] .v.flash .vn{background:#000;color:#f4f3ee;box-shadow:0 0 0 2px
 .searchbar input{flex:1;min-width:0}
 
 /* Tìm kiếm Kinh Thánh */
-body.searching .top .navrow{display:none}
 #tab-bible.searching>.reader,#tab-bible.searching>.pgv,#tab-bible.searching>.chapnav{display:none!important}
-.bsopts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 12px 8px;font-size:14px;color:var(--muted)}
-.bsopts label{display:flex;gap:6px;align-items:center}
-.bsopts input[type=checkbox]{width:auto}
-.bsopts select{width:auto;max-width:44vw;padding:6px 8px;font-size:14px}
-.bsopts .btn{margin-left:auto;padding:6px 12px}
-.bsinfo{padding:4px 14px 8px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
-.bsitem{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--card);
-  padding:12px 16px;font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.55}
-.bsitem b{display:block;font-family:var(--sans);font-size:13px;color:var(--accent);margin-bottom:2px}
 mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-weight:700}
+
+/* ===== TRANG TÌM KIẾM (màn hình riêng) ===== */
+#bSearch{position:fixed;left:0;right:0;top:0;height:100%;z-index:55;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font-family:var(--sans)}
+#bSearch[hidden]{display:none}
+#bSearch [hidden]{display:none!important}
+.bs-in{width:100%;max-width:760px;margin:0 auto;box-sizing:border-box}
+.bs-head{flex:none;background:var(--card);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + var(--sbx,0px) + 8px) 0 10px}
+.bs-row1{display:flex;align-items:center;gap:6px;padding:0 6px 0 10px}
+.bs-field{position:relative;flex:1;min-width:0}
+#bsQ{height:44px;padding:0 42px 0 40px;border-radius:22px;font-size:17px;background:var(--bg);-webkit-appearance:none;appearance:none}
+#bsQ:focus{border-color:var(--accent);outline:0;box-shadow:0 0 0 3px var(--accent-soft)}
+#bsQ::-webkit-search-cancel-button,#bsQ::-webkit-search-decoration{-webkit-appearance:none;display:none}
+.bs-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.bs-clear{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.bs-clear:active{background:var(--accent-soft)}
+.bs-cancel{flex:none;border:0;background:none;color:var(--accent);font-size:16px;font-weight:600;padding:12px 10px;min-height:44px}
+.bs-opts{display:flex;align-items:center;gap:8px;padding:10px 10px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.bs-opts::-webkit-scrollbar,.bs-facets::-webkit-scrollbar{display:none}
+.bs-seg{display:flex;flex:none;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg)}
+.bs-seg button{border:0;background:none;color:var(--muted);padding:8px 14px;font-size:14px;white-space:nowrap;min-height:36px}
+.bs-seg button.on{background:var(--accent);color:#fff;font-weight:600}
+[data-theme=dark] .bs-seg button.on{color:#1a1409}
+.bs-chip{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:8px 14px;font-size:14px;line-height:1.2;white-space:nowrap;min-height:36px;font-family:var(--sans)}
+.bs-chip i{font-style:normal;color:var(--muted);margin-left:3px;font-size:12.5px}
+.bs-chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.bs-chip.on i{color:var(--accent)}
+.bs-chip:active{background:var(--accent-soft)}
+.bs-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.bs-go{display:flex;align-items:center;gap:12px;width:calc(100% - 24px);margin:12px 12px 0;padding:12px 14px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:14px;text-align:left;color:var(--fg);font-family:var(--sans)}
+.bs-go b{display:block;font-size:16px}
+.bs-go small{display:block;color:var(--muted);font-size:13px;margin-top:1px}
+.bs-go .bs-goi{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px}
+[data-theme=dark] .bs-go .bs-goi{color:#1a1409}
+.bs-go .arr{margin-left:auto;color:var(--accent);font-size:24px;line-height:1}
+.bs-sec{display:flex;justify-content:space-between;align-items:center;margin:18px 14px 8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bs-link{border:0;background:none;color:var(--accent);font-size:13px;padding:4px 2px;text-transform:none;letter-spacing:0;font-weight:600}
+.bs-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px}
+.bs-wrap .bs-chip{white-space:normal;text-align:left}
+.bs-tips{margin:0;padding:0 18px 0 32px;color:var(--muted);font-size:14.5px;line-height:1.6}
+.bs-tips b{color:var(--fg);font-weight:600}
+.bsinfo{padding:12px 14px 6px;font-size:13px;color:var(--muted);min-height:1em}
+.bs-facets{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#bsItems{background:var(--card)}
+#bsItems:not(:empty){border-top:1px solid var(--line)}
+.bsitem{display:block;padding:12px 14px 13px;border-bottom:1px solid var(--line);background:var(--card);font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.55;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:0}
+.bsitem:active,.bsitem:focus-visible{background:var(--accent-soft)}
+.bs-ref{display:flex;align-items:center;gap:8px;font-family:var(--sans);margin-bottom:3px}
+.bs-ref b{display:inline;font-size:13.5px;color:var(--accent);margin:0}
+.bs-cp{margin-left:auto;border:0;background:none;color:var(--muted);width:36px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-top:-4px;margin-bottom:-4px;margin-right:-6px}
+.bs-cp:active{background:var(--accent-soft);color:var(--accent)}
+.bs-more{padding:14px 14px calc(18px + 8px);text-align:center}
+.bs-more .btn{width:100%;padding:12px 16px}
+.bs-end{color:var(--muted);font-size:13px;padding:4px 0 6px}
+.bs-empty{padding:26px 18px 12px;text-align:center;color:var(--muted);background:var(--bg)}
+.bs-empty b{display:block;color:var(--fg);font-size:17px;margin-bottom:4px}
+.bs-empty p{margin:0 0 10px;font-size:14.5px;line-height:1.5}
+.bs-empty .bs-chip{display:block;width:100%;text-align:left;border-radius:12px;margin-top:8px;white-space:normal;padding:11px 14px}
+.bs-dock{flex:none;background:var(--card);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+#bSearch.kbo .bs-dock{padding-bottom:8px}
+.bs-dock .bs-in{display:flex;gap:6px;padding:0 10px}
+.bs-sc{flex:1 1 0;min-width:0;min-height:44px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:12px;font-size:15px;font-family:var(--sans);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;justify-content:center;gap:6px}
+.bs-sc.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+[data-theme=dark] .bs-sc.on{color:#1a1409}
+.bs-pick{position:relative;flex:1.25 1 0}
+.bs-pick span{overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 18px)}
+.bs-pick select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;border:0;padding:0}
+@media (hover:hover){.bs-chip:hover,.bs-sc:hover,.bsitem:hover{background:var(--accent-soft)}}
 
 /* Thanh sao chép câu */
 .copybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px);z-index:25;
@@ -640,11 +689,6 @@ html[data-paper] .reader.print{text-align:justify}
     <div class="nf" id="nfChap"><input type="text" id="niChap" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" aria-label="Chương" disabled><select id="selChap" hidden></select><div class="rng" id="rngChap" hidden><span></span><button type="button">Xong</button></div></div>
     <div class="nf" id="nfVerse"><input type="text" id="niVerse" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" placeholder="Câu" aria-label="Câu" disabled><select id="selVerse" hidden></select><div class="rng" id="rngVerse" hidden><span></span><button type="button">Xong</button></div></div>
   </div>
-  <div class="sfield">
-    <svg class="sico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
-    <input type="search" id="bsQ" placeholder="Tìm trong Kinh Thánh… (vd: kính sợ)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Tìm trong Kinh Thánh">
-    <button class="iconbtn" id="bsClose" aria-label="Đóng tìm kiếm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
   <div class="right">
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
     <button class="iconbtn" id="btnSearch" aria-label="Tìm trong Kinh Thánh"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
@@ -657,16 +701,6 @@ html[data-paper] .reader.print{text-align:justify}
 
 <main>
   <section class="tab on" id="tab-bible">
-    <div id="bSearch" hidden>
-      <div class="bsopts">
-        <select id="bsMode" aria-label="Kiểu tìm"><option value="phrase">Đúng cụm từ</option><option value="all">Có đủ các từ</option></select>
-        <label><input type="checkbox" id="bsWord" checked> Nguyên từ</label>
-        <select id="bsScope" aria-label="Phạm vi"></select>
-      </div>
-      <div class="bsinfo" id="bsInfo"></div>
-      <div id="bsItems"></div>
-      <div class="pager" id="bsPager"></div>
-    </div>
     <div class="pgv" id="pgView"><article class="reader" id="bibleText"></article></div>
     <div id="pgFoot" role="status"><span id="pgPos"></span><span id="pgBook"></span></div>
     <div class="chapnav" id="chapNav" hidden>
@@ -675,6 +709,44 @@ html[data-paper] .reader.print{text-align:justify}
     </div>
   </section>
 </main>
+
+<!-- TRANG TÌM KIẾM: màn hình riêng phủ toàn bộ (ô nhập luôn ở TRÊN, bộ lọc nằm sát ngón tay cái ở DƯỚI) -->
+<div id="bSearch" role="search" aria-label="Tìm trong Kinh Thánh" hidden>
+  <div class="bs-head">
+    <div class="bs-in bs-row1">
+      <div class="bs-field">
+        <svg class="bs-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+        <input type="search" id="bsQ" placeholder="Tìm từ hoặc tên sách…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Tìm trong Kinh Thánh">
+        <button type="button" class="bs-clear" id="bsClear" aria-label="Xóa chữ đã gõ" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <button type="button" class="bs-cancel" id="bsClose">Đóng</button>
+    </div>
+    <div class="bs-in bs-opts">
+      <div class="bs-seg" id="bsModeSeg" role="group" aria-label="Kiểu tìm"><button type="button" data-v="phrase">Đúng cụm từ</button><button type="button" data-v="all">Có đủ các từ</button></div>
+      <button type="button" class="bs-chip" id="bsWordChip" aria-pressed="true">Nguyên từ</button>
+    </div>
+    <select id="bsMode" hidden aria-hidden="true"><option value="phrase">Đúng cụm từ</option><option value="all">Có đủ các từ</option></select>
+    <input type="checkbox" id="bsWord" hidden aria-hidden="true" checked>
+  </div>
+  <div class="bs-body" id="bsBody">
+    <div class="bs-in">
+      <button type="button" class="bs-go" id="bsGo" hidden></button>
+      <div class="bs-home" id="bsHome"></div>
+      <div class="bsinfo" id="bsInfo" aria-live="polite"></div>
+      <div class="bs-facets" id="bsFacets" hidden></div>
+      <div id="bsItems"></div>
+      <div class="bs-more" id="bsMore"></div>
+    </div>
+  </div>
+  <div class="bs-dock" id="bsDock">
+    <div class="bs-in">
+      <button type="button" class="bs-sc" data-sc="">Tất cả</button>
+      <button type="button" class="bs-sc" data-sc="@OT">Cựu Ước</button>
+      <button type="button" class="bs-sc" data-sc="@NT">Tân Ước</button>
+      <label class="bs-sc bs-pick" id="bsPick"><span id="bsPickTxt">Chọn sách</span><svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><select id="bsScope" aria-label="Chọn một sách để tìm"></select></label>
+    </div>
+  </div>
+</div>
 
 <div class="copybar" id="copyBar" hidden>
   <button class="btn" id="copyClear">Bỏ chọn</button>
@@ -1100,7 +1172,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2330,13 +2402,43 @@ function compressRange(a){ // [1,2,3,5] -> "1-3,5"
  *  - Lập chỉ mục trong bộ nhớ lần đầu mở (rồi dùng lại)
  *  - Gõ không dấu → bỏ qua dấu; gõ có dấu → khớp đúng dấu
  * ========================================================= */
-const bs = { idx:null, building:null, res:[], page:0 };
+const bs = { idx:null, building:null, res:[], all:[], shown:0, facet:'', go:null, nt:-1, topKeep:0 };
 const BS_PAGE = 30;
 
+/* Chỉ số sách đầu tiên của Tân Ước (nhận theo tên "Mát-thêu"/"Matthêu"/"Ma-thi-ơ"…; không nhận ra thì suy từ tổng số sách) → -1 nếu không biết */
+function bsNtIdx(){
+  const key = x => fold(x).replace(/[^a-z0-9]/g, '');
+  let i = bibleMeta.findIndex((m, k) => k >= 20 && (/^(matt|mathi|mathe)/.test(key(m.name)) || key(m.abbr || '') === 'mt'));
+  if (i < 0 && bibleMeta.length === 66) i = 39;
+  if (i < 0 && bibleMeta.length === 73) i = 46;
+  return i;
+}
 function bsFillScope(){
-  const sel = $('#bsScope'), old = sel.value;
-  sel.innerHTML = '<option value="">Cả Kinh Thánh</option>' + bibleMeta.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
-  if (bibleMeta.some(m => m.name === old)) sel.value = old;
+  const sel = $('#bsScope'), old = sel.value; bs.nt = bsNtIdx();
+  const opt = m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`;
+  let h = '<option value="">Cả Kinh Thánh</option>';
+  if (bs.nt > 0) h += '<option value="@OT">Cựu Ước</option><option value="@NT">Tân Ước</option>'
+    + `<optgroup label="Cựu Ước">${bibleMeta.slice(0, bs.nt).map(opt).join('')}</optgroup><optgroup label="Tân Ước">${bibleMeta.slice(bs.nt).map(opt).join('')}</optgroup>`;
+  else h += bibleMeta.map(opt).join('');
+  sel.innerHTML = h;
+  if ([...sel.options].some(o => o.value === old)) sel.value = old;
+  bsSyncScope();
+}
+function bsScopeFn(sc){
+  if (!sc) return null;
+  if (sc === '@OT' || sc === '@NT'){
+    if (bs.nt < 1) return null;
+    const set = new Set((sc === '@OT' ? bibleMeta.slice(0, bs.nt) : bibleMeta.slice(bs.nt)).map(m => m.name));
+    return e => set.has(e.b);
+  }
+  return e => e.b === sc;
+}
+const bsScopeLabel = () => { const v = $('#bsScope').value; return !v ? 'cả Kinh Thánh' : v === '@OT' ? 'Cựu Ước' : v === '@NT' ? 'Tân Ước' : v; };
+function bsSyncScope(){
+  const v = $('#bsScope').value, isBook = !!v && v[0] !== '@', hasT = bs.nt > 0;
+  $$('#bsDock [data-sc]').forEach(b => { b.hidden = !hasT && b.dataset.sc !== ''; b.classList.toggle('on', b.dataset.sc === v); });
+  $('#bsPickTxt').textContent = isBook ? v : 'Chọn sách';
+  $('#bsPick').classList.toggle('on', isBook);
 }
 async function bsBuild(){
   if (bs.idx) return bs.idx;
@@ -2391,53 +2493,195 @@ function bsHighlight(e, rx, plain){
   return out + esc(e.t.slice(pos));
 }
 let bsCtx = null;
+const BS_RK = 'kt.bsrecent', BS_OK = 'kt.bsopts';
+let BSR = [], BSO = { mode:'phrase', word:true };
+try { const a = JSON.parse(localStorage.getItem(BS_RK) || '[]'); if (Array.isArray(a)) BSR = a.filter(x => typeof x === 'string').slice(0, 8); } catch(e){}
+try { Object.assign(BSO, JSON.parse(localStorage.getItem(BS_OK) || '{}')); } catch(e){}
+const bsSaveR = () => { try { localStorage.setItem(BS_RK, JSON.stringify(BSR)); } catch(e){} };
+const bsSaveO = () => { try { localStorage.setItem(BS_OK, JSON.stringify(BSO)); } catch(e){} };
+const bsOn = () => document.body.classList.contains('searching');
+function bsRemember(q){ q = String(q || '').trim(); if (fold(q).length < 2) return; BSR = [q, ...BSR.filter(x => fold(x) !== fold(q))].slice(0, 8); bsSaveR(); }
+const BS_ICO_COPY = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg>';
+
+function bsApplyOpts(){
+  $('#bsMode').value = BSO.mode === 'all' ? 'all' : 'phrase';
+  $('#bsWord').checked = BSO.word !== false;
+  $$('#bsModeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === $('#bsMode').value));
+  const w = $('#bsWordChip'); w.classList.toggle('on', $('#bsWord').checked); w.setAttribute('aria-pressed', $('#bsWord').checked ? 'true' : 'false');
+}
+
+/* ---- Nhận ra "Gioan 3:16" / "1 Cor 13" / "Thi thiên 23" → thẻ "Đi tới" mở thẳng đoạn đó ---- */
+const bsKey = x => fold(x).replace(/[^a-z0-9]/g, '');
+const BS_REF = /^(\d\s*)?([^\d:;.,]+?)\s*(?:(\d{1,3})(?:\s*[:.,;]\s*|\s+)(\d{1,3})|(\d{1,3}))?\s*$/;
+function bsFindBook(lead, name, hasCh){
+  const k = bsKey((lead || '') + name); if (k.length < 2) return null;
+  const ms = bibleMeta.map(m => ({ m, n:bsKey(m.name), a:bsKey(m.abbr || '') }));
+  const hit = ms.find(x => x.n === k || x.a === k) || (k.length >= (hasCh ? 3 : 4) ? ms.find(x => x.n.startsWith(k)) : null);
+  return hit ? hit.m : null;
+}
+function bsRefCard(q){
+  const box = $('#bsGo'); bs.go = null;
+  const m = q.trim().match(BS_REF);
+  if (m && bibleMeta.length && /[a-z]/.test(fold(m[2]))){
+    const ch0 = m[3] || m[5], bk = bsFindBook(m[1], m[2], !!ch0);
+    if (bk){
+      let ch = ch0 ? +ch0 : 0, v = m[4] ? +m[4] : 0;
+      if (ch < 1 || ch > (bk.chapterCount || 9999)){ ch = 0; v = 0; }
+      bs.go = { book:bk.name, ch, v };
+    }
+  }
+  if (!bs.go){ box.hidden = true; box.innerHTML = ''; return null; }
+  const g = bs.go, lab = g.book + (g.ch ? ' ' + g.ch + (g.v ? ':' + g.v : '') : '');
+  box.innerHTML = `<span class="bs-goi">↗</span><span><b>Đi tới ${esc(lab)}</b><small>${g.v ? 'Mở thẳng câu này' : g.ch ? 'Mở chương này' : 'Mở sách này'}</small></span><span class="arr">›</span>`;
+  box.hidden = false; return g;
+}
+
+/* ---- Màn hình khởi đầu: tìm gần đây · gợi ý · mẹo ---- */
+function bsHome(){
+  $('#bsInfo').textContent = ''; $('#bsFacets').hidden = true; $('#bsItems').innerHTML = ''; $('#bsMore').innerHTML = '';
+  bs.res = bs.all = []; bsCtx = null;
+  const ex = bibleMeta.length ? bibleMeta[0].name + ' 1:1' : 'Sáng Thế 1:1';
+  const chips = a => a.map(x => `<button type="button" class="bs-chip" data-q="${esc(x)}">${esc(x)}</button>`).join('');
+  const rec = BSR.length ? `<div class="bs-sec"><span>Đã tìm gần đây</span><button type="button" class="bs-link" data-clr="1">Xóa</button></div><div class="bs-wrap">${chips(BSR)}</div>` : '';
+  const h = $('#bsHome'); h.hidden = false;
+  h.innerHTML = rec + `<div class="bs-sec"><span>Gợi ý</span></div><div class="bs-wrap">${chips(['bình an', 'yêu thương', 'đức tin', 'hy vọng', 'tha thứ', 'kính sợ Chúa'])}</div>`
+    + `<div class="bs-sec"><span>Mẹo</span></div><ul class="bs-tips"><li>Gõ <b>không dấu</b> vẫn tìm được, ví dụ “binh an”.</li><li>Gõ tên sách và số, ví dụ <b>${esc(ex)}</b>, để mở thẳng đến đoạn đó.</li><li>Chạm <b>Cựu Ước</b> / <b>Tân Ước</b> ở dưới để thu hẹp phạm vi tìm.</li></ul>`;
+}
+
+/* ---- Chạy tìm ---- */
 async function bsRun(){
   const q = $('#bsQ').value, info = $('#bsInfo');
-  if (!bibleMeta.length){ info.textContent = 'Chưa có dữ liệu Kinh Thánh.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
-  if (fold(q.trim()).length < 2){ bs.res = []; info.textContent = 'Nhập ít nhất 2 ký tự để tìm.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
-  info.textContent = 'Đang tìm…';
+  $('#bsClear').hidden = !q;
+  bsRefCard(q);
+  if (!bibleMeta.length){ $('#bsHome').hidden = true; info.textContent = 'Chưa có dữ liệu Kinh Thánh.'; $('#bsItems').innerHTML = $('#bsMore').innerHTML = ''; $('#bsFacets').hidden = true; return; }
+  if (fold(q.trim()).length < 2){ bsHome(); if (q.trim()) info.textContent = 'Nhập ít nhất 2 ký tự để tìm.'; return; }
+  $('#bsHome').hidden = true;
+  info.textContent = bs.idx ? 'Đang tìm…' : 'Đang chuẩn bị dữ liệu tìm kiếm (chỉ lần đầu)…';
   const idx = await bsBuild();
   if ($('#bsQ').value !== q) return;                 // người dùng đã gõ tiếp
   bsCtx = bsRegexes(q);
-  const scope = $('#bsScope').value, { rx, plain } = bsCtx;
-  bs.res = idx.filter(e => (!scope || e.b === scope) && rx.every(r => { r.lastIndex = 0; return r.test(plain ? e.f : e.l); }));
-  bs.page = 0; bsRender();
+  const test = bsScopeFn($('#bsScope').value), { rx, plain } = bsCtx;
+  bs.all = idx.filter(e => (!test || test(e)) && rx.every(r => { r.lastIndex = 0; return r.test(plain ? e.f : e.l); }));
+  bs.facet = ''; bs.res = bs.all; bsRender();
+}
+function bsFacets(){
+  const box = $('#bsFacets'), cnt = new Map();
+  bs.all.forEach(e => cnt.set(e.b, (cnt.get(e.b) || 0) + 1));
+  if (cnt.size < 2){ box.hidden = true; box.innerHTML = ''; return; }
+  const ord = new Map(bibleMeta.map((m, i) => [m.name, i]));
+  const names = [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a) || ord.get(a) - ord.get(b));
+  const left = box.scrollLeft;
+  box.innerHTML = `<button type="button" class="bs-chip${bs.facet ? '' : ' on'}" data-fb="">Tất cả<i>${bs.all.length}</i></button>`
+    + names.map(b => `<button type="button" class="bs-chip${bs.facet === b ? ' on' : ''}" data-fb="${esc(b)}">${esc(b)}<i>${cnt.get(b)}</i></button>`).join('');
+  box.hidden = false; box.scrollLeft = left;
+}
+function bsEmptyHtml(q){
+  const acts = [];
+  if ($('#bsWord').checked) acts.push(['word', 'Bỏ “Nguyên từ” (tìm cả khi chữ nằm trong từ khác)']);
+  if ($('#bsMode').value === 'phrase' && /\s/.test(q.trim())) acts.push(['all', 'Tìm các câu có đủ các từ (không cần liền nhau)']);
+  if ($('#bsScope').value) acts.push(['scope', 'Tìm trong cả Kinh Thánh']);
+  return `<div class="bs-empty"><b>Không có kết quả</b><p>Thử gõ ngắn lại hoặc gõ không dấu${acts.length ? ', hoặc:' : '.'}</p>${acts.map(a => `<button type="button" class="bs-chip" data-act="${a[0]}">${a[1]}</button>`).join('')}</div>`;
+}
+function bsItemsHtml(a, b){
+  return bs.res.slice(a, b).map((e, k) => { const i = a + k;
+    return `<div class="bsitem" role="button" tabindex="0" data-i="${i}"><div class="bs-ref"><b>${esc(e.b)} ${e.c}:${e.n}</b><button type="button" class="bs-cp" data-cp="${i}" aria-label="Sao chép câu này">${BS_ICO_COPY}</button></div>${bsHighlight(e, bsCtx.rx, bsCtx.plain)}</div>`; }).join('');
+}
+function bsMoreBtn(){
+  const left = bs.res.length - bs.shown;
+  $('#bsMore').innerHTML = left > 0 ? `<button type="button" class="btn" data-more="1">Xem thêm ${Math.min(BS_PAGE, left)} câu · còn ${left}</button>` : (bs.res.length > BS_PAGE ? '<div class="bs-end">Đã hiện hết kết quả</div>' : '');
+}
+function bsMore(){
+  if (bs.shown >= bs.res.length) return;
+  const a = bs.shown; bs.shown = Math.min(a + BS_PAGE, bs.res.length);
+  $('#bsItems').insertAdjacentHTML('beforeend', bsItemsHtml(a, bs.shown)); bsMoreBtn();
 }
 function bsRender(){
-  const n = bs.res.length, info = $('#bsInfo');
-  if (!n){ info.textContent = 'Không tìm thấy kết quả.'; $('#bsItems').innerHTML = $('#bsPager').innerHTML = ''; return; }
+  const n = bs.res.length, info = $('#bsInfo'), q = $('#bsQ').value.trim();
+  $('#bsHome').hidden = true; bsFacets();
+  if (!n){
+    info.textContent = bs.go ? '' : `Không tìm thấy “${q}” trong ${bsScopeLabel()}.`;
+    $('#bsItems').innerHTML = bs.go ? '' : bsEmptyHtml(q); $('#bsMore').innerHTML = ''; return;
+  }
   const books = new Set(bs.res.map(e => e.b)).size;
-  info.textContent = `Tìm thấy ${n} câu trong ${books} sách`;
-  const pages = Math.ceil(n / BS_PAGE); bs.page = Math.min(bs.page, pages - 1);
-  const from = bs.page * BS_PAGE;
-  $('#bsItems').innerHTML = bs.res.slice(from, from + BS_PAGE).map((e, i) =>
-    `<button class="bsitem" data-i="${from + i}"><b>${from + i + 1}. ${esc(e.b)} ${e.c}:${e.n}</b>${bsHighlight(e, bsCtx.rx, bsCtx.plain)}</button>`).join('');
-  $('#bsPager').innerHTML = pages > 1 ? `<button class="btn" data-p="-1" ${bs.page === 0 ? 'disabled' : ''}>‹ Trước</button>
-    <span>trang ${bs.page + 1}/${pages}</span>
-    <button class="btn" data-p="1" ${bs.page >= pages - 1 ? 'disabled' : ''}>Sau ›</button>` : '';
+  info.textContent = `Tìm thấy ${n} câu${books > 1 ? ' trong ' + books + ' sách' : ''} · ${bs.facet || bsScopeLabel()}`;
+  bs.shown = Math.min(BS_PAGE, n);
+  $('#bsItems').innerHTML = bsItemsHtml(0, bs.shown); bsMoreBtn();
+  $('#bsBody').scrollTop = 0;
 }
+
+/* ---- Mở kết quả / sao chép ---- */
+async function bsOpen(book, ch, n){
+  setSearch(false);
+  await openBook(book, ch);
+  if (n){ const el = $('#v' + n); if (el){ if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' }); flashVerse(el); } }
+}
+async function bsCopy(r){
+  const txt = r.t + '\n— ' + r.b + ' ' + r.c + ':' + r.n; let ok = false;
+  try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){}
+  if (!ok){ try { const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); } catch(e){} }
+  toast(ok ? '📋 Đã sao chép ' + r.b + ' ' + r.c + ':' + r.n : 'Không sao chép được');
+}
+
+/* ---- Khung tìm kiếm luôn khít vùng nhìn thấy (trên bàn phím): ô nhập ở trên, bộ lọc ngay sát bàn phím ---- */
+function bsVV(){
+  const box = $('#bSearch'), vv = window.visualViewport; if (box.hidden || !vv) return;
+  box.style.top = vv.offsetTop + 'px'; box.style.height = vv.height + 'px';
+  box.classList.toggle('kbo', innerHeight - vv.height > 120);
+}
+if (window.visualViewport){ visualViewport.addEventListener('resize', bsVV); visualViewport.addEventListener('scroll', bsVV); }
+
 function setSearch(on){
+  const box = $('#bSearch');
+  if (on) bs.topKeep = SCR.scrollTop;
   $('#tab-bible').classList.toggle('searching', on); document.body.classList.toggle('searching', on);
-  $('#bSearch').hidden = !on;
+  box.hidden = !on;
   SCR.scrollTop = 0;
-  if (on){ $('#bsQ').focus(); clearSelection(); setTimeout(() => { if (document.body.classList.contains('searching')){ bsFillScope(); bsBuild(); } }, 900); }   // việc nặng chờ bàn phím trượt lên xong mới chạy → không giật   // focus() phải chạy ngay trong cú chạm thì iPhone mới bật bàn phím
-  else $('#bsQ').blur();
+  if (on){
+    bsApplyOpts(); bsFillScope();
+    if (fold($('#bsQ').value.trim()).length < 2) bsHome();
+    bsVV(); $('#bsQ').focus(); clearSelection();       // focus() phải chạy ngay trong cú chạm thì iPhone mới bật bàn phím
+    setTimeout(bsVV, 80); setTimeout(bsVV, 400);
+    setTimeout(() => { if (bsOn()) bsBuild(); }, 900);   // việc nặng chờ bàn phím trượt lên xong mới chạy → không giật
+  } else {
+    $('#bsQ').blur(); box.style.top = ''; box.style.height = ''; box.classList.remove('kbo');
+  }
 }
-$('#btnSearch').onclick = () => { if (document.body.classList.contains('searching')){ $('#bsQ').focus(); $('#bsQ').select(); } else setSearch(true); };
-$('#bsClose').onclick = () => setSearch(false);
+$('#btnSearch').onclick = () => { if (bsOn()){ $('#bsQ').focus(); $('#bsQ').select(); } else setSearch(true); };
+$('#bsClose').onclick = () => { setSearch(false); SCR.scrollTop = bs.topKeep || 0; };   // đóng không chọn gì → trả lại đúng chỗ đang đọc
 let bsTimer;
-$('#bsQ').addEventListener('input', () => { clearTimeout(bsTimer); bsTimer = setTimeout(bsRun, 250); });
-$('#bsQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeout(bsTimer); bsRun(); e.target.blur(); } });
-['bsMode', 'bsWord', 'bsScope'].forEach(id => $('#' + id).onchange = bsRun);
-$('#bsPager').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; bs.page += +b.dataset.p; bsRender(); SCR.scrollTop = 0; });
-$('#bsItems').addEventListener('click', async e => {
+$('#bsQ').addEventListener('input', () => { $('#bsClear').hidden = !$('#bsQ').value; clearTimeout(bsTimer); bsTimer = setTimeout(bsRun, 220); });
+$('#bsQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeout(bsTimer); bsRun().then(() => { if (bs.res.length) bsRemember($('#bsQ').value); }); e.target.blur(); } });
+$('#bsClear').onclick = () => { clearTimeout(bsTimer); $('#bsQ').value = ''; bsRun(); $('#bsQ').focus(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && bsOn()) $('#bsClose').click(); });
+$('#bsModeSeg').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; BSO.mode = b.dataset.v; bsSaveO(); bsApplyOpts(); bsRun(); });
+$('#bsWordChip').onclick = () => { BSO.word = !$('#bsWord').checked; bsSaveO(); bsApplyOpts(); bsRun(); };
+$('#bsDock').addEventListener('click', e => { const b = e.target.closest('button[data-sc]'); if (!b) return; $('#bsScope').value = b.dataset.sc; bsSyncScope(); bsRun(); });
+$('#bsScope').onchange = () => { bsSyncScope(); bsRun(); };
+$('#bsGo').onclick = () => { const g = bs.go; if (g) bsOpen(g.book, g.ch || 1, g.v); };
+$('#bsFacets').addEventListener('click', e => { const b = e.target.closest('[data-fb]'); if (!b) return; bs.facet = b.dataset.fb; bs.res = bs.facet ? bs.all.filter(x => x.b === bs.facet) : bs.all; bsRender(); });
+$('#bsHome').addEventListener('click', e => {
+  const c = e.target.closest('[data-q]');
+  if (c){ $('#bsQ').value = c.dataset.q; bsRun().then(() => { if (bs.res.length) bsRemember(c.dataset.q); }); return; }
+  if (e.target.closest('[data-clr]')){ BSR = []; bsSaveR(); bsHome(); }
+});
+$('#bsMore').addEventListener('click', e => { if (e.target.closest('[data-more]')) bsMore(); });
+$('#bsBody').addEventListener('scroll', () => { const b = $('#bsBody'); if (b.scrollTop + b.clientHeight >= b.scrollHeight - 500) bsMore(); }, { passive:true });
+$('#bsBody').addEventListener('touchmove', () => { if (document.activeElement === $('#bsQ')) $('#bsQ').blur(); }, { passive:true });   // vuốt xem kết quả → tự hạ bàn phím
+$('#bsItems').addEventListener('click', e => {
+  if (e.target.closest('[data-act]')){
+    const a = e.target.closest('[data-act]').dataset.act;
+    if (a === 'word'){ BSO.word = false; bsSaveO(); bsApplyOpts(); }
+    else if (a === 'all'){ BSO.mode = 'all'; bsSaveO(); bsApplyOpts(); }
+    else if (a === 'scope'){ $('#bsScope').value = ''; bsSyncScope(); }
+    bsRun(); return;
+  }
+  const cp = e.target.closest('[data-cp]');
+  if (cp){ const r = bs.res[+cp.dataset.cp]; if (r){ bsRemember($('#bsQ').value); bsCopy(r); } return; }
   const b = e.target.closest('[data-i]'); if (!b) return;
   const r = bs.res[+b.dataset.i]; if (!r) return;
-  setSearch(false);
-  await openBook(r.b, r.c);
-  const el = $('#v' + r.n);
-  if (el){ if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' }); flashVerse(el); }
+  bsRemember($('#bsQ').value); bsOpen(r.b, r.c, r.n);
 });
+$('#bsItems').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.bsitem')){ e.preventDefault(); e.target.click(); } });
 
 /* =========================================================
  *  NHẬP DỮ LIỆU: chuẩn hóa JSON / văn bản
@@ -4882,7 +5126,7 @@ async function pgFlip(dir){                                        // chạm mé
 
 
 /* ============ QUẢN LÝ DỮ LIỆU CÁ NHÂN: sao lưu · khôi phục · làm mới hành trình ============ */
-const dtDefName = withDate => 'kinh-thanh-cua-toi' + (withDate ? '-' + dayKey() : '');
+const dtDefName = withDate => 'NhatKy_DocKT' + (withDate ? '_' + dayKey().split('-').reverse().join('-') : '');   // NhatKy_DocKT_02-11-2026 (Ngày-Tháng-Năm)
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
   return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, planCustom:PCUST, resume:RESUME, rshist:RSH };
@@ -4966,7 +5210,7 @@ $$('#bigSeg button').forEach(b => b.onclick = () => {
 
 const OB = [
   { ico:'Aa', aa:true, t:'Chọn cỡ chữ cho dễ đọc', d:'Bấm chọn cỡ chữ bạn thấy thoải mái. Bạn có thể đổi lại bất cứ lúc nào trong Cài đặt (nút Aa ở góc trên).', size:true },
-  { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh, không cần gõ dấu.' },
+  { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh (không cần gõ dấu), hoặc gõ thẳng tên sách và số, ví dụ Gioan 3:16, để mở ngay.' },
   { ico:'👆', t:'Vuốt để lật chương', d:'Vuốt ngón tay sang trái để sang chương sau, vuốt sang phải để về chương trước, như lật trang sách giấy.' },
   { ico:'✍️', t:'Chạm giữ một câu', d:'Giữ ngón tay lên một câu khoảng nửa giây để đánh dấu chỗ đang đọc, sao chép, chia sẻ thành ảnh hoặc viết bài học cá nhân.' },
   { ico:'📄', t:'Chế độ Trang giấy', d:'Bấm biểu tượng tờ giấy để đọc như sách in: chữ đen trên nền giấy, dễ đọc dưới nắng. Vuốt sang trái hoặc phải để lật trang.' }
