@@ -475,6 +475,36 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .abfeat li.abh{padding:0;margin:1.2em 0 .45em;padding-bottom:.35em;border-bottom:1px solid var(--line);font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .abfeat li.abh::before{display:none}
 .abfeat li.abh:first-child{margin-top:0}
+/* Cài đặt dễ đọc cho người lớn tuổi */
+#settings .shead{position:sticky;top:0;z-index:6;background:var(--card);margin:0 -18px 6px;padding:6px 20px 8px;border-bottom:1px solid var(--line)}
+#settings .sdone{font-size:18px;padding:10px 8px}
+#settings .stxt b{font-size:16.5px}
+#settings .stxt span{font-size:13.5px;line-height:1.45;color:var(--muted);color:color-mix(in srgb,var(--fg) 72%,var(--card))}
+#settings .srow{padding:14px 14px}
+#settings .srow .seg button{padding:10px 14px;font-size:15px}
+#settings .fld span{font-size:14px;color:var(--muted);color:color-mix(in srgb,var(--fg) 72%,var(--card))}
+#settings .fld select{height:50px;font-size:17px}
+.seg.tg button[data-v="0"].on{background:#6f6a60;color:#fff}
+.seg.tg button[data-v="1"].on{background:#2e7d32;color:#fff}
+.fszctl{display:flex;align-items:center;gap:12px}
+.fszb{flex:1;height:56px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--accent);font:700 24px var(--serif);-webkit-tap-highlight-color:transparent}
+.fszb:active{background:var(--accent-soft)}
+.fszb:disabled{opacity:.35}
+.fszv{flex:none;min-width:74px;text-align:center}
+.fszv b{display:block;font-size:26px;line-height:1.1}
+.fszv small{font-size:12px;color:var(--muted)}
+.fszprev{padding:12px 14px;border-radius:10px;background:var(--bg);font-family:var(--serif);font-size:var(--fs);line-height:1.6;overflow-wrap:anywhere}
+details.adv>summary{list-style:none;cursor:pointer;border-top:1px solid var(--line)}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv .chev{font-size:26px;color:var(--muted);transition:transform .18s}
+details.adv[open] .chev{transform:rotate(90deg)}
+details.adv>div>.srow{border-top:1px solid var(--line)}
+.updwarn{margin-top:18px;padding:12px 14px;border-radius:12px;border:1px solid rgba(217,119,6,.45);border-left-width:4px;background:rgba(217,119,6,.10);text-align:left}
+.updwarn b{display:block;font-size:14px;color:var(--fg)}
+.updwarn p{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--fg)}
+.updwarn .ust{margin-top:8px;font-size:12.5px;font-weight:600}
+.updwarn.ok{border-color:rgba(46,125,50,.45);background:rgba(46,125,50,.09)}
+.updwarn .btn{width:100%;margin-top:10px;padding:10px 14px;font-size:14px}
 .updwrap{text-align:center;margin-top:10px}
 .updwrap .btn{padding:8px 16px;font-size:13.5px}
 .updmsg{min-height:1.4em;margin-top:6px;font-size:12px;color:var(--muted)}
@@ -782,37 +812,49 @@ html[data-paper] .reader.print{text-align:justify}
 
     <div class="slabel">Giao diện đọc</div>
     <div class="sgroup">
-      <div class="srow"><div class="stxt"><b>Chế độ màu</b><span>Sáng, tối hoặc theo thiết bị</span></div>
+      <div class="srow"><div class="stxt"><b>Chế độ màu</b><span>Sáng, tối, hoặc “Tự động” theo điện thoại</span></div>
         <div class="seg" id="themeSeg">
           <button data-v="auto">Tự động</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button>
         </div>
       </div>
-      <div class="srow col">
-        <div class="fgrid">
-          <label class="fld"><span>Font chữ</span><select id="fontSel" aria-label="Font chữ"></select></label>
-          <label class="fld"><span>Cỡ chữ</span><select id="fsSel" aria-label="Cỡ chữ"></select></label>
+      <div class="srow col fszwrap">
+        <div class="stxt"><b>Cỡ chữ</b><span>Bấm A+ để chữ to hơn, A− để nhỏ lại</span></div>
+        <div class="fszctl">
+          <button class="fszb" id="fsMinus" type="button" aria-label="Giảm cỡ chữ">A−</button>
+          <div class="fszv"><b id="fsVal">20</b><small>cỡ hiện tại</small></div>
+          <button class="fszb" id="fsPlus" type="button" aria-label="Tăng cỡ chữ">A+</button>
         </div>
+        <div class="fszprev" id="fsPrev">Ban đầu Đức Chúa Trời dựng nên trời đất.</div>
+        <select id="fsSel" aria-label="Cỡ chữ" hidden></select>
       </div>
-      <div class="srow"><div class="stxt"><b>Kiểu hiển thị</b><span>Trang sách hoặc từng câu một dòng</span></div>
+      <div class="srow col">
+        <label class="fld"><span>Kiểu chữ (chữ mẫu ở trên đổi theo)</span><select id="fontSel" aria-label="Kiểu chữ"></select></label>
+      </div>
+      <div class="srow"><div class="stxt"><b>Kiểu hiển thị</b><span>Sách in: chữ liền mạch như sách giấy. Từng câu: mỗi câu một dòng.</span></div>
         <div class="seg" id="viewSeg"><button data-v="print">Sách in</button><button data-v="verse">Từng câu</button></div>
       </div>
-      <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Không tự tắt khi đang đọc</span></div>
-        <div class="seg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Bật một chạm để chữ rất to, dễ đọc</span></div>
+        <div class="seg tg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
-      <div class="srow"><div class="stxt"><b>Toàn màn hình tự động</b><span>Android/máy tính: tự ẩn thanh hệ thống và khóa xoay ngang. iPhone: dùng "Thêm vào Màn hình chính"</span></div>
-        <div class="seg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
-      </div>
-      <div class="srow"><div class="stxt"><b>Vị trí thanh menu (iPhone)</b><span>Chỉ khi mở từ biểu tượng Màn hình chính: ở trên hoặc ở dưới màn hình</span></div>
-        <div class="seg" id="mpSeg"><button data-v="top">Trên</button><button data-v="bottom">Dưới</button></div>
-      </div>
-      <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px"><div class="stxt"><b>Chừa mép trên (iPhone)</b><span>Chỉ khi mở từ biểu tượng Màn hình chính. Tự động: iOS 26 trở lên chừa chỗ, máy khác tràn viền. Nếu chữ ở mép trên còn mờ, tăng mức</span></div>
-        <div class="seg" id="sbSeg" style="width:100%"><button data-v="auto" style="flex:1;white-space:nowrap">Tự động</button><button data-v="0" style="flex:1;white-space:nowrap">Không</button><button data-v="12" style="flex:1;white-space:nowrap">Ít</button><button data-v="24" style="flex:1;white-space:nowrap">Vừa</button><button data-v="36" style="flex:1;white-space:nowrap">Nhiều</button></div>
-      </div>
-      <div class="srow"><div class="stxt"><b>Chữ lớn</b><span>Phóng to chữ cho dễ đọc</span></div>
-        <div class="seg" id="bigSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+      <div class="srow"><div class="stxt"><b>Giữ màn hình sáng</b><span>Màn hình không tự tắt khi đang đọc</span></div>
+        <div class="seg tg" id="wakeSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
       </div>
       <div class="srow"><div class="stxt"><b>Hướng dẫn sử dụng</b><span>Xem lại các thao tác cơ bản</span></div>
         <button class="sbtn" id="obShow">Xem lại</button></div>
+      <details class="adv" id="advDet">
+        <summary class="srow advsum"><div class="stxt"><b>⚙ Tùy chọn nâng cao</b><span>Ít khi cần đổi. Bấm để mở hoặc đóng.</span></div><span class="chev" aria-hidden="true">›</span></summary>
+        <div>
+          <div class="srow"><div class="stxt"><b>Toàn màn hình khi đọc</b><span>Ẩn thanh hệ thống cho rộng chỗ (Android, máy tính). Trên iPhone: bấm Chia sẻ → “Thêm vào Màn hình chính”.</span></div>
+            <div class="seg tg" id="fullSeg"><button data-v="0">Tắt</button><button data-v="1">Bật</button></div>
+          </div>
+          <div class="srow iosonly"><div class="stxt"><b>Thanh menu ở trên hay dưới</b><span>Chỉ dùng khi mở app từ biểu tượng ở Màn hình chính của iPhone.</span></div>
+            <div class="seg" id="mpSeg"><button data-v="top">Trên</button><button data-v="bottom">Dưới</button></div>
+          </div>
+          <div class="srow iosonly" style="flex-direction:column;align-items:stretch;gap:10px"><div class="stxt"><b>Khoảng trống mép trên</b><span>Chỉ dùng khi mở app từ Màn hình chính của iPhone. Nếu chữ ở mép trên bị mờ hoặc bị che, hãy tăng mức.</span></div>
+            <div class="seg" id="sbSeg" style="width:100%"><button data-v="auto" style="flex:1;white-space:nowrap">Tự động</button><button data-v="0" style="flex:1;white-space:nowrap">Không</button><button data-v="12" style="flex:1;white-space:nowrap">Ít</button><button data-v="24" style="flex:1;white-space:nowrap">Vừa</button><button data-v="36" style="flex:1;white-space:nowrap">Nhiều</button></div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="slabel">Dữ liệu của tôi</div>
@@ -832,6 +874,12 @@ html[data-paper] .reader.print{text-align:justify}
       <div class="abtxt" id="abText"></div>
       <div class="abfeatbox"><ul class="abfeat" id="abFeat"></ul></div>
       <div id="verTag" class="abver"></div>
+      <div class="updwarn" id="updWarn">
+        <b>⚠ Sao lưu trước khi cập nhật</b>
+        <p>Hãy lưu một bản sao lưu ra <b style="display:inline">file JSON</b> trước khi cập nhật phiên bản. Nếu chưa sao lưu, ghi chú, kế hoạch đọc và dấu trang của bạn có thể bị mất khi có sự cố.</p>
+        <div class="ust" id="updBkSt"></div>
+        <button class="btn primary" id="updBkNow">💾 Sao lưu ra file JSON ngay</button>
+      </div>
       <div class="updwrap"><button class="btn" id="btnUpd">🔄 Kiểm tra cập nhật</button><div class="updmsg" id="updMsg" aria-live="polite"></div></div>
     </div>
 
@@ -1196,7 +1244,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3261,6 +3309,17 @@ $('#abeReset').onclick = () => {
   }, { passive:false });
 })();
 
+window.updBkRefresh = () => {
+  const w = $('#updWarn'), st = $('#updBkSt'); if (!w || !st) return;
+  let r = { has:false, exportAt:0, ago:'chưa lần nào', stale:true }; try { r = PStore.status(); } catch(e){}
+  const fresh = r.exportAt && Date.now() - r.exportAt < 864e5;      // sao lưu trong 24 giờ gần nhất
+  w.classList.toggle('ok', !r.has || !!fresh);
+  st.textContent = !r.has ? 'Hiện chưa có dữ liệu cá nhân nào cần sao lưu.'
+    : !r.exportAt ? '⚠ Bạn CHƯA sao lưu ra file lần nào. Hãy sao lưu trước khi cập nhật!'
+    : fresh ? '✔ Đã sao lưu file ' + r.ago + '. Nếu vừa thêm ghi chú mới, hãy sao lưu lại.'
+    : '⚠ Lần sao lưu file gần nhất: ' + r.ago + '. Nên sao lưu lại trước khi cập nhật.';
+};
+$('#updBkNow').onclick = async () => { try { await dtExport(); } catch(e){ toast('Chưa sao lưu được: ' + (e.message || e)); } window.updBkRefresh(); };
 $('#btnUpd').onclick = async () => {
   const btn = $('#btnUpd'), msg = $('#updMsg'); if (btn.disabled) return;
   if (!navigator.onLine){ msg.textContent = 'Đang offline – chưa kiểm tra được.'; return; }
@@ -3271,11 +3330,20 @@ $('#btnUpd').onclick = async () => {
     const m = (await res.text()).match(/const APP_VERSION\s*=\s*'([^']+)'/);
     if (!m) throw new Error('không đọc được số phiên bản');
     if (m[1] === APP_VERSION){ msg.textContent = '✔ Bạn đang dùng bản mới nhất (' + APP_VERSION + ').'; }
-    else { msg.textContent = 'Có bản mới ' + m[1] + ' – đang tải lại…'; setTimeout(() => location.replace(u.href), 700); return; }
+    else {
+      let r = { has:false, exportAt:0 }; try { r = PStore.status(); } catch(e){}
+      if (r.has && !(r.exportAt && Date.now() - r.exportAt < 864e5)){      // có dữ liệu cá nhân mà chưa sao lưu file trong 24 giờ → hỏi trước khi cập nhật
+        const i = await choose('Sao lưu trước khi cập nhật?', 'Có bản mới ' + m[1] + '. Bạn chưa sao lưu dữ liệu ra file JSON gần đây. Nếu cập nhật mà chưa sao lưu, ghi chú, kế hoạch và dấu trang có thể bị mất khi có sự cố.',
+          [{ t:'💾 Sao lưu ra file trước (khuyên dùng)', cls:'primary' }, { t:'Cập nhật luôn, không sao lưu', cls:'danger' }, { t:'Để sau' }]);
+        if (i === 0){ try { await dtExport(); } catch(e){} window.updBkRefresh(); msg.textContent = 'Đã sao lưu. Bấm "Kiểm tra cập nhật" lần nữa để cập nhật.'; btn.disabled = false; return; }
+        if (i !== 1){ msg.textContent = 'Đã hoãn cập nhật (có bản mới ' + m[1] + ').'; btn.disabled = false; return; }
+      }
+      msg.textContent = 'Có bản mới ' + m[1] + ' – đang tải lại…'; setTimeout(() => location.replace(u.href), 700); return;
+    }
   } catch(e){ msg.textContent = 'Không kiểm tra được: ' + (e.message || e); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; try { window.updBkRefresh(); } catch(e){} show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
@@ -5426,6 +5494,21 @@ $$('#bigSeg button').forEach(b => b.onclick = () => {
   saveS(); applyFs(); try { pgRefresh(); } catch(e){}
 });
 
+/* Cài đặt: cỡ chữ A−/A+ có chữ mẫu · ẩn mục chỉ dành cho iPhone trên máy khác */
+(function(){
+  const MIN = 14, MAX = 36, STEP = 2;
+  const ui = () => {
+    $('#fsVal').textContent = S.fs;
+    $('#fsMinus').disabled = S.fs <= MIN; $('#fsPlus').disabled = S.fs >= MAX;
+  };
+  const set = v => { v = Math.max(MIN, Math.min(MAX, v)); if (v === S.fs) return; S.fs = v; saveS(); applyFs(); try { pgRefresh(); } catch(e){} };
+  $('#fsMinus').onclick = () => set(S.fs - STEP);
+  $('#fsPlus').onclick = () => set(S.fs + STEP);
+  const _afs = applyFs; applyFs = function(){ _afs.apply(this, arguments); ui(); };     // mọi nơi đổi cỡ chữ (Chữ lớn, hướng dẫn…) đều cập nhật số hiển thị
+  ui();
+  if (!IS_IOS) $$('.iosonly').forEach(e => e.style.display = 'none');
+})();
+
 const OB = [
   { ico:'Aa', aa:true, t:'Chọn cỡ chữ cho dễ đọc', d:'Bấm chọn cỡ chữ bạn thấy thoải mái. Bạn có thể đổi lại bất cứ lúc nào trong Cài đặt (nút Aa ở góc trên).', size:true },
   { ico:'📖', t:'Tìm sách, chương, câu', d:'Ở đầu trang, chọn sách rồi gõ số chương, số câu muốn đọc. Bấm biểu tượng 🔍 để tìm một từ trong cả Kinh Thánh. Gõ đúng dấu: “tội” chỉ ra “tội”, “toi” chỉ ra “toi”.' },
@@ -5947,7 +6030,7 @@ const PStore = (() => {
       remind(); updateSum();
     } catch(e){ console.warn('PStore.periodic', e); }
   }
-  const noteExport = () => { meta.exportAt = Date.now(); saveMeta(); updateSum(); try { const sh = $('#psSheet'); if (sh && !sh.hidden) refreshUI(); } catch(e){} };
+  const noteExport = () => { meta.exportAt = Date.now(); saveMeta(); updateSum(); try { window.updBkRefresh && window.updBkRefresh(); } catch(e){} try { const sh = $('#psSheet'); if (sh && !sh.hidden) refreshUI(); } catch(e){} };
 
   /* ---------- Giao diện (chữ đơn giản, ít nút, dễ dùng cho mọi lứa tuổi) ---------- */
   const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
@@ -6001,7 +6084,8 @@ const PStore = (() => {
     setInterval(() => { if (document.visibilityState === 'visible') periodic(); }, TICK_MS);
     setTimeout(periodic, 5000);
   }
-  return { init, bootRestore, safety, noteExport, periodic };
+  const status = () => { const s = snapshot(); return { has:hasData(s), exportAt:meta.exportAt || 0, ago:ago(meta.exportAt), stale:fileStale(s) }; };
+  return { init, bootRestore, safety, noteExport, periodic, status };
 })();
 
 /* =========================================================
