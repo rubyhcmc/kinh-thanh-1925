@@ -424,6 +424,12 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 /* Câu đang được chạm giữ (menu hiện ra): in đậm bằng nét viền chữ – chỉ đổi cách vẽ, không đổi độ rộng nên trang/dòng không bị dàn lại */
 .v.hold{-webkit-text-stroke:.55px currentColor;paint-order:stroke fill}
 .v.hold .vn{-webkit-text-stroke:0}
+/* Chỗ đọc tiếp (📍): số câu được tô đặc – không đổi độ rộng nên không làm dàn lại trang */
+.v.rs .vn{background:var(--accent);color:var(--card);border-radius:3px;outline:2px solid var(--accent);outline-offset:0}
+.vmenu button.on{color:var(--accent);font-weight:700}
+.vmenu button small{display:block;margin-top:3px;font-size:12px;font-weight:400;color:var(--muted);line-height:1.35}
+.bmitem.rsitem{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;margin:0 0 10px;padding:0 4px}
+.toast button{margin-left:10px;border:0;background:none;color:#ffd27a;font:inherit;font-weight:700;padding:2px 4px}
 html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .v.bm .vn{text-decoration:underline;text-underline-offset:2px}
 .v.bm.sel{background:var(--hl)}
@@ -1088,7 +1094,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02-AB22';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1112,6 +1118,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 let toastTimer;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+// Thông báo có nút thao tác (vd. “Hoàn tác”), tự tắt sau 5 giây
+function toastAct(msg, label, fn){
+  const t = $('#toast'); t.textContent = msg;
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+  b.onclick = () => { try { fn(); } finally { t.hidden = true; } };
+  t.appendChild(b); t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 5000);
+}
 // Hộp thoại nhiều lựa chọn (thay cho confirm khi cần chọn 2–3 hướng)
 function choose(title, msg, opts){
   return new Promise(res => {
@@ -1698,6 +1711,23 @@ try { RESUME = JSON.parse(localStorage.getItem(RS_KEY) || 'null'); } catch(e){ R
 if (!(RESUME && RESUME.book && RESUME.ch >= 1)) RESUME = null;
 const saveResume = () => { try { RESUME ? localStorage.setItem(RS_KEY, JSON.stringify(RESUME)) : localStorage.removeItem(RS_KEY); } catch(e){} };
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
+const rsAgo = t => { if (!t) return ''; const d = Math.round((Date.parse(dayKey()) - Date.parse(dayKey(t))) / 864e5); return d <= 0 ? 'hôm nay' : d === 1 ? 'hôm qua' : d + ' ngày trước'; };
+function markResume(flip){                                          // tô số câu của chỗ đọc tiếp
+  $$('#bibleText .v.rs').forEach(e => e.classList.remove('rs'));
+  if (curBook && RESUME && RESUME.book === curBook.name && RESUME.ch === S.chapter && RESUME.n >= 1){ const el = $('#v' + RESUME.n); if (el) el.classList.add('rs'); }
+  if (flip){ try { if (window.ktFlipDirty) window.ktFlipDirty(); if (!pg.busy) pgPrepClear(true); } catch(e){} }
+}
+function toggleResumeAt(n){                                         // 📍 Đọc đến đây: ghi nhớ / bỏ ghi nhớ, luôn có Hoàn tác
+  if (!curBook) return;
+  const book = curBook.name, ch = S.chapter, prev = RESUME ? { ...RESUME } : null, off = rsIsOff();
+  const was = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
+  const undo = () => { RESUME = prev; saveResume(); rsSetOff(off); markResume(true); };
+  hideResumeChip();
+  if (was){ RESUME = null; saveResume(); rsSetOff(true); markResume(true); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', undo); return; }
+  setResume(book, ch, n); markResume(true);
+  try { navigator.vibrate && navigator.vibrate(25); } catch(e){}
+  toastAct(`📍 Đã ghi nhớ ${book} ${ch}:${n}. Lần sau mở app sẽ tiếp tục từ đây`, 'Hoàn tác', undo);
+}
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
    - Đọc XONG một chương (xem bộ đếm “ĐẾM CHƯƠNG ĐÃ ĐỌC”) mà chưa có chỗ đọc tiếp nối → tự tạo ở chương kế tiếp.
@@ -1710,13 +1740,15 @@ let rsT = 0, rsHold = 0;
 function rsTrackNow(){
   clearTimeout(rsT);
   if (document.documentElement.dataset.flipping){ rsT = setTimeout(rsTrackNow, 600); return; }
-  if (!PLAN || !RESUME || !curBook || document.body.classList.contains('searching')) return;
+  if (!RESUME || !curBook || document.body.classList.contains('searching')) return;
   if (RESUME.book !== curBook.name || RESUME.ch !== S.chapter) return;
   const wait = rsHold - Date.now();
   if (wait > 0){ rsT = setTimeout(rsTrackNow, wait + 50); return; }          // vừa khôi phục vị trí: chờ trang ổn định rồi mới ghi
   const n = parseInt(curVerseNo(), 10);
-  if (!(n >= 1) || n === RESUME.n) return;
-  RESUME.n = n; RESUME.at = Date.now(); saveResume();
+  /* Thông minh: chỗ đọc tiếp tự đi theo bạn khi đọc tiếp trong cùng chương (chỉ tiến lên, bước nhỏ ≤ 30 câu).
+     Nhảy xa (tra cứu, tìm kiếm) hay lùi lại xem câu trước KHÔNG làm mất chỗ bạn đã ghi nhớ. */
+  if (!(n >= 1) || n <= RESUME.n || n - RESUME.n > 30) return;
+  RESUME.n = n; RESUME.at = Date.now(); saveResume(); markResume(true);
 }
 const rsTrack = () => { clearTimeout(rsT); rsT = setTimeout(rsTrackNow, 1500); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') rsTrackNow(); });
@@ -1739,9 +1771,10 @@ async function restoreResume(){                                  // gọi khi m�
   hideResumeChip();
   if (!RESUME || !bibleMeta.some(m => m.name === RESUME.book)) return;
   const r = { book:RESUME.book, ch:RESUME.ch, n:RESUME.n || 0 };      // chụp lại vị trí lúc mở app (cuộn sau đó không làm đổi lối tắt)
+  if (curBook && curBook.name === r.book && S.chapter === r.ch && r.n <= 1) return;   // đang ở đúng đầu chương đó rồi → không cần lối tắt
   rsHold = Date.now() + 20000;                                     // trong lúc lối tắt còn hiện, không ghi đè chỗ đọc cũ
   const c = document.createElement('div'); c.id = 'rsChip'; c.className = 'rschip';
-  c.innerHTML = `<button type="button" class="rsgo"><span class="rsl">📌 Tiếp tục đọc từ:</span> <b>${esc(r.book)} ${r.ch}${r.n > 1 ? ':' + r.n : ''}</b></button><button type="button" class="rsx" aria-label="Ẩn">✕</button>`;
+  c.innerHTML = `<button type="button" class="rsgo"><span class="rsl">📍 Tiếp tục đọc từ:</span> <b>${esc(r.book)} ${r.ch}${r.n > 1 ? ':' + r.n : ''}</b>${rsAgo(RESUME.at) ? ` <span class="rsl">· ${rsAgo(RESUME.at)}</span>` : ''}</button><button type="button" class="rsx" aria-label="Ẩn">✕</button>`;
   c.querySelector('.rsgo').onclick = async () => { hideResumeChip(); await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); };
   c.querySelector('.rsx').onclick = hideResumeChip;
   document.body.appendChild(c);
@@ -1750,6 +1783,7 @@ async function restoreResume(){                                  // gọi khi m�
 
 function markBookmarks(){
   if (window.ktFlipDirty) window.ktFlipDirty();
+  markResume(false);
   $$('#bibleText .v.bm').forEach(e => e.classList.remove('bm'));
   if (!curBook) return;
   BM.forEach(b => {
@@ -1766,7 +1800,14 @@ function addBookmark(n){
   if (BM.length > BM_MAX) BM.length = BM_MAX;
   saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){}
   try { navigator.vibrate && navigator.vibrate(25); } catch(e){}
-  toast(`🔖 Đã đánh dấu ${curBook.name} ${S.chapter}:${n}`);
+  const bk = curBook.name, ch0 = S.chapter;
+  toastAct(`🔖 Đã đánh dấu ${bk} ${ch0}:${n}`, 'Hoàn tác', () => { BM = BM.filter(b => !(b.book === bk && b.ch === ch0 && b.n === n)); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){} });
+}
+function removeBookmark(n){
+  if (!curBook) return;
+  const bk = curBook.name, ch0 = S.chapter, old = BM.find(b => b.book === bk && b.ch === ch0 && b.n === n); if (!old) return;
+  BM = BM.filter(b => b !== old); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){}
+  toastAct(`Đã bỏ đánh dấu ${bk} ${ch0}:${n}`, 'Hoàn tác', () => { BM.unshift(old); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){} });
 }
 function scrollToVerse(n){
   const el = $('#v' + n); if (!el) return;
@@ -1789,7 +1830,8 @@ function openMarks(){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
   const draw = () => {
     o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
-      <p class="bmhint">Chạm giữ một câu trong khi đọc để đánh dấu. Danh sách này chỉ gồm các câu bạn tự đánh dấu.</p>
+      <p class="bmhint">Chạm giữ một câu: <b>📍 Đọc đến đây</b> để lần sau app tiếp tục từ đó, <b>🔖 Đánh dấu</b> để lưu câu vào danh sách này.</p>
+      ${(RESUME && bibleMeta.some(m => m.name === RESUME.book)) ? `<div class="bmitem rsitem"><button class="bmmain" data-rsgo="1"><b>📍 Chỗ đọc tiếp · ${esc(RESUME.book)} ${RESUME.ch}${RESUME.n > 1 ? ':' + RESUME.n : ''}</b><span class="bmt">Chạm để mở đúng chỗ đang đọc dở</span><small>${esc(rsAgo(RESUME.at))}</small></button><button class="iconbtn" data-rsdel="1" aria-label="Bỏ chỗ đọc tiếp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ''}
       ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
         : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
       <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
@@ -1798,6 +1840,8 @@ function openMarks(){
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const g = e.target.closest('[data-go]'), d = e.target.closest('[data-del]');
+    if (e.target.closest('[data-rsdel]')){ const prev = RESUME ? { ...RESUME } : null, off = rsIsOff(); RESUME = null; saveResume(); rsSetOff(true); markResume(true); draw(); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', () => { RESUME = prev; saveResume(); rsSetOff(off); markResume(true); }); return; }
+    if (e.target.closest('[data-rsgo]')){ const r = RESUME; o.remove(); if (r) await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); return; }
     if (d){ BM.splice(+d.dataset.del, 1); saveBM(); markBookmarks(); draw(); return; }
     if (e.target.closest('[data-clear]')){ if (confirm('Xóa toàn bộ vị trí đã đánh dấu?')){ BM = []; saveBM(); markBookmarks(); draw(); } return; }
     if (g){ const b = BM[+g.dataset.go]; o.remove(); if (b) await goBookmark(b); }
@@ -2117,9 +2161,11 @@ function showVerseMenu(n, x, y){
   const bg = document.createElement('div'); bg.className = 'vmenu-bg';
   bg.style.cssText = 'position:fixed;inset:0;z-index:60;background:transparent';
   const m = document.createElement('div'); m.className = 'vmenu';
+  const isRs = !!(RESUME && RESUME.book === curBook.name && RESUME.ch === S.chapter && RESUME.n === n);
+  const isBm = BM.some(b => b.book === curBook.name && b.ch === S.chapter && b.n === n);
   m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
-    <button data-a="mark">🔖 Đã đọc đến đây</button>
-    <button data-a="resume">📌 Đọc tiếp từ đây</button>
+    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang là chỗ đọc tiếp' : '📍 Đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghi nhớ' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>
+    <button data-a="mark" class="${isBm ? 'on' : ''}">${isBm ? '🔖 Bỏ đánh dấu câu này' : '🔖 Đánh dấu câu này'}<small>${isBm ? 'Đang có trong danh sách 🔖' : 'Lưu vào danh sách 🔖 để xem lại'}</small></button>
     <button data-a="copy">📋 Sao chép câu này</button>
     <button data-a="img">🖼️ Chia sẻ thành ảnh</button>
     <button data-a="multi">☑️ Chọn nhiều câu</button>
@@ -2139,8 +2185,8 @@ function showVerseMenu(n, x, y){
     const b = e.target.closest('[data-a]'); close();
     if (!b) return;
     const a = b.dataset.a;
-    if (a === 'mark') addBookmark(n);
-    else if (a === 'resume'){ setResume(curBook.name, S.chapter, n); try { navigator.vibrate && navigator.vibrate(25); } catch(e){} toast(`📌 Lần sau mở app sẽ có lối tắt “Tiếp tục đọc từ ${curBook.name} ${S.chapter}:${n}”`); }
+    if (a === 'mark'){ isBm ? removeBookmark(n) : addBookmark(n); }
+    else if (a === 'resume') toggleResumeAt(n);
     else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
     else if (a === 'img') verseImage([n]);
     else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns:[n] } }));
