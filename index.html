@@ -1274,7 +1274,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.02y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1352,7 +1352,11 @@ const FONTS = {
   'Merriweather': { q:'Merriweather:ital,wght@0,400;0,700;1,400',       s:'"Merriweather",Georgia,"Times New Roman",serif' },
   'Inter':        { q:'Inter:wght@400;600;700',                         s:'"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif' },
   'Roboto':       { q:'Roboto:ital,wght@0,400;0,500;0,700;1,400',       s:'"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' },
-  'Open Sans':    { q:'Open+Sans:ital,wght@0,400;0,600;0,700;1,400',    s:'"Open Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' }
+  'Open Sans':    { q:'Open+Sans:ital,wght@0,400;0,600;0,700;1,400',    s:'"Open Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' },
+  /* EB Garamond: nét chữ bản Kinh Thánh cổ. Chữ nhỏ nên phần giao diện (nút, nhãn nhỏ) vẫn dùng font dễ đọc `ui` */
+  'EB Garamond':  { q:'EB+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700', s:'"EB Garamond",Garamond,"Times New Roman",serif', ui:'Georgia,"Times New Roman",serif' },
+  /* Playfair Display: chỉ dùng để vẽ ảnh chia sẻ câu Kinh Thánh (không có trong danh sách chọn font đọc) */
+  'Playfair Display': { q:'Playfair+Display:ital,wght@0,400;0,600;0,700;1,400', s:'"Playfair Display",Georgia,"Times New Roman",serif', hidden:true }
 };
 const fontP = {};
 function loadFont(name){                                  // trả về Promise: xong khi stylesheet VÀ file font đã tải
@@ -1372,15 +1376,15 @@ function loadFont(name){                                  // trả về Promise:
   return fontP[name];
 }
 function applyFont(){
-  if (!FONTS[S.font]) S.font = 'Lora';
+  if (!FONTS[S.font] || FONTS[S.font].hidden) S.font = 'Lora';
   /* Chữ chỉ hiện khi font đã sẵn sàng (tối đa 1,5 giây): không còn cảnh số chương to / chữ nháy đổi kiểu khi mở lại app */
   const de = document.documentElement; de.classList.add('fw');
   Promise.race([loadFont(S.font), new Promise(r => setTimeout(r, 2500))]).then(() => { de.classList.remove('fw'); try { pgRefresh(); } catch(e){} });
   const st = document.documentElement.style;
-  st.setProperty('--serif', FONTS[S.font].s); st.setProperty('--sans', FONTS[S.font].s);
+  st.setProperty('--serif', FONTS[S.font].s); st.setProperty('--sans', FONTS[S.font].ui || FONTS[S.font].s);
   $('#fontSel').value = S.font;
 }
-$('#fontSel').innerHTML = Object.keys(FONTS).map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}">${n}</option>`).join('');
+$('#fontSel').innerHTML = Object.keys(FONTS).filter(n => !FONTS[n].hidden).map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}">${n}</option>`).join('');
 $('#fsSel').innerHTML = Array.from({ length:23 }, (_, i) => `<option value="${14 + i}">${14 + i}</option>`).join('');
 $('#fontSel').onchange = e => { S.font = e.target.value; saveS(); applyFont(); };
 $('#fsSel').onchange = e => { S.fs = +e.target.value; saveS(); applyFs(); try { pgRefresh(); } catch(err){} };
@@ -5604,8 +5608,11 @@ async function verseImage(nums){
   const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, ' ')).join(' ').replace(/\s+/g, ' ').trim();
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());   // Sáng Thế Ký, Xuất Ê-díp-tô Ký
   const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
-  const fam = (FONTS[S.font] && FONTS[S.font].s) || PDF_SERIF;
-  try { await Promise.all([document.fonts.load('400 40px ' + fam), document.fonts.load('700 40px ' + fam)]); } catch(e){}
+  let fam = (FONTS[S.font] && FONTS[S.font].s) || PDF_SERIF;
+  try { await Promise.race([loadFont('Playfair Display'), new Promise(r => setTimeout(r, 4000))]); } catch(e){}
+  const pfOk = [...document.fonts].some(f => f.family.replace(/["']/g, '') === 'Playfair Display' && f.status === 'loaded');
+  if (pfOk) fam = FONTS['Playfair Display'].s;                          // chưa tải được (mất mạng) → dùng font đang đọc, ảnh vẫn tạo bình thường
+  try { await Promise.all([document.fonts.load('400 40px ' + fam, 'Ếệặ'), document.fonts.load('700 40px ' + fam, 'Ếệặ')]); } catch(e){}
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
   const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#fbf6ea'); g.addColorStop(1, '#efe2c6');
