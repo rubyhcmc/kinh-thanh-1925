@@ -374,6 +374,7 @@ details a{color:var(--accent)}
 /* ===== Quản lý tên sách trong trình soạn thảo ===== */
 .edsub{display:block;width:100%;margin:6px 0 0;padding:8px 12px;min-height:38px;max-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:inherit;font:inherit;font-size:13.5px;line-height:1.4;resize:none;overflow:auto;box-sizing:border-box}
 .chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
+.chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}   /* tiêu đề phụ dưới tên sách: lớn hơn, thưa chữ, cách xa dòng CHƯƠNG */
 .edbook{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
 .edbook .btn{padding:7px 10px;font-size:13px}
 .edhint{flex:1;min-width:170px;font-size:12.5px;color:var(--muted);line-height:1.4}
@@ -394,6 +395,19 @@ details a{color:var(--accent)}
 .lgbtns .lgcancel{border-color:transparent;background:none;color:var(--muted);font-weight:600}
 /* ===== Chú thích bấm để bung/ẩn ===== */
 :root[data-theme=dark] .fnm{color:#ffb454}
+.hd .fnx{font-size:15px;font-family:var(--serif);letter-spacing:0;text-transform:none;font-weight:400;text-align:left}
+.hd .fnm{font-size:.6em}
+/* Dời chương */
+.mvlist{margin:6px 0 10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.mvrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+.mvrow:first-child{border-top:0}
+.mvrow.moved{background:var(--accent-soft)}
+.mvn{flex:none;min-width:40px;text-align:center;font-weight:700;font-size:15px;border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--bg)}
+.mvt{flex:1;min-width:0;font-size:13px;line-height:1.35;color:var(--muted)}
+.mvt b{display:block;color:var(--fg);font-size:13px;font-weight:600}
+.mvt i{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvb{flex:none;display:flex;gap:4px}
+.mvb button{min-width:38px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
 .fnk{cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
 .fnk::after{content:'';position:absolute;inset:-12px -8px}
 .fnk:active{opacity:.55}
@@ -1089,10 +1103,13 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       </div>
     </div>
     <textarea id="edSub" class="edsub" rows="1" placeholder="Tiêu đề trên tên sách (Enter = xuống dòng)" autocomplete="off"></textarea>
+    <select id="edSubPos" class="edsub" aria-label="Vị trí tiêu đề phụ"><option value="">Tiêu đề phụ hiện PHÍA TRÊN tên sách (vd: SÁCH THỨ NHẤT CỦA)</option><option value="below">Tiêu đề phụ hiện PHÍA DƯỚI tên sách (vd: SỬ-KÝ → THỨ NHẤT)</option></select>
+    <input type="text" id="edTitle" class="edsub" placeholder="Tên hiển thị ở chương 1 (vd: Các Vua). Từ chương 2 trở đi vẫn hiện đủ tên sách (vd: II Các Vua)" autocomplete="off">
     <datalist id="bookList"></datalist>
     <div class="edbook">
       <div class="edhint" id="edBookHint"></div>
       <button class="btn" id="edBookList">📚 Tất cả sách</button>
+      <button class="btn" id="edBookMove">↕ Dời chương</button>
       <button class="btn" id="edBookRename">✏️ Đổi tên sách</button>
       <button class="btn danger" id="edBookDel">🗑 Xóa sách</button>
     </div>
@@ -1109,6 +1126,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edPasteBtn" title="Dán từ bộ nhớ tạm vào vị trí con trỏ (tự nhận dạng số câu, tiêu đề, thơ)">📥 Dán</button>
           <button class="btn" id="edDelBtn" title="Xóa phần đang bôi chọn; không chọn gì thì xóa dòng đang đứng">⌫ Xóa</button>
           <button class="btn" id="edH">＃ Tiêu đề</button>
+          <button class="btn" id="edNote" title="Gắn chú thích tại vị trí con trỏ (trong câu, tiêu đề, tiểu mục… bất kỳ đâu)">📝 Chú thích</button>
           <button class="btn" id="edQ1">＞ Thơ</button>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
@@ -1172,7 +1190,7 @@ try { if (localStorage.getItem('kt.menupos') !== 'bottom') document.documentElem
    Máy khác (Android, iOS cũ, máy tính) → 0, tràn viền. Người dùng vẫn chọn tay được ở Cài đặt. */
 window.sbAuto = () => { try { return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && CSS.supports('anchor-name', '--a') ? 24 : 0; } catch(e){ return 0; } };
 try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.setProperty('--sbx', (v === null || v === 'auto' ? window.sbAuto() : (+v || 0)) + 'px'); } catch(e){ document.documentElement.style.setProperty('--sbx', window.sbAuto() + 'px'); }
-const APP_VERSION = '2026.11.02h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.02o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2246,7 +2264,7 @@ function docxFile(items, title, fname){                               // items: 
 $('#lsWord').onclick = () => {
   const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
   const c = lsCur, name = 'bai-hoc-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu');
-  saveFiles([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(() => toast('📄 Đã tạo file Word'), e => toast('Không xuất được file Word: ' + (e.message || e)));
+  saveSmart([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, e => toast('Không xuất được file Word: ' + (e.message || e)));
 };
 $('#lsShare').onclick = async () => {
   if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
@@ -2301,49 +2319,40 @@ function showVerseMenu(n, x, y){
   bg.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-/* Chạm giữ (cảm ứng + chuột) */
+/* Nhấn 2 lần liên tiếp vào một câu (cảm ứng + chuột) → mở menu ghi chú */
 (function(){
-  const root = $('#bibleText'), HOLD = 550;
-  let timer = null, sx = 0, sy = 0, fired = false, lastTouch = 0;
-  let hEl = null, hDelay = 0, hInt = 0;
-  const stopBlink = () => { clearTimeout(hDelay); clearInterval(hInt); if (hEl){ hEl.classList.remove('holding', 'hb'); hEl = null; } };
-  const cancel = () => { clearTimeout(timer); timer = null; stopBlink(); };
-  const start = (el, x, y) => {
-    const p = el.closest && el.closest('.v'); fired = false; cancel();
-    if (!p || !curBook) return;
-    sx = x; sy = y;
-    hEl = p; hDelay = setTimeout(() => { p.classList.add('holding', 'hb'); hInt = setInterval(() => p.classList.toggle('hb'), 220); }, 160);
-    timer = setTimeout(() => {
-      timer = null; fired = true; stopBlink();
-      if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
-        selected.add(+p.dataset.n);
+  const root = $('#bibleText'), GAP = 380, DIST = 40;
+  let lastT = 0, lastN = 0, lastX = 0, lastY = 0, lastTouch = 0, dbT = 0;
+  root.style.touchAction = 'manipulation';                // nhấn đúp không bị trình duyệt coi là zoom / chờ 300ms
+  const trigger = (p, x, y) => {
+    clearTimeout(dbT);
+    dbT = setTimeout(() => {                              // chờ 2 lần chạm xử lý chọn câu xong rồi mới mở
+      if (!curBook) return;
+      const n = +p.dataset.n;
+      try { window.getSelection && window.getSelection().removeAllRanges(); } catch(e){}
+      if (selected.size){                                 // đang chọn câu → nhấn đúp mở thẳng cửa sổ viết bài học cho các câu đã chọn
+        selected.add(n);
         const ns = [...selected].sort((a, b) => a - b);
         try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
         clearSelection();
         window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns } }));
         return;
       }
-      clearSelection(); showVerseMenu(+p.dataset.n, sx, sy);
-    }, HOLD);
+      clearSelection(); showVerseMenu(n, x, y);
+    }, 0);
   };
-  root.addEventListener('touchstart', e => {
-    lastTouch = Date.now();
-    if (e.touches.length !== 1){ cancel(); return; }
-    start(e.target, e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive:true });
-  root.addEventListener('touchmove', e => {
-    if (!timer) return;
-    const t = e.touches[0];
-    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) cancel();
-  }, { passive:true });
-  ['touchend', 'touchcancel'].forEach(k => root.addEventListener(k, cancel, { passive:true }));
-  SCR.addEventListener('scroll', cancel, { passive:true });
-  root.addEventListener('mousedown', e => { if (e.button !== 0 || Date.now() - lastTouch < 800) return; start(e.target, e.clientX, e.clientY); });
-  root.addEventListener('mousemove', e => { if (timer && (Math.abs(e.clientX - sx) > 6 || Math.abs(e.clientY - sy) > 6)) cancel(); });
-  ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
+  root.addEventListener('touchstart', () => { lastTouch = Date.now(); }, { passive:true });
+  root.addEventListener('click', e => {
+    const p = e.target.closest && e.target.closest('.v'); if (!p){ lastT = 0; return; }
+    const now = Date.now(), n = +p.dataset.n, x = e.clientX, y = e.clientY;
+    if (lastT && now - lastT < GAP && lastN === n && Math.abs(x - lastX) < DIST && Math.abs(y - lastY) < DIST){
+      lastT = 0; trigger(p, x, y);
+    } else { lastT = now; lastN = n; lastX = x; lastY = y; }
+  }, true);
+  // chuột: nhấn đúp không bôi đen chữ
+  root.addEventListener('mousedown', e => { if (e.detail > 1 && e.target.closest && e.target.closest('.v')) e.preventDefault(); });
+  // giữ lâu không còn mở menu; chỉ chặn menu hệ thống của trình duyệt
   root.addEventListener('contextmenu', e => { if (e.target.closest('.v')) e.preventDefault(); });
-  // thả tay sau khi giữ không bị tính là chạm chọn câu
-  root.addEventListener('click', e => { if (fired){ fired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 })();
 
 /* Bấm dấu chú thích → bung/ẩn nội dung; bấm vào khung chú thích → thu lại. Chạy ở pha capture để không bị tính là chạm chọn câu. */
@@ -2707,7 +2716,7 @@ function normChapters(cs){
 }
 function normBible(j){
   const books = Array.isArray(j) ? j : Array.isArray(j.books) ? j.books : Object.keys(j).map(k => ({ name:k, chapters:j[k] }));
-  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), sub:String(b.sub || '').trim(), chapters:normChapters(b.chapters) }))
+  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), sub:String(b.sub || '').trim(), title:String(b.title || '').trim(), subPos:b.subPos === 'below' ? 'below' : '', chapters:normChapters(b.chapters), no:(+b.no > 0 && +b.no <= 999) ? Math.floor(+b.no) : 0 }))
               .filter(b => b.name && b.chapters.length);
 }
 function parseBibleText(t){
@@ -2737,8 +2746,9 @@ async function importBible(books, mode){
   const map = new Map(existing.map(m => [m.name, m]));
   let max = existing.reduce((a, m) => Math.max(a, m.order), 0);
   const metas = books.map(b => {
-    const m = map.get(b.name) || { name:b.name, order:++max };
-    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; m.chapterCount = b.chapters.length; return m;
+    const taken = new Set([...map.values()].map(x => x.order));
+    const m = map.get(b.name) || { name:b.name, order:(b.no && !taken.has(b.no)) ? (max = Math.max(max, b.no), b.no) : ++max };   // sách mới có số thứ tự (từ tệp xuất) → về đúng vị trí 1–66
+    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; m.chapterCount = b.chapters.length; return m;
   });
   await dbPut('books', books.map(b => ({ name:b.name, chapters:b.chapters })));
   await dbPut('bookMeta', metas);
@@ -2843,7 +2853,7 @@ function toB64(str){
 async function buildBooks(){
   const metas = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order), recs = await dbAll('books');
   const map = new Map(recs.map(b => [b.name, b]));
-  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
+  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
 const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
 
@@ -3615,7 +3625,7 @@ function detectVerses(raw, o){
   // gắn chú thích vào câu có dấu [n] tương ứng (không thấy thì gắn vào câu cuối)
   const taken = new Set();
   defs.forEach(d => {
-    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && v.t.includes('[' + d.k + ']'));
+    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && (v.t.includes('[' + d.k + ']') || String(v.h || '').includes('[' + d.k + ']')));
     if (idx < 0) idx = vs.length - 1;
     if (idx < 0) return;
     taken.add(d.k + ':' + idx);
@@ -3642,7 +3652,7 @@ function serializeVerses(vs){
 }
 // Văn bản soạn thảo → câu
 function parseMarkup(text, startAt){
-  const vs = []; let pendH = null, pendP = false, lastFn = null;     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
+  const vs = []; let pendH = null, pendP = false, lastFn = null, pendFn = [];     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
   const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
   for (let li = 0; li < lines.length; li++){
@@ -3653,6 +3663,9 @@ function parseMarkup(text, startAt){
     m = line.match(/^(>{1,2})\s*(.*)$/);
     const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
     const fm = !lvl && body.match(/^\[(\d{1,3})\][\s:.)\-–]*(\S.*)$/);      // chấp nhận cả "[1]Nội dung", "[1]: Nội dung"          // "[1] chú thích" → gắn vào câu liền trước
+    if (fm && (!vs.length || pendH !== null)){            // chú thích của dấu [n] nằm trong TIÊU ĐỀ (hoặc trước câu 1): giữ lại, gắn vào câu liền sau tiêu đề
+      pendFn.push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; continue;
+    }
     if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
     const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
     const nn = nm ? +(nm[1] || nm[2]) : 0;
@@ -3663,6 +3676,7 @@ function parseMarkup(text, startAt){
       const v = { n:nn, t:(nm[3] || '').trim() };
       if (lvl) v.q = [lvl];
       if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
+      if (pendFn.length){ v.fn = pendFn; pendFn = []; }
       pendH = null; pendP = false; vs.push(v);
     } else if (!lvl && (isHeadLine(body) || isRefLine(body)) && ((pendH !== null && !pendP) || !vs.length)){
       pendH = pendH ? pendH + '\n' + body : body;
@@ -3673,7 +3687,7 @@ function parseMarkup(text, startAt){
     } else if (!lvl && body.length <= 200 && lines.slice(li + 1).some(x => /^(?:>{1,2}\s*)?(?:\((\d{1,3})\)|(\d{1,3}))(?:[.:]|\s)/.test(x.trim()))){
       pendH = pendH ? pendH + '\n' + body : body;        // dòng trước câu 1 (kể cả không viết hoa) → tiêu đề / dẫn nhập
     } else {
-      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; pendH = null; pendP = false; vs.push(v);
+      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; if (pendFn.length){ v.fn = pendFn; pendFn = []; } pendH = null; pendP = false; vs.push(v);
     }
   }
   return vs;
@@ -3737,7 +3751,8 @@ function cleanVerseText(t){
 }
 
 // Dựng HTML: "print" = đoạn liền, số câu nhỏ, số chương chữ lớn như sách giấy; "verse" = mỗi câu một dòng
-function secHTML(h){
+function secHTML(h, fm){
+  const tx = x => richText(x, fm || {});                     // tiêu đề cũng hiểu dấu chú thích [1], [chữ…] như trong câu
   const ls = String(h).split('\n').map(s => s.trim()).filter(Boolean);
   const isRef = l => /^\([^()]*\)$/.test(l);
   const multi = ls.filter(l => !isRef(l)).length > 1;        // nhiều dòng: dòng đầu = mục lớn, các dòng sau = tiểu mục
@@ -3747,29 +3762,39 @@ function secHTML(h){
     const big = !multi || k === 0; k++;                      // tiêu đề một dòng = mục lớn
     const tag = big ? 'h3' : 'h4', cls = big ? 'sec' : 'sec2';
     const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    return m && m[1] ? `<${tag} class="${cls}">${esc(m[1])}<span class="ref">${esc(m[2])}</span></${tag}>`
-                     : `<${tag} class="${cls}">${esc(l)}</${tag}>`;
+    return m && m[1] ? `<${tag} class="${cls}">${tx(m[1])}<span class="ref">${esc(m[2])}</span></${tag}>`
+                     : `<${tag} class="${cls}">${tx(l)}</${tag}>`;
   }).join('') + '</div>';
 }
 function subOf(book){
   try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Sub.value; } catch(_){}
   return (bibleMeta.find(m => m.name === book) || {}).sub || '';
 }
+function subBelowOf(book){   // tiêu đề phụ nằm dưới tên sách?
+  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.SubPos.value === 'below'; } catch(_){}
+  return (bibleMeta.find(m => m.name === book) || {}).subPos === 'below';
+}
+function titleOf(book){   // tên hiển thị ở đầu chương (để trống thì dùng tên sách – tên sách vẫn dùng cho mục lục)
+  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Title.value.trim() || book; } catch(_){}
+  return ((bibleMeta.find(m => m.name === book) || {}).title || '').trim() || book;
+}
 function paperHTML(book, ch, verses, view, idp){
   idp = idp || 'v';
   const print = view !== 'verse';
   const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
-  verses.forEach(v => String(v.t).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));
+  verses.forEach(v => (String(v.t) + '\n' + String(v.h || '')).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));   // dấu [n] nằm trong tiêu đề cũng tính là đã gắn
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
-  let out = `<div class="chhead">${sub.length && +ch === 1 ? `<div class="bksub">${sub.map(esc).join('<br>')}</div>` : ''}<div class="bk">${esc(book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
+  const subHTML = sub.length && +ch === 1 ? `<div class="bksub${subBelowOf(book) ? ' below' : ''}">${sub.map(esc).join('<br>')}</div>` : '';
+  const below = !!subHTML && subBelowOf(book);
+  let out = `<div class="chhead">${below ? '' : subHTML}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div>${below ? subHTML : ''}<div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
   verses.forEach((v, i) => {
     const isPoem = Array.isArray(v.q) && v.q.length;
     const vm = Object.assign({}, fm, fnMapOf(v.fn));
-    if (v.h){ close(); out += secHTML(v.h); }
+    if (v.h){ close(); out += secHTML(v.h, vm); }
     const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
     const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
     const num = `<sup class="vn">${v.n}</sup>`;
@@ -3835,7 +3860,7 @@ function htmlToMarked(html){
  *  ở trang chủ và tự đẩy lên GitHub (nếu đã kết nối).
  * ========================================================= */
 const ed = {};
-['Book','Abbr','Sub','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
+['Book','Abbr','Sub','SubPos','Title','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
 let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
 const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
 
@@ -3857,7 +3882,7 @@ function edRefresh(){
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
-async function persistChapter(name, ch, vs, abbr, sub){
+async function persistChapter(name, ch, vs, abbr, sub, title, subPos){
   if (!isAdmin()) throw new Error('Chỉ quản trị viên mới được sửa nội dung.');   // chế độ chỉ đọc cho cộng đồng
   const rec = (await dbGet('books', name)) || { name, chapters:[] };
   while (rec.chapters.length < ch) rec.chapters.push([]);
@@ -3865,7 +3890,7 @@ async function persistChapter(name, ch, vs, abbr, sub){
   const metas = await dbAll('bookMeta');
   let meta = metas.find(m => m.name === name);
   if (!meta) meta = { name, order: metas.reduce((a, m) => Math.max(a, m.order), 0) + 1 };
-  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); meta.chapterCount = rec.chapters.length;
+  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); if (typeof title === 'string') meta.title = title.trim(); if (typeof subPos === 'string') meta.subPos = subPos; meta.chapterCount = rec.chapters.length;
   await dbPut('books', [rec]); await dbPut('bookMeta', [meta]);
   S.book = name; S.chapter = ch; saveS();
   await initBible(); await refreshStats(); markDirty();
@@ -3878,7 +3903,7 @@ async function edAuto(){
   const vs = parseMarkup(text, +ed.Start.value || 1); if (!vs.length) return;
   try {
     const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
-    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined);
+    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined, ed.Book.value.trim() === name ? ed.Title.value : undefined, ed.Book.value.trim() === name ? ed.SubPos.value : undefined);
     edLoaded = text;
     try { localStorage.removeItem(draftKey()); } catch(e){}
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -3893,6 +3918,8 @@ async function edLoad(){
   const meta = bibleMeta.find(m => m.name === name);
   if (meta && !ed.Abbr.value) ed.Abbr.value = meta.abbr || '';
   if (meta && !ed.Sub.value) ed.Sub.value = meta.sub || '';
+  if (meta && !ed.Title.value) ed.Title.value = meta.title || '';
+  if (meta) ed.SubPos.value = meta.subPos === 'below' ? 'below' : '';
   edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
   let txt = edLoaded;
   try {
@@ -3941,7 +3968,7 @@ const edSel = { s:0, e:0 };
   document.addEventListener('selectionchange', keep);
   t.addEventListener('blur', () => { edSel.s = t.selectionStart; edSel.e = t.selectionEnd; });
   // giữ tiêu điểm khi bấm nút công cụ (không bàn phím nhảy, không mất vùng chọn)
-  ['#edPasteBtn', '#edDelBtn'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
+  ['#edPasteBtn', '#edDelBtn', '#edNote'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
 }
 const edRange = () => { const n = ed.Text.value.length; let s = Math.min(edSel.s, n), e = Math.min(edSel.e, n); if (s > e) [s, e] = [e, s]; return [s, e]; };
 // Thay đoạn [s,e) bằng txt. Ưu tiên execCommand (giữ Hoàn tác); nếu trình duyệt không làm thật thì ghi trực tiếp vào ô.
@@ -4032,6 +4059,28 @@ function edLines(fn){
 }
 const stripPre = l => l.replace(/^(#\s?|>{1,2}\s?)/, '');
 $('#edH').onclick  = () => edLines(l => /^#\s/.test(l) ? stripPre(l) : '# ' + stripPre(l));
+/* Nút 📝 Chú thích: chèn dấu [n] (n = số kế tiếp chưa dùng) tại con trỏ – trong câu, tiêu đề hay tiểu mục đều được – rồi tự thêm dòng "[n] …" ngay sau
+   đoạn đang viết và bôi sẵn phần nội dung để gõ thay vào. */
+$('#edNote').onclick = () => {
+  const t = ed.Text, v = t.value; if (!v.trim()) return toast('Hãy nhập nội dung trước, rồi đặt con trỏ vào chỗ cần chú thích');
+  const [, e] = edRange(), lines = v.split('\n');
+  let li = 0, off = 0; while (li < lines.length - 1 && off + lines[li].length < e){ off += lines[li].length + 1; li++; }
+  if (!lines[li].trim()) return toast('Hãy đặt con trỏ vào chỗ cần gắn chú thích (không phải dòng trống)');
+  if (/^\s*\[\d{1,3}\]/.test(lines[li])) return toast('Hãy đặt con trỏ trong câu hoặc tiêu đề cần chú thích (không phải trong dòng chú thích)');
+  let mx = 0; (v.match(/\[(\d{1,3})\]/g) || []).forEach(x => { mx = Math.max(mx, +x.slice(1, -1)); });
+  const n = mx + 1;
+  const isHead = l => /^\s*#\s/.test(l), isDef = l => /^\s*\[\d{1,3}\]/.test(l), isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s|$)/.test(l);
+  let k = li;                                                                  // dòng cuối của đoạn đang viết: dòng chú thích chèn ngay sau đó
+  if (isHead(lines[li])){ while (k + 1 < lines.length && isHead(lines[k + 1])) k++; }
+  else { while (k + 1 < lines.length && lines[k + 1].trim() && !isHead(lines[k + 1]) && !isDef(lines[k + 1]) && !isVerse(lines[k + 1])) k++; }
+  let endK = 0; for (let i = 0; i <= k; i++) endK += lines[i].length + (i < k ? 1 : 0);
+  const ph = 'Nội dung chú thích', tail = '\n[' + n + '] ' + ph;
+  edReplace(e, endK, '[' + n + ']' + v.slice(e, endK) + tail);
+  const c = e + 2 + String(n).length + (endK - e) + tail.length;
+  try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); }
+  t.setSelectionRange(c - ph.length, c); edSel.s = c - ph.length; edSel.e = c;
+  toast('Đã gắn chú thích [' + n + '] – gõ nội dung thay cho dòng được bôi chọn');
+};
 $('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' + stripPre(l));
 $('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
 $('#edPara').onclick = () => edLines((l, i) => i === 0 ? '\n' + l : l);
@@ -4086,7 +4135,7 @@ async function edDeleteBook(){
     if (S.book === name){ S.book = null; S.chapter = 1; saveS(); }
     BM = BM.filter(b => b.book !== name); saveBM();
     try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => localStorage.removeItem(k)); } catch(e){}
-    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Chap.value = 1;
+    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Title.value = ''; ed.SubPos.value = ''; ed.Chap.value = 1;
     await initBible(); await refreshStats(); markDirty(); edBookList(); edRefresh();
     toast(`Đã xóa sách "${name}"`);
   } catch(e){ toast('Lỗi xóa sách: ' + (e.message || e)); }
@@ -4100,10 +4149,72 @@ $('#edBookList').onclick = async () => {
   const i = await choose('Chọn sách để xem / sửa', `Trong máy có ${bibleMeta.length} sách.`, opts);
   if (i < 0 || i >= bibleMeta.length) return;
   const m = bibleMeta[i];
-  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; edSubFit();
+  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; edSubFit();
   ed.Chap.value = m.name === S.book && S.chapter ? S.chapter : 1;
   await edLoad();
 };
+/* ↕ Dời chương: sắp lại thứ tự các chương của sách đang soạn khi bị đảo lộn (dùng ▲ ▼ hoặc bấm số để dời thẳng tới vị trí khác) */
+async function edMoveChapters(){
+  if (!isAdmin()) return;
+  await edAuto();
+  const name = ed.Book.value.trim(); if (!name) return toast('Hãy chọn sách cần dời chương');
+  const rec = await dbGet('books', name);
+  if (!rec || !rec.chapters || rec.chapters.length < 2) return toast('Sách cần có từ 2 chương trở lên để dời');
+  const chs = rec.chapters, N = chs.length;
+  let order = Array.from({ length:N }, (_, i) => i);                 // order[vị trí mới] = chỉ số chương cũ
+  const snip = i => {
+    const vs = chs[i] || [];
+    if (!vs.length) return '<b>(chương trống)</b>';
+    const h = vs.find(v => v.h), t = String(vs[0].t || '').replace(/\[[^\]]*\]/g, '').trim();
+    return `<b>${vs.length} câu${h ? ' · ' + esc(String(h.h).split('\n')[0].slice(0, 40)) : ''}</b><i>${esc(t.slice(0, 70))}</i>`;
+  };
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = `<div class="sheet"><h3>Dời chương – ${esc(name)}</h3>
+    <p class="hint" style="margin:0 0 4px;font-size:13px;color:var(--muted)">Bấm ▲ ▼ để dời chương lên/xuống một vị trí, hoặc bấm vào <b>số chương</b> để dời thẳng tới vị trí khác. Dòng nền vàng là chương đã đổi chỗ. Chỉ khi bấm “Áp dụng” mới lưu.</p>
+    <div class="mvlist" id="mvList"></div>
+    <div class="btns" style="flex-direction:column"><button class="btn primary" id="mvOk" disabled>Áp dụng thứ tự mới</button><button class="btn" id="mvReset">Đặt lại như ban đầu</button><button class="btn" id="mvX">Hủy</button></div></div>`;
+  document.body.appendChild(o);
+  const list = o.querySelector('#mvList'), ok = o.querySelector('#mvOk');
+  const draw = () => {
+    list.innerHTML = order.map((old, pos) => `<div class="mvrow${old !== pos ? ' moved' : ''}" data-pos="${pos}">
+      <button class="mvn" data-a="to" title="Dời tới vị trí khác" style="min-height:38px">${pos + 1}${old !== pos ? `<small style="display:block;font-weight:400;font-size:10px;color:var(--muted)">cũ ${old + 1}</small>` : ''}</button>
+      <div class="mvt">${snip(old)}</div>
+      <div class="mvb"><button data-a="up" aria-label="Lên"${pos === 0 ? ' disabled' : ''}>▲</button><button data-a="dn" aria-label="Xuống"${pos === N - 1 ? ' disabled' : ''}>▼</button></div></div>`).join('');
+    ok.disabled = order.every((v, i) => v === i);
+  };
+  const move = (from, to) => { to = Math.max(0, Math.min(N - 1, to)); if (from === to) return; const [x] = order.splice(from, 1); order.splice(to, 0, x); draw(); };
+  draw();
+  o.addEventListener('click', async e => {
+    if (e.target === o) return o.remove();
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'mvX') return o.remove();
+    if (b.id === 'mvReset'){ order = order.map((_, i) => i); return draw(); }
+    if (b.id === 'mvOk'){
+      if (!confirm(`Lưu thứ tự chương mới cho "${name}"? Các chương sẽ được đánh số lại theo thứ tự này.`)) return;
+      try {
+        const cur = (await dbGet('books', name)) || rec;
+        cur.chapters = order.map(i => cur.chapters[i] || []);
+        while (cur.chapters.length && !(cur.chapters[cur.chapters.length - 1] || []).length) cur.chapters.pop();   // chương trống thừa ở cuối (vd chương 2–5 sau khi dời chương 5 lên 1) được bỏ, như khi xóa chương
+        await dbPut('books', [cur]);
+        { const meta = (await dbAll('bookMeta')).find(m => m.name === name); if (meta){ meta.chapterCount = cur.chapters.length; await dbPut('bookMeta', [meta]); } }
+        try { Object.keys(localStorage).filter(k => k.startsWith('kt.draft.' + name + '|')).forEach(k => localStorage.removeItem(k)); } catch(err){}
+        await initBible(); await refreshStats(); markDirty();
+        o.remove(); await edLoad(); edBookHint();
+        toast('✔ Đã dời chương – thứ tự mới đã lưu');
+      } catch(err){ toast('Lỗi dời chương: ' + (err.message || err)); }
+      return;
+    }
+    const row = b.closest('.mvrow'); if (!row) return;
+    const pos = +row.dataset.pos, a = b.dataset.a;
+    if (a === 'up') move(pos, pos - 1);
+    else if (a === 'dn') move(pos, pos + 1);
+    else if (a === 'to'){
+      const v = parseInt(prompt(`Dời chương đang ở vị trí ${pos + 1} tới vị trí số (1–${N}):`, String(pos + 1)), 10);
+      if (v >= 1 && v <= N) move(pos, v - 1);
+    }
+  });
+}
+$('#edBookMove').onclick = edMoveChapters;
 $('#edBookRename').onclick = edRenameBook;
 $('#edBookDel').onclick = edDeleteBook;
 $('#edClear').onclick =() => { if (confirm('Xóa toàn bộ nội dung trong ô soạn thảo?')){ ed.Text.value = ''; edRefresh(); } };
@@ -4119,6 +4230,26 @@ ed.Sub.addEventListener('input', () => {
     const v = ed.Sub.value.trim(); if (v === (meta.sub || '')) return;
     const m2 = Object.assign({}, meta, { sub:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
     ed.Auto.textContent = '✔ Đã lưu tiêu đề sách';
+  }, 1200);
+});
+let edPosTimer;
+ed.SubPos.addEventListener('change', () => {   // đổi vị trí tiêu đề phụ: xem trước ngay, tự lưu cho sách đã có
+  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 100);
+  clearTimeout(edPosTimer); edPosTimer = setTimeout(async () => {
+    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
+    const v = ed.SubPos.value; if (v === (meta.subPos || '')) return;
+    const m2 = Object.assign({}, meta, { subPos:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
+    ed.Auto.textContent = '✔ Đã lưu vị trí tiêu đề phụ';
+  }, 300);
+});
+let edTitleTimer;
+ed.Title.addEventListener('input', () => {   // tên hiển thị đầu chương: xem trước ngay, tự lưu cho sách đã có
+  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200);
+  clearTimeout(edTitleTimer); edTitleTimer = setTimeout(async () => {
+    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
+    const v = ed.Title.value.trim(); if (v === (meta.title || '')) return;
+    const m2 = Object.assign({}, meta, { title:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
+    ed.Auto.textContent = '✔ Đã lưu tên hiển thị đầu chương';
   }, 1200);
 });
 ed.Start.addEventListener('input', edQueue);
@@ -4147,7 +4278,7 @@ function edApplyPoem(){
 ed.Poem.onchange = edApplyPoem;
 // Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
 ed.Chap.onchange = async () => { await edAuto(); edLoad(); };
-ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; edSubFit(); edLoad(); };
+ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; ed.Title.value = bm.title || ''; ed.SubPos.value = bm.subPos === 'below' ? 'below' : ''; edSubFit(); edLoad(); };
 $('#edPrev').onclick = async () => { await edAuto(); ed.Chap.value = Math.max(1, (parseInt(ed.Chap.value, 10) || 1) - 1); edLoad(); };
 $('#edNext').onclick = async () => { await edAuto(); ed.Chap.value = (parseInt(ed.Chap.value, 10) || 0) + 1; edLoad(); };
 $$('#edSeg button').forEach(b => b.onclick = () => {
@@ -4168,7 +4299,7 @@ async function edSave(goNext){
   const w = checkVerses(vs);
   if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
   try {
-    await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value);
+    await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value, ed.Title.value, ed.SubPos.value);
     try { localStorage.removeItem(draftKey()); } catch(e){}
     edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
     toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
@@ -4300,7 +4431,7 @@ function pdfHeading(L, h){
     if (isRef(l)){ ref(l); return; }
     const big = !multi || k === 0; k++;
     const m = l.match(/^(.*?)\s*(\([^()]*\))\s*$/);
-    L.flow([{ s:(m && m[1]) ? m[1] : l, k:'n' }], { size:big ? 11.5 : 10, lh:big ? 15.5 : 14, align:'center', st:'b' });
+    L.flow(pdfRuns((m && m[1]) ? m[1] : l), { size:big ? 11.5 : 10, lh:big ? 15.5 : 14, align:'center', st:'b' });
     if (m && m[1]) ref(m[2]);
   });
   L.gap(5);
@@ -4476,24 +4607,82 @@ async function saveFiles(files){
     if (i < files.length - 1) await new Promise(r => setTimeout(r, 700));
   }
 }
-function exportResult(name, pdf, json, pages){
+/* ===== 66 SÁCH: số thứ tự chuẩn (Sáng Thế Ký = 01 … Khải Huyền = 66) dùng để đặt tên tệp xuất và ghi vào dữ liệu khôi phục ===== */
+const BIBLE66 = ['Sáng Thế Ký','Xuất Ê-díp-tô Ký','Lê-vi Ký','Dân Số Ký','Phục Truyền Luật Lệ Ký','Giô-suê','Các Quan Xét','Ru-tơ','I Sa-mu-ên','II Sa-mu-ên','I Các Vua','II Các Vua','I Sử Ký','II Sử Ký','Ê-xơ-ra','Nê-hê-mi','Ê-xơ-tê','Gióp','Thi Thiên','Châm Ngôn','Truyền Đạo','Nhã Ca','Ê-sai','Giê-rê-mi','Ca Thương','Ê-xê-chi-ên','Đa-ni-ên','Ô-sê','Giô-ên','A-mốt','Áp-đia','Giô-na','Mi-chê','Na-hum','Ha-ba-cúc','Sô-phô-ni','A-ghê','Xa-cha-ri','Ma-la-chi','Ma-thi-ơ','Mác','Lu-ca','Giăng','Công Vụ Các Sứ Đồ','Rô-ma','I Cô-rinh-tô','II Cô-rinh-tô','Ga-la-ti','Ê-phê-sô','Phi-líp','Cô-lô-se','I Tê-sa-lô-ni-ca','II Tê-sa-lô-ni-ca','I Ti-mô-thê','II Ti-mô-thê','Tít','Phi-lê-môn','Hê-bơ-rơ','Gia-cơ','I Phi-e-rơ','II Phi-e-rơ','I Giăng','II Giăng','III Giăng','Giu-đe','Khải Huyền'];
+const BIBLE_ALIAS = [['Sáng Thế',1],['Sáng Thế Ký',1],['Xuất Hành',2],['Xuất Hành Ký',2],['Xuất Ê-díp-tô',2],['Xuất Ai Cập Ký',2],['Lê-vi',3],['Dân Số',4],['Dân Số Ký',4],['Phục Truyền',5],['Phục Truyền Luật Lệ',5],['Phục Truyền Luật Lệ Ký',5],['Giô-suê',6],['Quan Xét',7],['Các Quan Xét',7],['Ru-tơ',8],['Rút',8],
+  ['I Sa-mu-ên',9],['II Sa-mu-ên',10],['I Các Vua',11],['II Các Vua',12],['I Sử Ký',13],['II Sử Ký',14],['I Sử Biên Niên',13],['II Sử Biên Niên',14],['Ê-xơ-ra',15],['Ê-xơ-rơ',15],['Nê-hê-mi',16],['Ê-xơ-tê',17],['Ê-xo-tê',17],['Gióp',18],['Thi Thiên',19],['Thánh Thi',19],['Châm Ngôn',20],['Truyền Đạo',21],['Nhã Ca',22],['Nhã Ca Ca',22],
+  ['Ê-sai',23],['Ê-sa-i',23],['Giê-rê-mi',24],['Ca Thương',25],['Ê-xê-chi-ên',26],['Đa-ni-ên',27],['Ô-sê',28],['Ô-sê-a',28],['Giô-ên',29],['A-mốt',30],['Áp-đia',31],['Ap-đia',31],['Giô-na',32],['Mi-chê',33],['Na-hum',34],['Ha-ba-cúc',35],['Sô-phô-ni',36],['A-ghê',37],['A-gai',37],['Xa-cha-ri',38],['Xa-cha-ri-a',38],['Ma-la-chi',39],
+  ['Ma-thi-ơ',40],['Mát-thêu',40],['Mác',41],['Mác-cô',41],['Lu-ca',42],['Lu-ca',42],['Giăng',43],['Gioan',43],['Công Vụ',44],['Công Vụ Các Sứ Đồ',44],['Công Vụ Các Sứ Đồ',44],['Rô-ma',45],['I Cô-rinh-tô',46],['II Cô-rinh-tô',47],['Ga-la-ti',48],['Ê-phê-sô',49],['Phi-líp',50],['Phi-líp-phê',50],['Cô-lô-se',51],
+  ['I Tê-sa-lô-ni-ca',52],['II Tê-sa-lô-ni-ca',53],['I Ti-mô-thê',54],['II Ti-mô-thê',55],['Tít',56],['Phi-lê-môn',57],['Hê-bơ-rơ',58],['Gia-cơ',59],['I Phi-e-rơ',60],['II Phi-e-rơ',61],['I Giăng',62],['II Giăng',63],['III Giăng',64],['Giu-đe',65],['Khải Huyền',66],['Khải Thị',66]];
+const bkKey = s => fold(s).replace(/[^a-z0-9]+/g, '').replace(/^1(?=[a-z])/, 'i').replace(/^2(?=[a-z])/, 'ii').replace(/^3(?=[a-z])/, 'iii');   // "1 Sa-mu-ên" ≡ "I Sa-mu-ên"
+const BIBLE_KEYS = (() => { const m = new Map(); BIBLE_ALIAS.forEach(([n, i]) => m.set(bkKey(n), i)); BIBLE66.forEach((n, i) => m.set(bkKey(n), i + 1)); return m; })();
+// Số thứ tự của sách: theo danh sách chuẩn 66 sách; không nhận ra tên thì dùng vị trí của sách trong app
+function bookNoOf(name){
+  const k = BIBLE_KEYS.get(bkKey(name)); if (k) return { no:k, known:true };
+  const i = bibleMeta.findIndex(m => m.name === name);
+  return { no:i >= 0 ? i + 1 : 0, known:false };
+}
+// Tên tệp: 10_II-Sa-Mu-En (số thứ tự 2 chữ số + tên không dấu, mỗi từ viết hoa chữ đầu; số La Mã I/II/III giữ nguyên chữ hoa)
+function bookSlug(name){
+  const w = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean);
+  return w.map((x, i) => (i === 0 && /^i{1,3}$/.test(x)) ? x.toUpperCase() : x.charAt(0).toUpperCase() + x.slice(1)).join('-') || 'Sach';
+}
+function bookFileBase(name){ const n = bookNoOf(name); return (n.no ? String(n.no).padStart(2, '0') + '_' : '') + bookSlug(name); }
+/* Kiểm tra bản xuất NGAY trước khi giao cho người dùng: đọc lại dữ liệu khôi phục nằm trong PDF và JSON, so với sách đang có trong máy */
+async function verifyExport(pdf, jsonStr, srcChapters, name){
+  const R = { jsonOk:false, pdfOk:null, chaps:0, verses:0, warns:[] };
+  const canon = cs => JSON.stringify(normChapters(cs));
+  try {
+    const j = JSON.parse(jsonStr), b = normBible(j.bible || j).find(x => x.name === name);
+    R.jsonOk = !!b && canon(b.chapters) === canon(srcChapters);
+  } catch(e){ R.jsonOk = false; }
+  try { R.pdfOk = (await pdfToJson(await pdf.arrayBuffer())) === jsonStr; } catch(e){ R.pdfOk = (e && /chưa hỗ trợ/.test(e.message)) ? null : false; }
+  normChapters(srcChapters).forEach((vs, i) => {
+    if (!vs.length) return; R.chaps++; R.verses += vs.length;
+    checkVerses(vs).filter(w => !/^Gợi ý/.test(w)).forEach(w => R.warns.push(`Chương ${i + 1}: ${w}`));
+  });
+  return R;
+}
+/* Lưu tệp có cửa sổ CHỌN THƯ MỤC: máy tính (Chrome/Edge) mở hộp chọn thư mục rồi ghi thẳng vào đó (lần sau nhớ thư mục gần nhất);
+   điện thoại mở bảng chia sẻ (“Lưu vào Tệp” → chọn thư mục); trình duyệt không hỗ trợ thì tải về thư mục Tải xuống như cũ. */
+const canPickDir = () => typeof window.showDirectoryPicker === 'function' && !matchMedia('(pointer:coarse)').matches;
+const askDirPref = () => { try { return localStorage.getItem('kt.askDir') !== '0'; } catch(e){ return true; } };
+async function saveSmart(files){
+  if (canPickDir() && askDirPref()){
+    let dir = null;
+    try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); }
+    catch(e){ if (e && e.name === 'AbortError'){ toast('Đã hủy – chưa lưu tệp nào'); return 'cancel'; } }
+    if (dir){
+      try {
+        for (const f of files){ const fh = await dir.getFileHandle(f.name, { create:true }); const w = await fh.createWritable(); await w.write(f); await w.close(); }
+        toast(`📁 Đã lưu ${files.length} tệp vào thư mục “${dir.name}”`); return 'dir';
+      } catch(e){ toast('Không ghi được vào thư mục đã chọn, chuyển sang tải về máy: ' + (e.message || e)); }
+    }
+  }
+  await saveFiles(files); return 'default';
+}
+function exportResult(name, pdf, json, pages, rep){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet"><h3>Đã xuất xong: ${esc(name)}</h3>
     <p style="margin:0 0 8px">PDF ${pages} trang (${mb(pdf)}) và JSON (${mb(json)}). Hãy cất cả hai nơi an toàn.</p>
+    ${rep ? `<div class="log ${rep.ok ? 'ok' : 'err'}" style="margin:0 0 8px;white-space:pre-wrap">${esc(rep.text)}</div>` : ''}
     <p class="hint" style="margin:0 0 6px;font-size:13px;color:var(--muted)">Khi web lỗi: bấm Aa → Quản lý dữ liệu → "Khôi phục từ PDF/JSON" rồi chọn một trong hai tệp.</p>
     <div class="btns" style="flex-direction:column">
-      <button class="btn primary" data-k="both">⬇️ Tải cả hai tệp</button>
-      <button class="btn" data-k="pdf">📕 Chỉ tải PDF</button>
-      <button class="btn" data-k="json">🧾 Chỉ tải JSON</button>
+      ${canPickDir() ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 2px"><input type="checkbox" id="exAsk" ${askDirPref() ? 'checked' : ''}> Hỏi chọn thư mục lưu mỗi lần</label>`
+        : `<p class="hint" style="margin:0;font-size:13px;color:var(--muted)">Điện thoại: bảng chia sẻ sẽ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
+      <button class="btn primary" data-k="both">📁 Lưu cả hai tệp</button>
+      <button class="btn" data-k="pdf">📕 Chỉ lưu PDF</button>
+      <button class="btn" data-k="json">🧾 Chỉ lưu JSON</button>
       <button class="btn" data-k="x">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) o.remove(); return; }
     const k = b.dataset.k;
     if (k === 'x') return o.remove();
-    await saveFiles(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
+    await saveSmart(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
   });
+  o.addEventListener('change', e => { if (e.target.id === 'exAsk'){ try { localStorage.setItem('kt.askDir', e.target.checked ? '1' : '0'); } catch(err){} } });
   document.body.appendChild(o);
 }
 async function exportBook(name){
@@ -4512,7 +4701,7 @@ async function exportBook(name){
   const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
   try {
     await new Promise(r => setTimeout(r, 30));
-    const book = { name:rec.name, abbr:meta.abbr || '', sub:meta.sub || '', chapters:rec.chapters };
+    const bno = bookNoOf(rec.name), book = { name:rec.name, abbr:meta.abbr || '', sub:meta.sub || '', title:meta.title || '', subPos:meta.subPos || '', chapters:rec.chapters, no:bno.no };
     const lay = layoutBook(book);
     const r = await renderPages(lay.pages, book.name, (i, n) => say(`Đang vẽ trang ${i}/${n}…`));
     say('Đang đóng gói dữ liệu khôi phục…');
@@ -4520,12 +4709,19 @@ async function exportBook(name){
     const jsonStr = JSON.stringify(payload), raw = new TextEncoder().encode(jsonStr), packed = await pdfDeflate(raw);
     const parts = buildPdfParts({ images:r.images, w:r.w, h:r.h, W:PG.W, H:PG.H, marks:lay.marks, title:book.name + ' - Kinh Thánh',
       data:packed || raw, flate:!!packed, rawSize:raw.length });
-    // Tên file = tên sách không dấu, mỗi từ viết hoa chữ đầu, nối bằng gạch ngang: Sáng Thế Ký → Sang-The-Ky.pdf
-    const base = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
+    // Tên file = số thứ tự sách (01–66) + tên không dấu: Sáng Thế Ký → 01_Sang-The-Ky.pdf · II Sa-mu-ên → 10_II-Sa-Mu-En.pdf
+    const base = bookFileBase(name);
     const pdf = new File(parts, base + '.pdf', { type:'application/pdf' });
     const json = new File([jsonStr], base + '.json', { type:'application/json' });
-    pr.remove(); exportResult(name, pdf, json, lay.pages.length);
+    say('Đang kiểm tra dữ liệu khôi phục…');
+    const vr = await verifyExport(pdf, jsonStr, rec.chapters, rec.name);
+    const lines = [`Tên tệp: ${base}.pdf · ${base}.json`, bno.known ? `Số thứ tự sách: ${String(bno.no).padStart(2, '0')}/66` : `Số thứ tự: ${bno.no || '—'} (tên sách chưa trùng danh sách 66 sách chuẩn nên dùng vị trí trong app)`];
+    const good = vr.jsonOk && vr.pdfOk !== false;
+    lines.push(good ? `✔ Đã kiểm tra: dữ liệu khôi phục trong ${vr.pdfOk ? 'PDF và JSON' : 'JSON'} khớp 100% với sách trong máy (${vr.chaps} chương, ${vr.verses} câu).`
+                    : `✖ KHÔNG KHỚP: ${!vr.jsonOk ? 'JSON' : 'dữ liệu trong PDF'} khác sách trong máy – đừng dùng bản này, hãy xuất lại.`);
+    if (vr.pdfOk === null) lines.push('• Trình duyệt này chưa kiểm tra được dữ liệu bên trong PDF; JSON đã kiểm tra.');
+    if (vr.warns.length){ lines.push(`⚠ Có ${vr.warns.length} cảnh báo trong nội dung (nên sửa rồi xuất lại):`); vr.warns.slice(0, 12).forEach(w => lines.push('  • ' + w)); if (vr.warns.length > 12) lines.push(`  … và ${vr.warns.length - 12} cảnh báo khác`); }
+    pr.remove(); exportResult(name, pdf, json, lay.pages.length, { ok:good && !vr.warns.length, text:lines.join('\n') });
   } catch(e){ pr.remove(); console.error(e); toast('Lỗi xuất sách: ' + (e.message || e)); }
   finally { exBusy = false; }
 }
@@ -4542,13 +4738,17 @@ function wParaX(runs, o){
   o = o || {};
   return `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.brk ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 340}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'both'}"/></w:pPr>${runs}</w:p>`;
 }
-function docxBookFile(bookName, sub, chapters, fname){        // chapters: [{ch, vs}]
+function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        // chapters: [{ch, vs}]
   const SZ = 26; let body = '';
   const subL = String(sub || '').split('\n').map(x => x.trim()).filter(Boolean);
   chapters.forEach((c, ci) => {
     const first = ci === 0;
-    if (subL.length && c.ch === 1) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
-    body += wParaX(wRun(bookName.toUpperCase(), { b:true, sz:36 }), { align:'center', after:40, before:first || (subL.length && c.ch === 1) ? 0 : 0, brk:!first && !(subL.length && c.ch === 1), keep:true });
+    const hasSub = subL.length && c.ch === 1;
+    const subP = () => wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, keep:true });
+    const ttl = (c.ch === 1 ? (title || bookName) : bookName).toUpperCase();
+    if (hasSub && !subBelow) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
+    body += wParaX(wRun(ttl, { b:true, sz:36 }), { align:'center', after:40, brk:!first && !(hasSub && !subBelow), keep:true });
+    if (hasSub && subBelow) body += subP();
     body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true });
     let para = null, lastPoem = false;
     const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
@@ -4557,7 +4757,8 @@ function docxBookFile(bookName, sub, chapters, fname){        // chapters: [{ch,
         flush();
         String(v.h).split('\n').map(x => x.trim()).filter(Boolean).forEach((l, k) => {
           const ref = /^\([^()]*\)$/.test(l);
-          body += wParaX(wRun(l, ref ? { i:true, sz:22, color:'7A6E60' } : { b:true, sz:k ? 26 : 28 }), { align:'center', before:k ? 0 : 200, after:80, keep:true });
+          const hr = ref ? wRun(l, { i:true, sz:22, color:'7A6E60' }) : l.split(/(\[\d{1,3}\])/).filter(Boolean).map(pc => /^\[\d{1,3}\]$/.test(pc) ? wRun(pc, { b:true, sz:18, color:'8A5A1F', sup:true }) : wRun(pc, { b:true, sz:k ? 26 : 28 })).join('');
+          body += wParaX(hr, { align:'center', before:k ? 0 : 200, after:80, keep:true });
         });
       }
       const poem = Array.isArray(v.q) && v.q.length;
@@ -4591,7 +4792,7 @@ $('#edWord').onclick = async () => {
   await edAuto();
   const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
   if (!name) return toast('Hãy nhập hoặc chọn tên sách');
-  const base = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'Sach';
+  const base = bookFileBase(name);
   const curVs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
   const rec = await dbGet('books', name);
   const nFilled = rec ? rec.chapters.filter(c => c && c.length).length : 0;
@@ -4602,11 +4803,11 @@ $('#edWord').onclick = async () => {
   } else if (!curVs.length && nFilled) mode = 1;
   else if (!curVs.length) return toast('Chưa có nội dung để xuất');
   let chapters, fname;
-  if (mode === 0){ chapters = [{ ch, vs:curVs }]; fname = `${base}-${ch}.docx`; }
+  if (mode === 0){ chapters = [{ ch, vs:curVs }]; fname = `${base}_Chuong-${String(ch).padStart(2, '0')}.docx`; }
   else { chapters = rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length); fname = base + '.docx'; }
   try {
-    const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname);
-    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
+    const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname, ed.Title.value.trim() || (bibleMeta.find(m => m.name === name) || {}).title || '', ed.SubPos.value === 'below');
+    const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
   } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 };
 $('#exRestore').onclick = () => $('#exFile').click();
