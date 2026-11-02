@@ -1102,7 +1102,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       </div>
     </div>
     <textarea id="edSub" class="edsub" rows="1" placeholder="Tiêu đề trên tên sách (Enter = xuống dòng)" autocomplete="off"></textarea>
-    <input type="text" id="edTitle" class="edsub" placeholder="Tên hiển thị đầu chương (để trống = dùng tên sách, vd: Sa-mu-ên)" autocomplete="off">
+    <input type="text" id="edTitle" class="edsub" placeholder="Tên hiển thị ở chương 1 (vd: Các Vua). Từ chương 2 trở đi vẫn hiện đủ tên sách (vd: II Các Vua)" autocomplete="off">
     <datalist id="bookList"></datalist>
     <div class="edbook">
       <div class="edhint" id="edBookHint"></div>
@@ -3788,7 +3788,7 @@ function paperHTML(book, ch, verses, view, idp){
   verses.forEach(v => (String(v.t) + '\n' + String(v.h || '')).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));   // dấu [n] nằm trong tiêu đề cũng tính là đã gắn
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
-  let out = `<div class="chhead">${sub.length && +ch === 1 ? `<div class="bksub">${sub.map(esc).join('<br>')}</div>` : ''}<div class="bk">${esc(titleOf(book))}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
+  let out = `<div class="chhead">${sub.length && +ch === 1 ? `<div class="bksub">${sub.map(esc).join('<br>')}</div>` : ''}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div><div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
@@ -4734,7 +4734,7 @@ function docxBookFile(bookName, sub, chapters, fname, title){        // chapters
   chapters.forEach((c, ci) => {
     const first = ci === 0;
     if (subL.length && c.ch === 1) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
-    body += wParaX(wRun((title || bookName).toUpperCase(), { b:true, sz:36 }), { align:'center', after:40, before:first || (subL.length && c.ch === 1) ? 0 : 0, brk:!first && !(subL.length && c.ch === 1), keep:true });
+    body += wParaX(wRun((c.ch === 1 ? (title || bookName) : bookName).toUpperCase(), { b:true, sz:36 }), { align:'center', after:40, before:first || (subL.length && c.ch === 1) ? 0 : 0, brk:!first && !(subL.length && c.ch === 1), keep:true });
     body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true });
     let para = null, lastPoem = false;
     const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
