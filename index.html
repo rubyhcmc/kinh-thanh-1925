@@ -157,6 +157,9 @@ select{min-width:0}
 /* Số mờ cho biết tổng: ô Chương hiện "/30" (sách có 30 chương), ô Câu hiện "/24" (chương có 24 câu) */
 .nrg{position:absolute;right:4px;top:50%;transform:translateY(-50%);font:600 10px var(--sans);letter-spacing:0;color:var(--muted);opacity:.75;pointer-events:none;white-space:nowrap}
 .nf:focus-within .nrg,.nf.vf .nrg,.nf.bad .nrg{display:none}
+.nf input:focus::placeholder,.nf.vf input::placeholder{font-size:12px;letter-spacing:-.02em;white-space:nowrap}
+.nf:focus-within input,.nf.vf input{padding-left:5px!important;padding-right:3px!important;text-overflow:clip!important}
+html.sa:not(.mtop) .ntip{top:auto;bottom:calc(100% + 8px)}
 .ntip{position:absolute;top:calc(100% + 6px);left:0;z-index:60;padding:7px 12px;border-radius:12px;background:var(--card);border:1px solid var(--accent);box-shadow:0 4px 14px rgba(0,0,0,.25);font:600 13px/1.35 var(--sans);color:var(--accent);white-space:nowrap;pointer-events:none}
 .ntip.r{left:auto;right:0}
 .ntip.bad{color:var(--danger);border-color:var(--danger)}
@@ -1299,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
