@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1636,7 +1636,7 @@ function setupNav(kind){
   let tip = nf.querySelector('.ntip');                      // thẻ gợi ý nổi dưới ô: cho biết sách có bao nhiêu chương / chương có bao nhiêu câu
   if (!tip){ tip = document.createElement('div'); tip.className = 'ntip' + (isC ? '' : ' r'); tip.hidden = true; nf.appendChild(tip); }
   const say = (m, bad) => { pill.hidden = true; nf.classList.toggle('bad', !!bad); tip.textContent = m || ''; tip.hidden = !m; tip.classList.toggle('bad', !!bad); };
-  const range = c => { say(isC ? `Sách này có ${c.max} chương (nhập từ 1 đến ${c.max})` : `Chương này có ${c.max} câu (nhập từ 1 đến ${c.max})`, false); inp.placeholder = `1–${c.max}`; };
+  const range = c => { say('', false); inp.placeholder = `1–${c.max}`; };
   const bad = (c, n) => say(isC ? `Chỉ có 1-${c.max} ${LB}` : (n > c.max || n < 1 ? `Chỉ có 1-${c.max} ${LB}` : `Không có câu ${n} (1-${c.max} ${LB})`), true);
   const canExtend = (c, n) => { const s = String(n); for (const m of c.nums) if (m > n && String(m).startsWith(s)) return true; return false; };
   const jump = (n, adv) => {
