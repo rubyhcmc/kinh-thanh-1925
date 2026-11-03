@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5774,12 +5774,12 @@ function drawVerseCard(X, W, H, o){
   /* LỚP 3: chữ. Địa chỉ câu ở cuối: viết hoa đầu mỗi từ, không gạch đầu dòng, không đường kẻ. Lời trích: cỡ chữ lớn nhất còn vừa, cân đều độ dài các dòng */
   const drawText = x => {
     x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-    const MAXW = CW - 2 * 96 * k;
+    let MAXW = CW - 2 * 96 * k;
     let rs = Math.round(44 * k); x.font = `700 ${rs}px ${fam}`;
     while (rs > 22 && x.measureText(o.ref).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
     const REF_Y = CT + CH - 90 * k;
     x.fillStyle = o.color || T.acc; x.fillText(o.ref, CX, REF_Y);
-    const RT = CT + 96 * k, RB = REF_Y - rs - 64 * k, availT = RB - RT;
+    let RT = CT + 96 * k; const RB = REF_Y - rs - 64 * k; let availT = RB - RT;
     const body = o.text, FS = (o.italic ? 'italic ' : '') + (o.weight === 'bold' ? 700 : 400), words = body.split(' ');
     const measure = sz => { x.font = `${FS} ${sz}px ${fam}`; return { sp:x.measureText(' ').width, w:words.map(t => x.measureText(t).width) }; };   // mỗi từ chỉ đo một lần cho mỗi cỡ chữ
     const wrapM = (m, mw) => {
@@ -5788,12 +5788,17 @@ function drawVerseCard(X, W, H, o){
       if (cur) lines.push(cur); return lines;
     };
     const MIN = 24, sz0 = Math.round(Math.min(CW, CH) * .078 * (o.scale || 1));
-    const fits = sz => wrapM(measure(sz), MAXW).length * sz * 1.5 <= availT;
-    let sz = sz0;
-    if (!fits(sz0)){                                                      // tìm cỡ chữ lớn nhất còn vừa bằng tìm kiếm nhị phân
-      let lo = MIN, hi = sz0; while (hi - lo > 1){ const mid = (lo + hi) >> 1; if (fits(mid)) lo = mid; else hi = mid; } sz = lo;
+    const fitsL = (z, lf) => wrapM(measure(z), MAXW).length * z * lf <= availT;
+    const best = (lf, lo0) => {                                           // cỡ chữ lớn nhất còn vừa (tìm nhị phân); 0 = không vừa ở cỡ nhỏ nhất
+      if (fitsL(sz0, lf)) return sz0; lo0 = Math.min(lo0, sz0); if (!fitsL(lo0, lf)) return 0;
+      let lo = lo0, hi = sz0; while (hi - lo > 1){ const mid = (lo + hi) >> 1; if (fitsL(mid, lf)) lo = mid; else hi = mid; } return lo;
+    };
+    let lhf = 1.5, sz = best(lhf, MIN);
+    if (!sz){                                                             // nhiều câu: nới lề, khít dòng, thu nhỏ chữ thêm để HIỆN TRỌN, không cắt bớt
+      MAXW = CW - 2 * 58 * k; RT = CT + 70 * k; availT = REF_Y - rs - 44 * k - RT; lhf = 1.34;
+      sz = best(lhf, 8) || 8;
     }
-    const m = measure(sz); let lines = wrapM(m, MAXW); const lh = sz * 1.5;
+    const m = measure(sz); let lines = wrapM(m, MAXW); const lh = sz * lhf;
     if (lines.length * lh > availT){                                      // quá dài: cắt bớt và thêm …
       const n = Math.max(1, Math.floor(availT / lh)); lines = lines.slice(0, n);
       lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?]*$/, '') + '\u2026';
