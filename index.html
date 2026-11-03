@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1780,21 +1780,26 @@ $('#nextChap').onclick = () => stepChapter(1);
     const t = sg.dir > 0 ? prog : 1 - prog;                 // t = mức tờ giấy đã lật đi (0 phẳng, 1 lật hết)
     const a = MAXA * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180, c = Math.cos(r);
     // Lật bằng co ngang quanh gáy sách (không dùng phối cảnh 3D): chiều cao tờ giấy không đổi nên mép trên/dưới đứng yên, không giật
-    sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + Math.max(c, 0.001) + ')';
-    sg.leaf.style.visibility = a >= 90 ? 'hidden' : '';
-    sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
-    sg.cast.style.opacity = String((1 - t) * 0.4);
-    const edge = sg.W * c;                                   // mép phải của tờ giấy đang co lại
-    sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
-    sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
+    const v = sg.v || (sg.v = {});                          // chỉ ghi style khi giá trị thật sự đổi (tránh tính lại style thừa mỗi khung hình)
+    const sc = Math.max(c, 0.001).toFixed(4), vis = a >= 90 ? 'hidden' : '';
+    if (v.sc !== sc){ v.sc = sc; sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + sc + ')'; }
+    if (v.vis !== vis){ v.vis = vis; sg.leaf.style.visibility = vis; }
+    const sh = (Math.min(1, t * 1.2) * 0.6).toFixed(3), ca = ((1 - t) * 0.4).toFixed(3);
+    if (v.sh !== sh){ v.sh = sh; sg.shade.style.opacity = sh; }
+    if (v.ca !== ca){ v.ca = ca; sg.cast.style.opacity = ca; }
+    const edge = Math.max(0, sg.W * c).toFixed(1);           // mép phải của tờ giấy đang co lại
+    if (v.ed !== edge){ v.ed = edge; sg.strip.style.transform = 'translate3d(' + edge + 'px,0,0)'; }
+    const so = (Math.min(1, t * 8) * Math.min(1, (1 - t) * 4)).toFixed(3);
+    if (v.so !== so){ v.so = so; sg.strip.style.opacity = so; }
   }
   const easeOut = k => 1 - Math.pow(1 - k, 3);
   const easeIO = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   function tween(sg, from, to, ms, ease){
     return new Promise(res => {
-      const t0 = performance.now();
+      let t0 = 0;
       const step = now => {
-        const k = Math.min(1, (now - t0) / ms);
+        if (!t0) t0 = now;                                  // mốc thời gian lấy từ chính khung hình đầu tiên → không bị giật lùi / nhảy bước ở khung đầu
+        const k = Math.max(0, Math.min(1, (now - t0) / ms));
         apply(sg, from + (to - from) * ease(k));
         k < 1 ? requestAnimationFrame(step) : res();
       };
@@ -5337,13 +5342,17 @@ async function pgNbrHTML(d){
 }
 function pgApply(sg, prog){
   const t = sg.dir > 0 ? prog : 1 - prog, a = 100 * t, r = Math.min(Math.abs(a), 90) * Math.PI / 180, c = Math.cos(r);
-  sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + Math.max(c, 0.001) + ')';   // co ngang quanh gáy sách, không phối cảnh: mép trên/dưới đứng yên
-  sg.leaf.style.visibility = a >= 90 ? 'hidden' : '';
-  sg.shade.style.opacity = String(Math.min(1, t * 1.2) * 0.6);
-  sg.cast.style.opacity = String((1 - t) * 0.4);
-  const edge = sg.W * c;
-  sg.strip.style.transform = 'translate3d(' + Math.max(0, edge) + 'px,0,0)';
-  sg.strip.style.opacity = String(Math.min(1, t * 8) * Math.min(1, (1 - t) * 4));
+  const v = sg.v || (sg.v = {});                                  // chỉ ghi style khi giá trị thật sự đổi
+  const sc = Math.max(c, 0.001).toFixed(4), vis = a >= 90 ? 'hidden' : '';
+  if (v.sc !== sc){ v.sc = sc; sg.leaf.style.transform = 'translate3d(0,0,0) scaleX(' + sc + ')'; }   // co ngang quanh gáy sách, không phối cảnh: mép trên/dưới đứng yên
+  if (v.vis !== vis){ v.vis = vis; sg.leaf.style.visibility = vis; }
+  const sh = (Math.min(1, t * 1.2) * 0.6).toFixed(3), ca = ((1 - t) * 0.4).toFixed(3);
+  if (v.sh !== sh){ v.sh = sh; sg.shade.style.opacity = sh; }
+  if (v.ca !== ca){ v.ca = ca; sg.cast.style.opacity = ca; }
+  const edge = Math.max(0, sg.W * c).toFixed(1);
+  if (v.ed !== edge){ v.ed = edge; sg.strip.style.transform = 'translate3d(' + edge + 'px,0,0)'; }
+  const so = (Math.min(1, t * 8) * Math.min(1, (1 - t) * 4)).toFixed(3);
+  if (v.so !== so){ v.so = so; sg.strip.style.opacity = so; }
 }
 /* Tờ giấy đang lật là CHÍNH khung đọc thật (hoặc 1 bản sao của trang lân cận); lớp bên dưới là phần còn lại → chỉ phải dựng tối đa 1 bản sao */
 function pgStage(dir, nbNode, shadow){
@@ -5438,8 +5447,8 @@ async function pgBegin(dir){                                       // trả về
 }
 function pgTween(sg, from, to, ms, ease){
   return new Promise(res => {
-    const t0 = performance.now();
-    const step = now => { const k = Math.min(1, (now - t0) / ms); pgApply(sg, from + (to - from) * ease(k)); k < 1 ? requestAnimationFrame(step) : res(); };
+    let t0 = 0;
+    const step = now => { if (!t0) t0 = now; const k = Math.max(0, Math.min(1, (now - t0) / ms)); pgApply(sg, from + (to - from) * ease(k)); k < 1 ? requestAnimationFrame(step) : res(); };
     requestAnimationFrame(step);
   });
 }
