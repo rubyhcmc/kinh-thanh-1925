@@ -423,6 +423,12 @@ details a{color:var(--accent)}
 .fnk:active{opacity:.55}
 .fnk[aria-expanded=true]{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.22em}
 .fnk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* Trang giấy: chú thích hiện trong khung nổi cố định phía dưới (KHÔNG bung xen vào dòng chữ → chữ và số trang đứng yên, không nhảy) */
+.fnpop{position:fixed;left:12px;right:12px;z-index:30;max-width:560px;margin:0 auto;max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;
+  padding:12px 16px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;
+  box-shadow:0 8px 26px rgba(0,0,0,.28);font-family:var(--serif);font-size:16px;line-height:1.55;font-style:italic;white-space:pre-line;text-align:left;cursor:pointer;animation:fnpIn .14s ease-out}
+@keyframes fnpIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fnpop{animation:none}}
 .fnx{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.78em;line-height:1.55;color:var(--muted);
   margin:.4em 0 .55em;padding:.45em .75em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;cursor:pointer;-webkit-hyphens:none;hyphens:none;
   /* Khung chú thích là một “vùng độc lập” (BFC): không bao giờ chạy lùi vào dưới số chương chữ lớn đang nổi bên trái.
@@ -1302,7 +1308,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2544,6 +2550,12 @@ function showVerseMenu(n, x, y, ns){
 })();
 
 /* Bấm dấu chú thích → bung/ẩn nội dung; bấm vào khung chú thích → thu lại. Chạy ở pha capture để không bị tính là chạm chọn câu. */
+let fnPop = null;
+function fnPopClose(){
+  if (!fnPop) return;
+  const p = fnPop; fnPop = null; if (p.mk) p.mk.setAttribute('aria-expanded', 'false'); p.el.remove();
+}
+document.addEventListener('click', e => { if (fnPop && !(e.target.closest && e.target.closest('.fnk'))) fnPopClose(); }, true);   // chạm chỗ khác → đóng khung chú thích
 function toggleFn(e){
   const k = e.target.closest('.fnk'), x = e.target.closest('.fnx');
   if (!k && !x) return;
@@ -2551,6 +2563,14 @@ function toggleFn(e){
   const mk = k || (x.previousElementSibling && x.previousElementSibling.classList.contains('fnk') ? x.previousElementSibling : null);
   const box = x || (k.nextElementSibling && k.nextElementSibling.classList.contains('fnx') ? k.nextElementSibling : null);
   if (!box) return;
+  if (document.body.classList.contains('pg') && e.currentTarget && e.currentTarget.id === 'bibleText'){   // Trang giấy: khung nổi, không làm dàn trang lại
+    const same = fnPop && fnPop.mk === mk; fnPopClose(); if (same || !mk) return;
+    const el = document.createElement('div'); el.className = 'fnpop'; el.setAttribute('role', 'note'); el.textContent = box.textContent;
+    const vb = $('#pgView').getBoundingClientRect(); el.style.bottom = Math.max(8, innerHeight - vb.bottom + 10) + 'px';
+    el.addEventListener('click', ev => { ev.stopPropagation(); fnPopClose(); });
+    document.body.appendChild(el); mk.setAttribute('aria-expanded', 'true'); fnPop = { el, mk };
+    return;
+  }
   const open = box.hidden;                       // đang ẩn → bung ra
   box.hidden = !open;
   if (mk) mk.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -5273,6 +5293,7 @@ function pgFoot(){
 }
 function pgGo(p){
   if (!pgOn()) return;
+  fnPopClose();
   if (!pg.pages || pg.dirty){ pgCount(); pg.dirty = false; }
   pg.page = Math.max(0, Math.min(p, pg.pages - 1));
   pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); clearTimeout(pg.svT); pg.svT = setTimeout(syncVerse, 250); pgPrep(); rsTrack();
@@ -5296,6 +5317,7 @@ function pgResetArt(art){
 }
 function pgRefresh(keepVerse){                                     // dựng lại số trang (đổi cỡ chữ, xoay máy, vào/ra chế độ giấy…)
   const art = $('#bibleText'); if (!art) return;
+  fnPopClose();
   if (!pgOn()){ pgResetArt(art); pgPrepClear(true); return; }
   pgPrepClear(true);
   const W = pgW(), widthSame = pg.lastW === W; pg.lastW = W;
@@ -5436,6 +5458,7 @@ function pgSync(){                                                  // đo lại
   if (pg.page > pg.pages - 1){ pg.page = pg.pages - 1; pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); }
 }
 async function pgBegin(dir){                                       // trả về { sg, commit } hoặc null nếu hết sách
+  fnPopClose();
   document.body.classList.remove('pgchrome'); pg.lastDir = dir;
   const P = pg.prep; let m = null;
   if (P.key === pgKey() && P.m[dir]){ m = P.m[dir]; delete P.m[dir]; }
@@ -5513,7 +5536,7 @@ async function pgFlip(dir){                                        // chạm mé
   view.addEventListener('click', e => {                            // chạm dải trên cùng = hiện/ẩn thanh công cụ
     if (!pgOn()) return;
     if (pg.busy || Date.now() < (pg.swallow || 0)){ e.stopPropagation(); e.preventDefault(); return; }
-    if (e.target.closest('.fnk,.fnx')){ setTimeout(() => { pgPrepClear(true); pgCount(); pgGo(pg.page); }, 40); return; }
+    if (e.target.closest('.fnk,.fnx')) return;                      // chú thích hiện bằng khung nổi: không dàn trang lại → chữ không nhảy
     if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
     const cl = document.body.classList, eat = () => { e.stopPropagation(); e.preventDefault(); };
     if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
