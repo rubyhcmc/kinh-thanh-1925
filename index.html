@@ -599,6 +599,13 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .lsread{flex:1;min-height:120px;overflow:auto;overscroll-behavior:contain;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
 .lsrtxt{font-family:var(--serif);font-size:calc(var(--fs) - 1px);line-height:1.7;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
 .lsrmeta{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font:12px var(--sans);color:var(--muted)}
+/* Chế độ XEM: bài học hiện như một trang hoàn chỉnh (tiêu đề câu, lời trích, nội dung ghi chú), cuộn trọn trang, không còn khung chữ nhỏ bị cắt */
+.lspanel.viewing .lstop{display:none}
+.lspanel.viewing .lsread{border:0;border-radius:0;background:var(--card);padding:6px 4px 10px}
+.lspage .lspref{font:700 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);text-align:center;margin:2px 0 10px}
+.lspage .lspq{margin:0 0 14px;padding:12px 14px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;font:italic calc(var(--fs) - 2px)/1.65 var(--serif);color:var(--fg)}
+.lspage .lsprule{width:56px;height:1px;border:0;margin:0 auto 16px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.8}
+.lspage .lsrtxt{font-size:var(--fs);line-height:1.75;text-align:justify;hyphens:auto}
 .lsbody textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .lsbtns{flex:none;display:flex;gap:8px;padding:10px 20px 14px}
 .lsbtns .btn{flex:1;white-space:nowrap}
@@ -1080,6 +1087,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <select id="exBook" aria-label="Chọn sách cần xuất"></select>
       <div class="btns">
         <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
+        <button class="btn" id="exWord">📄 Xuất Word</button>
         <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
       </div>
       <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
@@ -1218,7 +1226,6 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
       <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
-      <button class="btn" id="edWord">📄 Xuất Word</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -1286,7 +1293,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2257,11 +2264,11 @@ function lsClose(){ const back = lsCur && lsCur.back; lsEl.classList.remove('ope
 /* Hai chế độ: 'view' = xem bài học hoàn chỉnh · 'edit' = soạn thảo */
 function lsMode(m){
   const v = m === 'view'; lsCur.mode = m;
-  lsTa.hidden = v; $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
+  lsTa.hidden = v; $('.lspanel', lsEl).classList.toggle('viewing', v); $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
   $('#lsLbl').textContent = v ? 'Bài học của bạn' : 'Bài học cá nhân';
   if (v){
     const o = lsCur.old;
-    $('#lsRead').innerHTML = `<div class="lsrtxt">${esc(lsTa.value.trim())}</div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
+    $('#lsRead').innerHTML = `<div class="lspage"><div class="lspref">${esc($('#lsRef').textContent)}</div><p class="lspq">${esc(lsCur.quote || '')}</p><hr class="lsprule"><div class="lsrtxt">${esc(lsTa.value.trim())}</div></div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
     $('#lsRead').scrollTop = 0; try { lsTa.blur(); } catch(e){}
   }
 }
@@ -4956,25 +4963,15 @@ function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        /
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
-$('#edWord').onclick = async () => {
-  await edAuto();
-  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
-  if (!name) return toast('Hãy nhập hoặc chọn tên sách');
-  const base = bookFileBase(name);
-  const curVs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
+$('#exWord').onclick = async () => {              // Xuất file Word cả sách đang chọn (nằm trong mục 4 của Quản lý dữ liệu)
+  try { await edAuto(); } catch(e){}
+  const name = $('#exBook').value; if (!name) return toast('Hãy chọn sách cần xuất');
   const rec = await dbGet('books', name);
-  const nFilled = rec ? rec.chapters.filter(c => c && c.length).length : 0;
-  let mode = 0;
-  if (curVs.length && nFilled > 1){
-    mode = await choose('Xuất file Word', 'Bạn muốn xuất phần nào?', [{ t:`📄 Chương đang soạn (${name} ${ch})`, cls:'primary' }, { t:`📚 Cả sách ${name} (${nFilled} chương)` }, { t:'Hủy' }]);
-    if (mode !== 0 && mode !== 1) return;
-  } else if (!curVs.length && nFilled) mode = 1;
-  else if (!curVs.length) return toast('Chưa có nội dung để xuất');
-  let chapters, fname;
-  if (mode === 0){ chapters = [{ ch, vs:curVs }]; fname = `${base}_Chuong-${String(ch).padStart(2, '0')}.docx`; }
-  else { chapters = rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length); fname = base + '.docx'; }
+  const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
+  if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
+  const meta = bibleMeta.find(m => m.name === name) || {}, fname = bookFileBase(name) + '.docx';
   try {
-    const f = docxBookFile(name, ed.Sub.value || (bibleMeta.find(m => m.name === name) || {}).sub || '', chapters, fname, ed.Title.value.trim() || (bibleMeta.find(m => m.name === name) || {}).title || '', ed.SubPos.value === 'below');
+    const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
     const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
   } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 };
