@@ -503,6 +503,18 @@ details.adv>summary::-webkit-details-marker{display:none}
 details.adv .chev{font-size:26px;color:var(--muted);transition:transform .18s}
 details.adv[open] .chev{transform:rotate(90deg)}
 details.adv>div>.srow{border-top:1px solid var(--line)}
+.igd{border:1px solid var(--line);border-radius:12px;margin:0 0 10px;text-align:left;background:var(--bg)}
+.igd>summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.igd>summary::-webkit-details-marker{display:none}
+.igd .chev{font-size:24px;color:var(--muted);transition:transform .18s}
+.igd[open] .chev{transform:rotate(90deg)}
+.igd .igb{padding:0 14px 14px;display:flex;flex-direction:column;gap:14px}
+.igr{display:flex;flex-direction:column;gap:7px}
+.igr .l{font-size:13.5px;font-weight:600}
+.igr input[type=range]{width:100%;height:32px}
+.igsw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.igsw button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
+.igsw button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .updwarn{margin-top:18px;padding:12px 14px;border-radius:12px;border:1px solid rgba(217,119,6,.45);border-left-width:4px;background:rgba(217,119,6,.10);text-align:left}
 .updwarn b{display:block;font-size:14px;color:var(--fg)}
 .updwarn p{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--fg)}
@@ -1274,7 +1286,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5602,9 +5614,9 @@ function showOnboard(){
 }
 $('#obShow').onclick = () => { show('#settings', false); showOnboard(); };
 
-/* Chia sẻ câu Kinh Thánh thành ảnh (khổ 4:5, dùng được cho Zalo / Facebook): thẻ nổi, nền trắng / kem / tối, tự chọn font chữ */
+/* Chia sẻ câu Kinh Thánh thành ảnh: thẻ nổi, nền trắng / kem / tối, chọn khổ ảnh (mặc định dọc 4:5 cho Facebook), font, định dạng chữ, giấy cũ + hạt, khung mỏng */
 /* Vẽ "thẻ Lời Chúa" lên canvas 2D (ảnh chia sẻ câu Kinh Thánh), bố cục tự co giãn theo khung W×H (dọc, vuông, ngang…).
-   o = { text, ref, fam, theme:'white'|'cream'|'dark' }. Thẻ nổi có bóng đổ trên nền mềm; lời trích cân giữa; địa chỉ câu ở cuối. */
+   o = { text, ref, fam, theme:'white'|'cream'|'dark', scale (hệ số cỡ chữ), weight:'light'|'normal'|'bold', italic, color ('#rrggbb' hoặc rỗng = tự động), age 0-100 (ngả vàng + vân giấy), grain 0-100 (hạt nhiễu), frame (khung viền mỏng) }. Thẻ nổi có bóng đổ trên nền mềm; lời trích cân giữa; địa chỉ câu ở cuối. */
 function drawVerseCard(x, W, H, o){
   const TH = {
     white:{ bgA:'#f8fafd', bgB:'#e1e8f2', orb:['rgba(110,150,215,.30)', 'rgba(245,190,120,.30)'], card0:'#ffffff', card1:'#fbf9f5', edge:'rgba(255,255,255,.95)', shadow:'rgba(35,55,95,.30)',  ink:'#26221d', acc:'#b5832a', grain:'60,60,70' },
@@ -5625,7 +5637,8 @@ function drawVerseCard(x, W, H, o){
   const nGr = Math.round(W * H / 650); for (let i = 0; i < nGr; i++){ x.fillStyle = `rgba(${T.grain},${(.025 + rnd() * .04).toFixed(3)})`; x.fillRect(rnd() * W, rnd() * H, 1.4, 1.4); }
   /* thẻ nổi: bóng đổ mềm + viền sáng mảnh */
   const M = 84 * k, CL = M, CT = M, CW = W - 2 * M, CH = H - 2 * M, R = 46 * k;
-  const rr = () => { x.beginPath(); x.moveTo(CL + R, CT); x.arcTo(CL + CW, CT, CL + CW, CT + CH, R); x.arcTo(CL + CW, CT + CH, CL, CT + CH, R); x.arcTo(CL, CT + CH, CL, CT, R); x.arcTo(CL, CT, CL + CW, CT, R); x.closePath(); };
+  const rrect = (l, t, w, h, r) => { x.beginPath(); x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r); x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath(); };
+  const rr = () => rrect(CL, CT, CW, CH, R);
   const cg = x.createLinearGradient(0, CT, 0, CT + CH); cg.addColorStop(0, T.card0); cg.addColorStop(1, T.card1);
   x.save(); x.shadowColor = T.shadow; x.shadowBlur = 70 * k; x.shadowOffsetY = 28 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
   x.save(); x.shadowColor = T.shadow; x.shadowBlur = 14 * k; x.shadowOffsetY = 4 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
@@ -5634,24 +5647,56 @@ function drawVerseCard(x, W, H, o){
     x.save(); rr(); x.clip(); const gl = x.createRadialGradient(CX, H * .48, 0, CX, H * .48, Math.min(CW, CH) * .62); gl.addColorStop(0, 'rgba(232,196,121,.10)'); gl.addColorStop(1, 'rgba(232,196,121,0)');
     x.fillStyle = gl; x.fillRect(CL, CT, CW, CH); x.restore();
   }
+  /* giấy cũ: ngả vàng, cháy xém mép, sợi giấy, đốm ố (foxing) và hạt nhiễu — giả lập sách in năm 1925 */
+  const age = Math.max(0, Math.min(100, o.age || 0)) / 100, gr = Math.max(0, Math.min(100, o.grain || 0)) / 100, dk = o.theme === 'dark';
+  if (age > 0 || gr > 0){
+    x.save(); rr(); x.clip();
+    if (age > 0){
+      x.globalCompositeOperation = dk ? 'source-over' : 'multiply';
+      x.fillStyle = dk ? `rgba(205,150,70,${(.12 * age).toFixed(3)})` : `rgba(222,176,88,${(.62 * age).toFixed(3)})`; x.fillRect(CL, CT, CW, CH);
+      x.globalCompositeOperation = 'source-over';
+      const ccx = CL + CW / 2, ccy = CT + CH / 2, eg = x.createRadialGradient(ccx, ccy, Math.min(CW, CH) * .30, ccx, ccy, Math.hypot(CW, CH) * .56);
+      eg.addColorStop(0, 'rgba(110,62,12,0)'); eg.addColorStop(1, `rgba(110,62,12,${(.42 * age).toFixed(3)})`); x.fillStyle = eg; x.fillRect(CL, CT, CW, CH);
+      for (let i = 0, n = Math.round(CW * CH / 7000 * age); i < n; i++){                      // sợi giấy
+        const fx = CL + rnd() * CW, fy = CT + rnd() * CH, a = rnd() * Math.PI, l = (8 + rnd() * 26) * k;
+        x.strokeStyle = `rgba(120,80,30,${(.05 + rnd() * .08).toFixed(3)})`; x.lineWidth = Math.max(.8, k); x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx + Math.cos(a) * l, fy + Math.sin(a) * l); x.stroke();
+      }
+      for (let i = 0, n = Math.round(10 + 22 * age); i < n; i++){                              // đốm ố nhỏ
+        const fx = CL + rnd() * CW, fy = CT + rnd() * CH, r = (1.2 + rnd() * 4.5) * k;
+        x.fillStyle = `rgba(110,65,20,${(.06 + rnd() * .12).toFixed(3)})`; x.beginPath(); x.arc(fx, fy, r, 0, Math.PI * 2); x.fill();
+      }
+      for (let i = 0, n = Math.round(2 + 4 * age); i < n; i++){                                // vết ố loang mờ
+        const fx = CL + rnd() * CW, fy = CT + rnd() * CH, r = (50 + rnd() * 110) * k, bg2 = x.createRadialGradient(fx, fy, 0, fx, fy, r);
+        bg2.addColorStop(0, `rgba(130,80,25,${(.07 * age).toFixed(3)})`); bg2.addColorStop(1, 'rgba(130,80,25,0)'); x.fillStyle = bg2; x.fillRect(fx - r, fy - r, 2 * r, 2 * r);
+      }
+    }
+    if (gr > 0){                                                                                // hạt nhiễu
+      for (let i = 0, n = Math.round(CW * CH / 70 * gr); i < n; i++){
+        const dark = rnd() < .62; x.fillStyle = dark ? `rgba(${dk ? '0,0,0' : '70,45,15'},${(.05 + rnd() * .13).toFixed(3)})` : `rgba(255,255,255,${(.04 + rnd() * .10).toFixed(3)})`;
+        x.fillRect(CL + rnd() * CW, CT + rnd() * CH, 1.3 * Math.max(1, k), 1.3 * Math.max(1, k));
+      }
+    }
+    x.restore();
+  }
+  if (o.frame){ x.strokeStyle = o.color || T.acc; x.globalAlpha = .6; x.lineWidth = Math.max(1.5, 2 * k); rrect(CL + 34 * k, CT + 34 * k, CW - 68 * k, CH - 68 * k, Math.max(6, R - 16 * k)); x.stroke(); x.globalAlpha = 1; }
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
   /* địa chỉ câu ở cuối: viết hoa đầu mỗi từ, không gạch đầu dòng, không đường kẻ */
   const MAXW = CW - 2 * 96 * k;
   let rs = Math.round(44 * k); x.font = `700 ${rs}px ${fam}`;
   while (rs > 22 && x.measureText(o.ref).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
   const REF_Y = CT + CH - 90 * k;
-  x.fillStyle = T.acc; x.fillText(o.ref, CX, REF_Y);
+  x.fillStyle = o.color || T.acc; x.fillText(o.ref, CX, REF_Y);
   /* lời trích: tự chọn cỡ chữ lớn nhất còn vừa, rồi cân đều độ dài các dòng */
   const RT = CT + 96 * k, RB = REF_Y - rs - 64 * k, availT = RB - RT;
-  const body = o.text;
+  const body = o.text, FS = (o.italic ? 'italic ' : '') + (o.weight === 'bold' ? 700 : 400);
   const wrapAt = (sz, mw) => {
-    x.font = `400 ${sz}px ${fam}`;
+    x.font = `${FS} ${sz}px ${fam}`;
     const lines = []; let cur = '';
     body.split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cur && x.measureText(t2).width > mw){ lines.push(cur); cur = w; } else cur = t2; });
     if (cur) lines.push(cur); return lines;
   };
   const MIN = 24;
-  let sz = Math.round(Math.min(CW, CH) * .078), lines = wrapAt(sz, MAXW), lh = sz * 1.5;
+  let sz = Math.round(Math.min(CW, CH) * .078 * (o.scale || 1)), lines = wrapAt(sz, MAXW), lh = sz * 1.5;
   while (sz > MIN && lines.length * lh > availT){ sz -= 2; lines = wrapAt(sz, MAXW); lh = sz * 1.5; }
   if (lines.length * lh > availT){                                      // quá dài: cắt bớt và thêm …
     const n = Math.max(1, Math.floor(availT / lh)); lines = lines.slice(0, n);
@@ -5662,8 +5707,9 @@ function drawVerseCard(x, W, H, o){
     lines = wrapAt(sz, hi);
   }
   const ty = RT + Math.max(0, (availT - lines.length * lh) / 2);
-  x.fillStyle = T.ink; x.font = `400 ${sz}px ${fam}`;
+  x.fillStyle = o.color || T.ink; x.font = `${FS} ${sz}px ${fam}`; if (o.weight === 'light') x.globalAlpha = .72;
   lines.forEach((l, i) => x.fillText(l, CX, ty + i * lh + lh / 2 + sz * 0.34));
+  x.globalAlpha = 1;
 }
 
 async function verseImage(nums){
@@ -5677,56 +5723,102 @@ async function verseImage(nums){
   const SIZES = { p:{ w:1080, h:1350, t:'▯ Dọc 4:5' }, s:{ w:1080, h:1920, t:'📱 Story 9:16' }, q:{ w:1080, h:1080, t:'▢ Vuông' }, l:{ w:1600, h:900, t:'▭ Ngang 16:9' } };
   const THEMES = ['white', 'cream', 'dark'], THEME_LABEL = { white:'⚪ Trắng', cream:'🟡 Kem', dark:'🌙 Tối' };
   const IMG_FONTS = ['Playfair Display', 'EB Garamond', 'Lora', 'Merriweather', 'Inter', 'Open Sans', 'Roboto'].filter(n => FONTS[n]);
-  let th = 'cream', fn = 'Playfair Display', sk = 'p';
-  try { const t0 = localStorage.getItem('kt.imgTheme'), f0 = localStorage.getItem('kt.imgFont'), z0 = localStorage.getItem('kt.imgSize'); if (THEMES.includes(t0)) th = t0; if (IMG_FONTS.includes(f0)) fn = f0; if (SIZES[z0]) sk = z0; } catch(e){}
-  const ensure = async name => {                                        // tải font (tối đa 4 giây); chưa tải được thì canvas tự dùng font dự phòng trong danh sách
-    try { await Promise.race([loadFont(name), new Promise(r => setTimeout(r, 4000))]); await Promise.all([document.fonts.load('400 40px ' + FONTS[name].s, 'Ếệặ'), document.fonts.load('700 40px ' + FONTS[name].s, 'Ếệặ')]); } catch(e){}
+  const COLORS = [['', 'Tự động'], ['#3b2a1a', 'Nâu'], ['#1a1a1a', 'Đen'], ['#1f3a5f', 'Xanh navy'], ['#7a1f2b', 'Đỏ rượu'], ['#2f5d3a', 'Xanh lá'], ['#f6ebd0', 'Kem sáng'], ['#ffffff', 'Trắng']];
+  const DEF = { theme:'cream', font:'Playfair Display', size:'p', scale:100, weight:'normal', italic:0, color:'', age:0, grain:0, frame:0 };
+  const OLD1925 = { theme:'cream', font:'EB Garamond', weight:'normal', italic:0, color:'', scale:100, age:70, grain:55, frame:1 };   // kiểu sách cổ 1925
+  const clean = q => {
+    const r = { ...DEF }; if (!q) return r;
+    const nn = (v, lo, hi, d) => { v = +v; return isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d; };
+    if (THEMES.includes(q.theme)) r.theme = q.theme; if (IMG_FONTS.includes(q.font)) r.font = q.font; if (SIZES[q.size]) r.size = q.size;
+    r.scale = nn(q.scale, 60, 160, 100); r.age = nn(q.age, 0, 100, 0); r.grain = nn(q.grain, 0, 100, 0);
+    if (['light', 'normal', 'bold'].includes(q.weight)) r.weight = q.weight; r.italic = q.italic ? 1 : 0; r.frame = q.frame ? 1 : 0;
+    r.color = /^#[0-9a-f]{6}$/i.test(q.color || '') ? q.color : ''; return r;
   };
-  const mk = async (theme, font, size) => {
-    await ensure(font);
-    const W = SIZES[size].w, H = SIZES[size].h;
+  let opt = DEF;
+  try {
+    const j = localStorage.getItem('kt.imgOpt');
+    opt = j ? clean(JSON.parse(j)) : clean({ theme:localStorage.getItem('kt.imgTheme'), font:localStorage.getItem('kt.imgFont'), size:localStorage.getItem('kt.imgSize') });
+  } catch(e){ opt = DEF; }
+  const ensure = async q => {                                           // tải font (tối đa 4 giây); chưa tải được thì canvas tự dùng font dự phòng trong danh sách
+    const fs = FONTS[q.font].s, it = q.italic ? 'italic ' : '';
+    try { await Promise.race([loadFont(q.font), new Promise(r => setTimeout(r, 4000))]); await Promise.all([document.fonts.load(it + '400 40px ' + fs, 'Ếệặ'), document.fonts.load(it + '700 40px ' + fs, 'Ếệặ'), document.fonts.load('700 40px ' + fs, 'Ếệặ')]); } catch(e){}
+  };
+  const mk = async q => {
+    await ensure(q);
+    const W = SIZES[q.size].w, H = SIZES[q.size].h;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    drawVerseCard(cv.getContext('2d'), W, H, { text, ref, fam:FONTS[font].s, theme });
+    drawVerseCard(cv.getContext('2d'), W, H, { text, ref, fam:FONTS[q.font].s, theme:q.theme, scale:q.scale / 100, weight:q.weight, italic:q.italic, color:q.color, age:q.age, grain:q.grain, frame:q.frame });
     return await new Promise(r => cv.toBlob(r, 'image/png'));
   };
-  let blob = await mk(th, fn, sk);
+  let blob = await mk(opt);
   if (!blob) return toast('Không tạo được ảnh');
   const fname = (fold(ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cau-kinh-thanh') + '.png';
   let file = new File([blob], fname, { type:'image/png' }), url = URL.createObjectURL(blob);
+  const segBtns = (attr, items, cur) => items.map(([v, t]) => `<button data-${attr}="${v}" class="${String(v) === String(cur) ? 'on' : ''}" style="white-space:nowrap">${t}</button>`).join('');
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet" style="text-align:center"><h3>Chia sẻ thành ảnh</h3>
-    <img id="imgPrev" src="${url}" alt="" style="display:block;margin:0 auto 12px;width:auto;height:auto;max-width:100%;max-height:38vh;object-fit:contain;border-radius:10px;border:1px solid var(--line)">
-    <div class="seg" id="imgSz" style="margin:0 auto 10px;max-width:100%;overflow-x:auto">${Object.keys(SIZES).map(z => `<button data-z="${z}" class="${z === sk ? 'on' : ''}" style="white-space:nowrap">${SIZES[z].t}</button>`).join('')}</div>
-    <div class="seg" id="imgTh" style="margin:0 auto 10px">${THEMES.map(t => `<button data-t="${t}" class="${t === th ? 'on' : ''}">${THEME_LABEL[t]}</button>`).join('')}</div>
-    <label class="fld" style="display:block;text-align:left;margin-bottom:12px"><span>Kiểu chữ trong ảnh</span><select id="imgFont" style="width:100%">${IMG_FONTS.map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}"${n === fn ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div style="position:sticky;top:0;z-index:5;background:var(--card);padding:2px 0 8px"><img id="imgPrev" src="${url}" alt="" style="display:block;margin:0 auto;width:auto;height:auto;max-width:100%;max-height:34vh;object-fit:contain;border-radius:10px;border:1px solid var(--line)"></div>
+    <div class="seg" id="imgSz" style="margin:0 auto 8px;max-width:100%;overflow-x:auto">${segBtns('z', Object.keys(SIZES).map(z => [z, SIZES[z].t]), opt.size)}</div>
+    <p class="bmhint" style="margin:0 0 10px">Khổ dọc 4:5 là khổ đẹp nhất cho Facebook.</p>
+    <div class="seg" id="imgTh" style="margin:0 auto 10px">${segBtns('t', THEMES.map(t => [t, THEME_LABEL[t]]), opt.theme)}</div>
+    <label class="fld" style="display:block;text-align:left;margin-bottom:10px"><span>Kiểu chữ trong ảnh</span><select id="imgFont" style="width:100%">${IMG_FONTS.map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}">${n}</option>`).join('')}</select></label>
+    <div class="btns" style="margin:0 0 10px"><button class="btn" data-p="old" style="flex:1">📜 Kiểu sách cổ 1925</button><button class="btn" data-p="reset" style="flex:1">↺ Mặc định</button></div>
+    <details class="igd"><summary>🔠 Định dạng chữ <span class="chev" aria-hidden="true">›</span></summary><div class="igb">
+      <div class="igr"><span class="l">Cỡ chữ: <b id="igScaleV"></b></span><input type="range" id="igScale" min="60" max="160" step="5"></div>
+      <div class="igr"><span class="l">Độ đậm</span><div class="seg" id="igW">${segBtns('w', [['light', 'Nhạt'], ['normal', 'Thường'], ['bold', 'Đậm']], opt.weight)}</div></div>
+      <div class="igr"><span class="l">Kiểu chữ</span><div class="seg" id="igI">${segBtns('i', [[0, 'Đứng'], [1, 'Nghiêng']], opt.italic)}</div></div>
+      <div class="igr"><span class="l">Màu chữ</span><div class="igsw" id="igC">${COLORS.map(([c, n]) => `<button type="button" data-c="${c}" title="${n}" aria-label="${n}" style="background:${c || 'conic-gradient(#b5832a,#1f3a5f,#7a1f2b,#2f5d3a,#b5832a)'}"></button>`).join('')}<input type="color" id="igColor" aria-label="Chọn màu khác" style="width:34px;height:34px;padding:0;border:2px solid var(--line);border-radius:50%;background:none"></div></div>
+    </div></details>
+    <details class="igd"><summary>📜 Giấy cũ &amp; hạt nhiễu <span class="chev" aria-hidden="true">›</span></summary><div class="igb">
+      <div class="igr"><span class="l">Ngả vàng &amp; vân giấy: <b id="igAgeV"></b></span><input type="range" id="igAge" min="0" max="100" step="5"></div>
+      <div class="igr"><span class="l">Hạt nhiễu (sách cổ): <b id="igGrainV"></b></span><input type="range" id="igGrain" min="0" max="100" step="5"></div>
+    </div></details>
+    <details class="igd"><summary>🖼 Khung &amp; bố cục <span class="chev" aria-hidden="true">›</span></summary><div class="igb">
+      <div class="igr"><span class="l">Khung viền mỏng</span><div class="seg" id="igF">${segBtns('f', [[0, 'Tắt'], [1, 'Bật']], opt.frame)}</div></div>
+    </div></details>
     <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="a">💾 Lưu vào thư viện ảnh</button><button class="btn" data-k="s">↗ Chia sẻ (Zalo, Facebook…)</button><button class="btn" data-k="x">Đóng</button></div>
     <p class="bmhint" style="margin:10px 0 0" id="imgHint">${IS_IOS ? 'Trên iPhone: chọn “Lưu hình ảnh” trong bảng hiện ra.' : 'Ảnh được lưu vào mục Tải xuống và hiện trong Thư viện / Ảnh.'}</p></div>`;
-  let seq = 0;
-  const redo = async () => {                                            // vẽ lại khi đổi nền / đổi font; nhớ lựa chọn cho lần sau
-    const my = ++seq; o.querySelector('#imgPrev').style.opacity = '.5';
-    const nb = await mk(th, fn, sk); if (my !== seq) return;
-    o.querySelector('#imgPrev').style.opacity = ''; if (!nb) return;
-    try { localStorage.setItem('kt.imgTheme', th); localStorage.setItem('kt.imgFont', fn); localStorage.setItem('kt.imgSize', sk); } catch(err){}
-    URL.revokeObjectURL(url); blob = nb; file = new File([nb], fname, { type:'image/png' }); url = URL.createObjectURL(nb);
-    o.querySelector('#imgPrev').src = url;
+  const qs = sel => o.querySelector(sel), qa = sel => o.querySelectorAll(sel);
+  const syncUI = () => {                                                // đồng bộ mọi nút / thanh trượt theo opt
+    qa('[data-z]').forEach(b => b.classList.toggle('on', b.dataset.z === opt.size));
+    qa('[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === opt.theme));
+    qa('[data-w]').forEach(b => b.classList.toggle('on', b.dataset.w === opt.weight));
+    qa('[data-i]').forEach(b => b.classList.toggle('on', b.dataset.i === String(opt.italic)));
+    qa('[data-f]').forEach(b => b.classList.toggle('on', b.dataset.f === String(opt.frame)));
+    qa('#igC [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === opt.color.toLowerCase()));
+    qs('#imgFont').value = opt.font;
+    qs('#igScale').value = opt.scale; qs('#igScaleV').textContent = opt.scale + '%';
+    qs('#igAge').value = opt.age; qs('#igAgeV').textContent = opt.age ? opt.age + '%' : 'Tắt';
+    qs('#igGrain').value = opt.grain; qs('#igGrainV').textContent = opt.grain ? opt.grain + '%' : 'Tắt';
+    if (opt.color) qs('#igColor').value = opt.color;
   };
+  syncUI();
+  let seq = 0, tmr = 0;
+  const redo = async () => {                                            // vẽ lại khi đổi tùy chọn; nhớ lựa chọn cho lần sau
+    const my = ++seq; qs('#imgPrev').style.opacity = '.5';
+    const nb = await mk(opt); if (my !== seq) return;
+    qs('#imgPrev').style.opacity = ''; if (!nb) return;
+    try { localStorage.setItem('kt.imgOpt', JSON.stringify(opt)); } catch(err){}
+    URL.revokeObjectURL(url); blob = nb; file = new File([nb], fname, { type:'image/png' }); url = URL.createObjectURL(nb);
+    qs('#imgPrev').src = url;
+  };
+  const schedule = () => { clearTimeout(tmr); tmr = setTimeout(redo, 140); };
   const close = () => { URL.revokeObjectURL(url); o.remove(); };
-  o.addEventListener('change', e => { if (e.target.id === 'imgFont'){ fn = e.target.value; redo(); } });
+  o.addEventListener('input', e => {
+    const id = e.target.id;
+    if (id === 'igScale') opt.scale = +e.target.value; else if (id === 'igAge') opt.age = +e.target.value; else if (id === 'igGrain') opt.grain = +e.target.value;
+    else if (id === 'igColor'){ opt.color = e.target.value; qa('#igC [data-c]').forEach(b => b.classList.remove('on')); schedule(); return; }
+    else return;
+    syncUI(); schedule();
+  });
+  o.addEventListener('change', e => { if (e.target.id === 'imgFont'){ opt.font = e.target.value; redo(); } });
   o.addEventListener('click', async e => {
-    const zb = e.target.closest('[data-z]');
-    if (zb){                                                           // đổi kích thước ảnh (dọc / story / vuông / ngang)
-      if (zb.dataset.z === sk) return;
-      sk = zb.dataset.z; o.querySelectorAll('#imgSz button').forEach(x => x.classList.toggle('on', x.dataset.z === sk));
-      redo(); return;
-    }
-    const tb = e.target.closest('[data-t]');
-    if (tb){                                                           // đổi nền (trắng / kem / tối): vẽ lại ngay
-      if (tb.dataset.t === th) return;
-      th = tb.dataset.t; o.querySelectorAll('#imgTh button').forEach(x => x.classList.toggle('on', x.dataset.t === th));
-      redo(); return;
-    }
-    const b = e.target.closest('[data-k]');
-    if (!b){ if (e.target === o) close(); return; }
+    const t = e.target, pick = (attr, fn) => { const b = t.closest('[data-' + attr + ']'); if (!b) return false; fn(b.dataset[attr]); syncUI(); redo(); return true; };
+    if (pick('z', v => { opt.size = v; }) || pick('t', v => { opt.theme = v; }) || pick('w', v => { opt.weight = v; }) || pick('i', v => { opt.italic = +v; }) || pick('f', v => { opt.frame = +v; })) return;
+    if (pick('c', v => { opt.color = v; })) return;
+    if (pick('p', v => { opt = v === 'old' ? clean({ ...opt, ...OLD1925 }) : clean({ ...DEF, size:opt.size }); })) return;
+    const b = t.closest('[data-k]');
+    if (!b){ if (t === o) close(); return; }
     if (b.dataset.k === 'x') return close();
     if (b.dataset.k === 's'){ try { if (navigator.canShare && navigator.canShare({ files:[file] })) await navigator.share({ files:[file], title:ref }); else await saveImage(file, o); } catch(err){ if (err && err.name !== 'AbortError') await saveImage(file, o); } return; }
     await saveImage(file, o);
