@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5701,17 +5701,28 @@ function drawVerseCard(X, W, H, o){
     }
   };
   /* LỚP 2: giấy cũ (ngả vàng, cháy xém mép, sợi giấy, đốm ố, hạt nhiễu — giả lập sách in năm 1925) + khung viền mỏng */
-  const drawAging = x => {
-    const age = Math.max(0, Math.min(100, o.age || 0)) / 100, gr = Math.max(0, Math.min(100, o.grain || 0)) / 100;
-    if (age > 0 || gr > 0){
-      x.save(); rr(x); x.clip();
+  /* LỚP 2: giấy cũ (ngả vàng, cháy xém mép, sợi giấy, đốm ố, hạt nhiễu — giả lập sách in năm 1925) + khung viền mỏng.
+     Tách riêng: drawAge (ngả vàng + vân giấy), drawGrain (hạt nhiễu), drawFrame (khung) để xem trước chỉ vẽ lại đúng phần vừa đổi */
+  const drawAge = x => {
+    const age = Math.max(0, Math.min(100, o.age || 0)) / 100;
+    if (!(age > 0)) return;
+    x.save(); rr(x); x.clip();
       if (age > 0){
         reseed(2);
         x.globalCompositeOperation = dk ? 'source-over' : 'multiply';
         x.fillStyle = dk ? `rgba(205,150,70,${(.12 * age).toFixed(3)})` : `rgba(222,176,88,${(.62 * age).toFixed(3)})`; x.fillRect(CL, CT, CW, CH);
         x.globalCompositeOperation = 'source-over';
+        if (o.cache && typeof document !== 'undefined'){                                          // xem trước: vẽ sẵn vệt tối mép giấy một lần (độ đậm tối đa), mỗi bước kéo thanh chỉ chép lại theo độ đậm = age → nhanh gấp nhiều lần gradient vẽ lại
+          const vk = [W, H, CL, CT, CW, CH].join('|');
+          if (o.cache.vgk !== vk){
+            const vc = document.createElement('canvas'); vc.width = W; vc.height = H; const vx = vc.getContext('2d'), vcx = CL + CW / 2, vcy = CT + CH / 2, vg = vx.createRadialGradient(vcx, vcy, Math.min(CW, CH) * .30, vcx, vcy, Math.hypot(CW, CH) * .56);
+            vg.addColorStop(0, 'rgba(110,62,12,0)'); vg.addColorStop(1, 'rgba(110,62,12,.42)'); vx.fillStyle = vg; vx.fillRect(CL, CT, CW, CH); o.cache.vg = vc; o.cache.vgk = vk;
+          }
+          x.globalAlpha = age; x.drawImage(o.cache.vg, 0, 0); x.globalAlpha = 1;
+        } else {
         const ccx = CL + CW / 2, ccy = CT + CH / 2, eg = x.createRadialGradient(ccx, ccy, Math.min(CW, CH) * .30, ccx, ccy, Math.hypot(CW, CH) * .56);
         eg.addColorStop(0, 'rgba(110,62,12,0)'); eg.addColorStop(1, `rgba(110,62,12,${(.42 * age).toFixed(3)})`); x.fillStyle = eg; x.fillRect(CL, CT, CW, CH);
+        }
         for (let i = 0, n = Math.round(CW * CH / 7000 * age); i < n; i++){                      // sợi giấy
           const fx = CL + rnd() * CW, fy = CT + rnd() * CH, a = rnd() * Math.PI, l = (8 + rnd() * 26) * k;
           x.strokeStyle = `rgba(120,80,30,${(.05 + rnd() * .08).toFixed(3)})`; x.lineWidth = Math.max(.8, k); x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx + Math.cos(a) * l, fy + Math.sin(a) * l); x.stroke();
@@ -5725,6 +5736,12 @@ function drawVerseCard(X, W, H, o){
           bg2.addColorStop(0, `rgba(130,80,25,${(.07 * age).toFixed(3)})`); bg2.addColorStop(1, 'rgba(130,80,25,0)'); x.fillStyle = bg2; x.fillRect(fx - r, fy - r, 2 * r, 2 * r);
         }
       }
+    x.restore();
+  };
+  const drawGrain = x => {
+    const gr = Math.max(0, Math.min(100, o.grain || 0)) / 100;
+    if (!(gr > 0)) return;
+    x.save(); rr(x); x.clip();
       if (gr > 0){                                                                              // hạt nhiễu: lát một mảnh hạt tạo sẵn (nhanh, kéo thanh trượt không giật); độ mạnh = gr
         const gs = Math.max(.7, 1.3 * k), TS = 384, tk = (dk ? 'd' : 'l') + gs.toFixed(2);
         const GT = drawVerseCard.gt || (drawVerseCard.gt = {});
@@ -5736,7 +5753,11 @@ function drawVerseCard(X, W, H, o){
           }
           GT[tk] = tc;
         }
-        if (GT[tk]){ x.globalAlpha = Math.min(1, gr * 1.15); x.fillStyle = x.createPattern(GT[tk], 'repeat'); x.fillRect(CL, CT, CW, CH); x.globalAlpha = 1; }
+        if (GT[tk]){ x.globalAlpha = Math.min(1, gr * 1.15);
+          if (o.cache){                                                                       // xem trước: ghép các mảnh hạt bằng drawImage (nhanh hơn createPattern + fillRect trên iPhone cũ)
+            for (let ty = Math.floor(CT / TS) * TS; ty < CT + CH; ty += TS) for (let tx2 = Math.floor(CL / TS) * TS; tx2 < CL + CW; tx2 += TS) x.drawImage(GT[tk], tx2, ty);
+          } else { x.fillStyle = x.createPattern(GT[tk], 'repeat'); x.fillRect(CL, CT, CW, CH); }   // ảnh thật: giữ nguyên cách cũ để kết quả không đổi
+          x.globalAlpha = 1; }
         else {
           reseed(3);
           for (let i = 0, n = Math.round(CW * CH / 70 * gr); i < n; i++){
@@ -5745,10 +5766,12 @@ function drawVerseCard(X, W, H, o){
           }
         }
       }
-      x.restore();
-    }
+    x.restore();
+  };
+  const drawFrame = x => {
     if (o.frame){ x.strokeStyle = o.color || T.acc; x.globalAlpha = .6; x.lineWidth = Math.max(1.5, 2 * k); rrect(x, CL + 34 * k, CT + 34 * k, CW - 68 * k, CH - 68 * k, Math.max(6, R - 16 * k)); x.stroke(); x.globalAlpha = 1; }
   };
+  const drawAging = x => { drawAge(x); drawGrain(x); drawFrame(x); };
   /* LỚP 3: chữ. Địa chỉ câu ở cuối: viết hoa đầu mỗi từ, không gạch đầu dòng, không đường kẻ. Lời trích: cỡ chữ lớn nhất còn vừa, cân đều độ dài các dòng */
   const drawText = x => {
     x.textAlign = 'center'; x.textBaseline = 'alphabetic';
@@ -5788,14 +5811,19 @@ function drawVerseCard(X, W, H, o){
   const ch = o.cache;
   if (!ch || typeof document === 'undefined'){ drawBase(X); drawAging(X); drawText(X); return; }      // ảnh thật: vẽ thẳng, không dùng bộ nhớ đệm
   const mkc = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  const reuse = c => { if (c && c.width === W && c.height === H){ c.getContext('2d').clearRect(0, 0, W, H); return c; } return mkc(); };     // dùng lại canvas cũ thay vì tạo mới mỗi lần kéo thanh trượt (máy yếu rất nhạy việc cấp phát canvas)
   const kBase = [W, H, o.theme, o.ref].join('|');
-  const kL2 = [kBase, o.age | 0, o.grain | 0, o.frame ? 1 : 0, o.frame ? (o.color || '') : ''].join('|');
+  const kA = [kBase, o.age | 0].join('|');                                                           // lớp nền + ngả vàng
+  const kL2 = [kA, o.grain | 0, o.frame ? 1 : 0, o.frame ? (o.color || '') : ''].join('|');         // + hạt nhiễu + khung
   const kTx = [W, H, o.theme, fam, o.ref, o.text, o.scale, o.weight, o.italic, o.color || ''].join('|');
   if (ch.kL2 !== kL2){
-    if (ch.kBase !== kBase){ const cb = mkc(); drawBase(cb.getContext('2d')); ch.base = cb; ch.kBase = kBase; }
-    const c2 = mkc(), x2 = c2.getContext('2d'); x2.drawImage(ch.base, 0, 0); drawAging(x2); ch.l2 = c2; ch.kL2 = kL2;
+    if (ch.kA !== kA){
+      if (ch.kBase !== kBase){ const cb = reuse(ch.base); drawBase(cb.getContext('2d')); ch.base = cb; ch.kBase = kBase; }
+      const ca = reuse(ch.la), xa = ca.getContext('2d'); xa.drawImage(ch.base, 0, 0); drawAge(xa); ch.la = ca; ch.kA = kA;
+    }
+    const c2 = reuse(ch.l2), x2 = c2.getContext('2d'); x2.drawImage(ch.la, 0, 0); drawGrain(x2); drawFrame(x2); ch.l2 = c2; ch.kL2 = kL2;     // kéo thanh Hạt nhiễu: chỉ chép lớp ngả vàng + rải hạt, không vẽ lại giấy cũ
   }
-  if (ch.kTx !== kTx){ const ct = mkc(); drawText(ct.getContext('2d')); ch.tx = ct; ch.kTx = kTx; }
+  if (ch.kTx !== kTx){ const ct = reuse(ch.tx); drawText(ct.getContext('2d')); ch.tx = ct; ch.kTx = kTx; }
   X.drawImage(ch.l2, 0, 0); X.drawImage(ch.tx, 0, 0);
 }
 
