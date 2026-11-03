@@ -488,7 +488,7 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 /* Cài đặt dễ đọc cho người lớn tuổi */
 #settings .sheet{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}   /* chỉ vuốt lên xuống, không cuộn ngang */
 #settings .sheet>*{max-width:100%}
-#settings .shead{position:sticky;top:0;z-index:6;background:var(--bg);margin:0 -16px 6px;padding:6px 18px 8px;border-bottom:1px solid var(--line)}
+#settings .shead{position:sticky;top:-8px;z-index:6;background:var(--bg);margin:0 -16px 6px;padding:14px 18px 8px;max-width:none;width:auto;box-sizing:border-box;border-bottom:1px solid var(--line)}
 #settings #sbSeg button{padding:10px 2px;font-size:14px;min-width:0}
 #settings .seg{max-width:100%}
 #settings .sdone{font-size:18px;padding:10px 8px}
@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
