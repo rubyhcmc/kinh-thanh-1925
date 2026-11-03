@@ -336,7 +336,7 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-wei
 .copybar .btn:not(.primary){background:none;color:var(--muted)}
 /* Menu chạm giữ câu */
 .vmenu{position:fixed;z-index:61;min-width:260px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.32);overflow:hidden}
-.vmenu .vh{padding:11px 18px 9px;font-family:var(--sans);font-size:13.5px;font-weight:700;letter-spacing:.04em;color:var(--accent);border-bottom:1px solid var(--line)}
+.vmenu .vh{padding:14px 18px 12px;text-align:center;font-family:var(--serif,var(--sans));font-size:17px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border-bottom:1px solid var(--line)}
 .vmenu button{display:block;width:100%;text-align:left;border:0;background:none;padding:16px 18px;font-family:var(--sans);font-size:17px;color:var(--fg)}
 .vmenu button+button{border-top:1px solid var(--line)}
 .vmenu button:active{background:var(--accent-soft)}
@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2076,7 +2076,6 @@ function openMarks(){
     o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
       <p class="bmhint">Chạm giữ một câu: <b>📍 Đọc đến đây</b> để lần sau app tiếp tục từ đó, <b>🔖 Đánh dấu</b> để lưu câu vào danh sách này.</p>
       ${(RESUME && bibleMeta.some(m => m.name === RESUME.book)) ? `<div class="bmitem rsitem"><button class="bmmain" data-rsgo="1"><b>📍 Chỗ đọc tiếp · ${esc(RESUME.book)} ${RESUME.ch}${RESUME.n > 1 ? ':' + RESUME.n : ''}</b><span class="bmt">Chạm để mở đúng chỗ đang đọc dở</span><small>${esc(rsAgo(RESUME.at))}</small></button><button class="iconbtn" data-rsdel="1" aria-label="Bỏ chỗ đọc tiếp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ''}
-      ${RSH.length ? `<div class="sth" style="margin-top:6px">📅 Nhật ký đọc đến</div>` + RSH.slice(0, 15).map((x, i) => `<div class="bmitem"><button class="bmmain" data-rh="${i}"><b>${esc(x.book)} ${x.ch}${x.n > 1 ? ':' + x.n : ''}</b><small>${esc(rsDate(x.at))}</small></button><button class="iconbtn" data-rhdel="${i}" aria-label="Xóa dòng này"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('') + (BM.length ? `<div class="sth" style="margin-top:14px">🔖 Câu đã đánh dấu</div>` : '') : ''}
       ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
         : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
       <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
@@ -5840,12 +5839,12 @@ async function verseImage(nums){
   const IMG_FONTS = ['Playfair Display', 'EB Garamond', 'Lora', 'Merriweather', 'Inter', 'Open Sans', 'Roboto'].filter(n => FONTS[n]);
   const COLORS = [['', 'Tự động'], ['#3b2a1a', 'Nâu'], ['#1a1a1a', 'Đen'], ['#1f3a5f', 'Xanh navy'], ['#7a1f2b', 'Đỏ rượu'], ['#2f5d3a', 'Xanh lá'], ['#f6ebd0', 'Kem sáng'], ['#ffffff', 'Trắng']];
   const DEF = { theme:'cream', font:'Playfair Display', size:'p', scale:100, weight:'normal', italic:0, color:'', age:0, grain:0, frame:0 };
-  const OLD1925 = { theme:'cream', font:'EB Garamond', weight:'normal', italic:0, color:'', scale:100, age:70, grain:55, frame:1 };   // kiểu sách cổ 1925
+  const OLD1925 = { theme:'cream', font:'EB Garamond', weight:'normal', italic:0, color:'', scale:100, age:0, grain:0, frame:1 };   // kiểu sách cổ 1925 (nền kem + chữ Garamond + khung mỏng)
   const clean = q => {
     const r = { ...DEF }; if (!q) return r;
     const nn = (v, lo, hi, d) => { v = +v; return isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d; };
     if (THEMES.includes(q.theme)) r.theme = q.theme; if (IMG_FONTS.includes(q.font)) r.font = q.font; if (SIZES[q.size]) r.size = q.size;
-    r.scale = nn(q.scale, 60, 160, 100); r.age = nn(q.age, 0, 100, 0); r.grain = nn(q.grain, 0, 100, 0);
+    r.scale = nn(q.scale, 60, 160, 100); r.age = 0; r.grain = 0;   // mục “Giấy cũ & hạt nhiễu” đã bỏ (nặng với máy yếu): luôn tắt, kể cả cấu hình đã lưu từ bản cũ
     if (['light', 'normal', 'bold'].includes(q.weight)) r.weight = q.weight; r.italic = q.italic ? 1 : 0; r.frame = q.frame ? 1 : 0;
     r.color = /^#[0-9a-f]{6}$/i.test(q.color || '') ? q.color : ''; return r;
   };
@@ -5883,10 +5882,6 @@ async function verseImage(nums){
       <div class="igr"><span class="l">Kiểu chữ</span><div class="seg" id="igI">${segBtns('i', [[0, 'Đứng'], [1, 'Nghiêng']], opt.italic)}</div></div>
       <div class="igr"><span class="l">Màu chữ</span><div class="igsw" id="igC">${COLORS.map(([c, n]) => `<button type="button" data-c="${c}" title="${n}" aria-label="${n}" style="background:${c || 'conic-gradient(#b5832a,#1f3a5f,#7a1f2b,#2f5d3a,#b5832a)'}"></button>`).join('')}<input type="color" id="igColor" aria-label="Chọn màu khác" style="width:34px;height:34px;padding:0;border:2px solid var(--line);border-radius:50%;background:none"></div></div>
     </div></details>
-    <details class="igd"><summary>📜 Giấy cũ &amp; hạt nhiễu <span class="chev" aria-hidden="true">›</span></summary><div class="igb">
-      <div class="igr"><span class="l">Ngả vàng &amp; vân giấy: <b id="igAgeV"></b></span><input type="range" id="igAge" min="0" max="100" step="5"></div>
-      <div class="igr"><span class="l">Hạt nhiễu (sách cổ): <b id="igGrainV"></b></span><input type="range" id="igGrain" min="0" max="100" step="5"></div>
-    </div></details>
     <details class="igd"><summary>🖼 Khung &amp; bố cục <span class="chev" aria-hidden="true">›</span></summary><div class="igb">
       <div class="igr"><span class="l">Khung viền mỏng</span><div class="seg" id="igF">${segBtns('f', [[0, 'Tắt'], [1, 'Bật']], opt.frame)}</div></div>
     </div></details>
@@ -5902,8 +5897,6 @@ async function verseImage(nums){
     qa('#igC [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === opt.color.toLowerCase()));
     qs('#imgFont').value = opt.font;
     qs('#igScale').value = opt.scale; qs('#igScaleV').textContent = opt.scale + '%';
-    qs('#igAge').value = opt.age; qs('#igAgeV').textContent = opt.age ? opt.age + '%' : 'Tắt';
-    qs('#igGrain').value = opt.grain; qs('#igGrainV').textContent = opt.grain ? opt.grain + '%' : 'Tắt';
     if (opt.color) qs('#igColor').value = opt.color;
   };
   syncUI();
@@ -5942,11 +5935,10 @@ async function verseImage(nums){
   const close = () => { clearTimeout(tmr); clearTimeout(trail); cancelAnimationFrame(raf); saveOpt(); o.remove(); };
   const syncLabels = () => {
     qs('#igScaleV').textContent = opt.scale + '%';
-    qs('#igAgeV').textContent = opt.age ? opt.age + '%' : 'Tắt'; qs('#igGrainV').textContent = opt.grain ? opt.grain + '%' : 'Tắt';
   };
   o.addEventListener('input', e => {
     const id = e.target.id;
-    if (id === 'igScale') opt.scale = +e.target.value; else if (id === 'igAge') opt.age = +e.target.value; else if (id === 'igGrain') opt.grain = +e.target.value;
+    if (id === 'igScale') opt.scale = +e.target.value;
     else if (id === 'igColor'){ opt.color = e.target.value; qa('#igC [data-c]').forEach(b => b.classList.remove('on')); change(true); return; }
     else return;
     syncLabels(); change(true);                                         // kéo thanh trượt: chỉ cập nhật nhãn + xem trước nhanh
