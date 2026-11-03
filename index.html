@@ -379,7 +379,7 @@ details a{color:var(--accent)}
 .chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
 .chk input{width:auto}
 .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
-  background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;max-width:90vw;text-align:center}
+  background:#222;color:#fff;padding:8px 16px;border-radius:99px;font-size:14px;line-height:1.35;width:max-content;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
 /* ===== Quản lý tên sách trong trình soạn thảo ===== */
 .edsub{display:block;width:100%;margin:6px 0 0;padding:8px 12px;min-height:38px;max-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:inherit;font:inherit;font-size:13.5px;line-height:1.4;resize:none;overflow:auto;box-sizing:border-box}
@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5059,7 +5059,7 @@ function paperFullscreen(on){
     }
   } catch(e){}
 }
-$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen((PAPER_PAGED && S.paper) || S.fullauto); toast(S.paper ? '📄 Chế độ Trang giấy: BẬT' : 'Đã tắt chế độ Trang giấy'); };
+$('#btnPaper').onclick = () => { S.paper = !S.paper; saveS(); applyTheme(); paperFullscreen((PAPER_PAGED && S.paper) || S.fullauto); toast(S.paper ? '📄 Trang giấy: BẬT' : '📄 Trang giấy: TẮT', 1800); };
 // Mở app đang ở chế độ Trang giấy: chạm lần đầu để vào toàn màn hình (trình duyệt chỉ cho phép sau một cú chạm)
 document.addEventListener('click', () => {
   if ((PAPER_PAGED && S.paper) || S.fullauto) paperFullscreen(true);
