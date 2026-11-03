@@ -1293,7 +1293,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2385,24 +2385,33 @@ $('#lsShare').onclick = async () => {
   try { await navigator.clipboard.writeText(text); toast('📋 Đã chép ghi chú để dán chia sẻ'); } catch(err){ toast('Không chia sẻ được trên máy này'); }
 };
 
-/* Menu nhỏ hiện khi chạm giữ một câu */
-function showVerseMenu(n, x, y){
+/* Menu nhỏ hiện khi chạm giữ.
+   - Chạm giữ một câu (chưa bôi đen câu nào): chỉ có "Ghim đã đọc đến đây".
+   - Đã bôi đen (chọn) một hoặc nhiều câu rồi chạm giữ: Đánh dấu câu này · Viết bài học cá nhân · Tạo ảnh · Sao chép (áp dụng cho các câu đã chọn). */
+function showVerseMenu(n, x, y, ns){
   if (!curBook) return;
   try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
   $$('.vmenu-bg').forEach(e => e.remove());
   try { getSelection().removeAllRanges(); } catch(e){}
+  const multi = Array.isArray(ns) && ns.length > 0;
+  const list = multi ? ns : [n];
   const bg = document.createElement('div'); bg.className = 'vmenu-bg';
   bg.style.cssText = 'position:fixed;inset:0;z-index:60;background:transparent';
   const m = document.createElement('div'); m.className = 'vmenu';
-  const isRs = !!(RESUME && RESUME.book === curBook.name && RESUME.ch === S.chapter && RESUME.n === n);
-  const isBm = BM.some(b => b.book === curBook.name && b.ch === S.chapter && b.n === n);
-  m.innerHTML = `<div class="vh">${esc(curBook.name)} ${S.chapter}:${n}</div>
-    <button data-a="mark" class="${isBm ? 'on' : ''}">${isBm ? '🔖 Bỏ đánh dấu câu này' : '🔖 Đánh dấu câu này'}<small>${isBm ? 'Đang có trong danh sách 🔖' : 'Lưu vào danh sách 🔖 để xem lại'}</small></button>
+  const book = curBook.name, ch = S.chapter;
+  const isBmN = k => BM.some(b => b.book === book && b.ch === ch && b.n === k);
+  if (multi){
+    const allBm = list.every(isBmN);
+    m.innerHTML = `<div class="vh">${esc(book)} ${ch}:${esc(compressRange(list))}</div>
+    <button data-a="mark" class="${allBm ? 'on' : ''}">${allBm ? '🔖 Bỏ đánh dấu câu này' : '🔖 Đánh dấu câu này'}</button>
     <button data-a="lesson">✍️ Viết bài học cá nhân</button>
-    <button data-a="copy">📋 Sao chép</button>
     <button data-a="img">🖼️ Tạo ảnh</button>
-    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang ghim đã đọc đến đây' : '📍 Ghim đã đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghim' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>
-    <button data-a="multi">☑️ Chọn nhiều câu</button>`;
+    <button data-a="copy">📋 Sao chép</button>`;
+  } else {
+    const isRs = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
+    m.innerHTML = `<div class="vh">${esc(book)} ${ch}:${n}</div>
+    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang ghim đã đọc đến đây' : '📍 Ghim đã đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghim' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>`;
+  }
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
@@ -2418,15 +2427,29 @@ function showVerseMenu(n, x, y){
     const b = e.target.closest('[data-a]'); close();
     if (!b) return;
     const a = b.dataset.a;
-    if (a === 'mark'){ isBm ? removeBookmark(n) : addBookmark(n); }
-    else if (a === 'resume') toggleResumeAt(n);
-    else if (a === 'copy'){ selected.clear(); selected.add(n); $('#copyGo').click(); }
-    else if (a === 'img') verseImage([n]);
-    else if (a === 'lesson') window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns:[n] } }));
-    else if (a === 'multi'){
-      selected.clear(); selected.add(n);
-      const el = $('#v' + n); if (el) el.classList.add('sel');
-      $('#copyBar').hidden = false; $('#copyGo').textContent = 'Sao chép (1)';
+    if (a === 'resume') return toggleResumeAt(n);
+    if (a === 'copy'){ selected.clear(); list.forEach(k => selected.add(k)); $('#copyGo').click(); return; }   // #copyGo tự bỏ chọn sau khi chép
+    if (a === 'img'){ clearSelection(); verseImage(list); return; }
+    if (a === 'lesson'){ clearSelection(); window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book, ch, ns:list } })); return; }
+    if (a === 'mark'){
+      const all = list.every(isBmN);
+      if (list.length === 1){ all ? removeBookmark(list[0]) : addBookmark(list[0]); clearSelection(); return; }
+      const prev = BM.map(x => ({ ...x }));
+      if (all) BM = BM.filter(x => !(x.book === book && x.ch === ch && list.includes(x.n)));
+      else {
+        const data = curBook.chapters[ch - 1] || [];
+        list.forEach(k => {
+          if (isBmN(k)) return;
+          const v = data.find(x => x.n === k); if (!v) return;
+          const text = String(v.t).replace(/\[\d{1,3}\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
+          BM.unshift({ book, ch, n:k, text, at:Date.now() });
+        });
+        if (BM.length > BM_MAX) BM.length = BM_MAX;
+      }
+      saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(err){}
+      try { navigator.vibrate && navigator.vibrate(25); } catch(err){}
+      clearSelection();
+      toastAct(all ? `Đã bỏ đánh dấu ${book} ${ch}:${compressRange(list)}` : `🔖 Đã đánh dấu ${book} ${ch}:${compressRange(list)}`, 'Hoàn tác', () => { BM = prev; saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(err){} });
     }
   });
   bg.addEventListener('contextmenu', e => e.preventDefault());
@@ -2450,12 +2473,10 @@ function showVerseMenu(n, x, y){
       timer = null;
       if (flipping()){ stopBlink(); return; }               // đang vuốt lật trang → không mở menu
       fired = true; stopBlink(); setTimeout(() => { fired = false; }, 800);
-      if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
+      if (selected.size){                                   // đang bôi đen (chọn) câu → giữ lại thì hiện menu 4 mục cho các câu đã chọn
         selected.add(+p.dataset.n);
         const ns = [...selected].sort((a, b) => a - b);
-        try { navigator.vibrate && navigator.vibrate(20); } catch(e){}
-        clearSelection();
-        window.dispatchEvent(new CustomEvent('openLesson', { detail:{ book:curBook.name, ch:S.chapter, ns } }));
+        showVerseMenu(+p.dataset.n, sx, sy, ns);
         return;
       }
       clearSelection(); showVerseMenu(+p.dataset.n, sx, sy);
