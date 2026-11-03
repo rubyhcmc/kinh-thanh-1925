@@ -1274,7 +1274,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5599,75 +5599,63 @@ function showOnboard(){
 }
 $('#obShow').onclick = () => { show('#settings', false); showOnboard(); };
 
-/* Chia sẻ câu Kinh Thánh thành ảnh (khổ 4:5, dùng được cho Zalo / Facebook): thẻ Lời Chúa, nền sáng hoặc tối */
-/* Vẽ "thẻ Lời Chúa" lên canvas 2D (ảnh chia sẻ câu Kinh Thánh). o = { text, ref, fam, theme:'light'|'dark' }.
-   Thiết kế: nền giấy cổ có hạt + tối viền, khung vàng đôi, hoa văn bốn góc, thánh giá + nhãn LỜI CHÚA, lời trích cân giữa, địa chỉ câu ở cuối. */
+/* Chia sẻ câu Kinh Thánh thành ảnh (khổ 4:5, dùng được cho Zalo / Facebook): thẻ nổi, nền trắng / kem / tối, tự chọn font chữ */
+/* Vẽ "thẻ Lời Chúa" lên canvas 2D (ảnh chia sẻ câu Kinh Thánh), bố cục tự co giãn theo khung W×H (dọc, vuông, ngang…).
+   o = { text, ref, fam, theme:'white'|'cream'|'dark' }. Thẻ nổi có bóng đổ trên nền mềm; lời trích cân giữa; địa chỉ câu ở cuối. */
 function drawVerseCard(x, W, H, o){
   const TH = {
-    light:{ bg0:'#fdf8ec', bg1:'#efe0bd', vig:'rgba(120,80,25,.30)', g0:'#8a5f1c', g1:'#e9cc7e', g2:'#9c6d22', ink:'#2a1c0f', ref:'#7a4a12', grain:'70,45,10',   hole:'#fbf3df' },
-    dark: { bg0:'#1d2d44', bg1:'#0a111b', vig:'rgba(0,0,0,.60)',     g0:'#b5852f', g1:'#f3d98f', g2:'#c99b43', ink:'#f7ecd2', ref:'#ecca82', grain:'255,235,190', hole:'#15212f' }
+    white:{ bgA:'#f8fafd', bgB:'#e1e8f2', orb:['rgba(110,150,215,.30)', 'rgba(245,190,120,.30)'], card0:'#ffffff', card1:'#fbf9f5', edge:'rgba(255,255,255,.95)', shadow:'rgba(35,55,95,.30)',  ink:'#26221d', acc:'#b5832a', grain:'60,60,70' },
+    cream:{ bgA:'#f7ecd6', bgB:'#e2cb9e', orb:['rgba(214,150,70,.32)', 'rgba(255,246,222,.60)'], card0:'#fffaf0', card1:'#fbf0da', edge:'rgba(255,255,255,.85)', shadow:'rgba(95,58,15,.34)',  ink:'#33220f', acc:'#9a6420', grain:'80,50,10' },
+    dark: { bgA:'#18263d', bgB:'#060b13', orb:['rgba(70,110,195,.38)', 'rgba(232,188,105,.18)'], card0:'#213253', card1:'#152238', edge:'rgba(255,255,255,.13)', shadow:'rgba(0,0,0,.65)',     ink:'#f6ebd0', acc:'#e8c479', grain:'255,235,190' }
   };
-  const T = TH[o.theme] || TH.light, fam = o.fam, CX = W / 2;
-  /* nền: giấy sáng giữa, tối dần ra mép + hạt giấy (cố định theo địa chỉ câu → vẽ lại vẫn y hệt) */
-  let g = x.createRadialGradient(CX, H * .42, 80, CX, H / 2, H * .82); g.addColorStop(0, T.bg0); g.addColorStop(1, T.bg1);
+  const T = TH[o.theme] || TH.cream, fam = o.fam, CX = W / 2, k = Math.min(W, H) / 1080;
+  /* nền mềm + vệt sáng + hạt mịn */
+  let g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, T.bgA); g.addColorStop(1, T.bgB);
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  g = x.createRadialGradient(CX, H / 2, H * .38, CX, H / 2, H * .78); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, T.vig);
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const OR = Math.max(W, H) * .5;
+  [[W * .18, H * .16, OR * .95, T.orb[0]], [W * .90, H * .88, OR * 1.05, T.orb[1]]].forEach(([ox, oy, r, c]) => {
+    const og = x.createRadialGradient(ox, oy, 0, ox, oy, r); og.addColorStop(0, c); og.addColorStop(1, c.replace(/[\d.]+\)$/, '0)'));
+    x.fillStyle = og; x.fillRect(0, 0, W, H);
+  });
   let seed = 7; for (const c of String(o.ref)) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  for (let i = 0; i < 3200; i++){ x.fillStyle = `rgba(${T.grain},${(.03 + rnd() * .05).toFixed(3)})`; const s = rnd() < .15 ? 2 : 1; x.fillRect(rnd() * W, rnd() * H, s, s); }
-  /* vàng */
-  const gold = x.createLinearGradient(0, 0, W, H); gold.addColorStop(0, T.g0); gold.addColorStop(.5, T.g1); gold.addColorStop(1, T.g2);
-  const diamond = (cx, cy, r, fill) => { x.fillStyle = fill; x.beginPath(); x.moveTo(cx, cy - r); x.lineTo(cx + r, cy); x.lineTo(cx, cy + r); x.lineTo(cx - r, cy); x.closePath(); x.fill(); };
-  const dot = (cx, cy, r) => { x.fillStyle = gold; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); };
-  const spaced = (t, cx, y, sp) => {                                  // chữ giãn đều (tự giãn từng ký tự vì không phải trình duyệt nào cũng có letterSpacing)
-    const cs = [...t], w = cs.map(c => x.measureText(c).width), tot = w.reduce((a, b) => a + b, 0) + sp * (cs.length - 1);
-    let px = cx - tot / 2; x.textAlign = 'left'; cs.forEach((c, i) => { x.fillText(c, px, y); px += w[i] + sp; }); x.textAlign = 'center';
-  };
-  /* khung vàng đôi */
-  x.strokeStyle = gold; x.lineWidth = 6; x.strokeRect(44, 44, W - 88, H - 88);
-  x.lineWidth = 1.6; x.strokeRect(66, 66, W - 132, H - 132);
-  /* hoa văn bốn góc */
-  const corner = (px, py, sx, sy) => {
-    x.save(); x.translate(px, py); x.scale(sx, sy);
-    x.strokeStyle = gold; x.lineWidth = 3; x.lineJoin = 'miter';
-    x.beginPath(); x.moveTo(-20, 84); x.lineTo(-20, -20); x.lineTo(84, -20); x.stroke();
-    diamond(0, 0, 17, gold); diamond(0, 0, 7, T.hole);
-    dot(52, 0, 3.4); dot(0, 52, 3.4); dot(86, 0, 2.4); dot(0, 86, 2.4);
-    x.restore();
-  };
-  corner(44, 44, 1, 1); corner(W - 44, 44, -1, 1); corner(44, H - 44, 1, -1); corner(W - 44, H - 44, -1, -1);
+  const nGr = Math.round(W * H / 650); for (let i = 0; i < nGr; i++){ x.fillStyle = `rgba(${T.grain},${(.025 + rnd() * .04).toFixed(3)})`; x.fillRect(rnd() * W, rnd() * H, 1.4, 1.4); }
+  /* thẻ nổi: bóng đổ mềm + viền sáng mảnh */
+  const M = 84 * k, CL = M, CT = M, CW = W - 2 * M, CH = H - 2 * M, R = 46 * k;
+  const rr = () => { x.beginPath(); x.moveTo(CL + R, CT); x.arcTo(CL + CW, CT, CL + CW, CT + CH, R); x.arcTo(CL + CW, CT + CH, CL, CT + CH, R); x.arcTo(CL, CT + CH, CL, CT, R); x.arcTo(CL, CT, CL + CW, CT, R); x.closePath(); };
+  const cg = x.createLinearGradient(0, CT, 0, CT + CH); cg.addColorStop(0, T.card0); cg.addColorStop(1, T.card1);
+  x.save(); x.shadowColor = T.shadow; x.shadowBlur = 70 * k; x.shadowOffsetY = 28 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
+  x.save(); x.shadowColor = T.shadow; x.shadowBlur = 14 * k; x.shadowOffsetY = 4 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
+  x.lineWidth = 2; x.strokeStyle = T.edge; rr(); x.stroke();
+  if (o.theme === 'dark'){                                              // quầng sáng ấm sau lời trích cho nền tối
+    x.save(); rr(); x.clip(); const gl = x.createRadialGradient(CX, H * .48, 0, CX, H * .48, Math.min(CW, CH) * .62); gl.addColorStop(0, 'rgba(232,196,121,.10)'); gl.addColorStop(1, 'rgba(232,196,121,0)');
+    x.fillStyle = gl; x.fillRect(CL, CT, CW, CH); x.restore();
+  }
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-  /* đầu thẻ: thánh giá + LỜI CHÚA + đường phân cách */
-  x.fillStyle = gold; x.fillRect(CX - 5, 104, 10, 72); x.fillRect(CX - 23, 123, 46, 10);
-  diamond(CX, 104, 5, gold); diamond(CX, 176, 5, gold); diamond(CX - 23, 128, 5, gold); diamond(CX + 23, 128, 5, gold);
-  x.font = `700 27px ${fam}`; x.fillStyle = T.ref; spaced('LỜI CHÚA', CX, 238, 12);
-  x.strokeStyle = gold; x.lineWidth = 1.6; x.beginPath(); x.moveTo(CX - 250, 274); x.lineTo(CX - 36, 274); x.moveTo(CX + 36, 274); x.lineTo(CX + 250, 274); x.stroke();
-  diamond(CX, 274, 9, gold); dot(CX - 24, 274, 3); dot(CX + 24, 274, 3);
   /* địa chỉ câu ở cuối: viết hoa đầu mỗi từ, không gạch đầu dòng, không đường kẻ */
-  const MAXW = W - 2 * 150;
-  let rs = 46; x.font = `700 ${rs}px ${fam}`;
-  while (rs > 26 && x.measureText(o.ref).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
-  const REF_Y = H - 150;
-  x.fillStyle = T.ref; x.fillText(o.ref, CX, REF_Y);
-  diamond(CX - 28, REF_Y - rs - 44, 4, gold); diamond(CX, REF_Y - rs - 44, 7, gold); diamond(CX + 28, REF_Y - rs - 44, 4, gold);
-  /* lời trích: tự chọn cỡ chữ lớn nhất còn vừa, rồi cân đều độ dài các dòng (không còn dòng cuối chỉ một chữ) */
-  const RT = 330, RB = REF_Y - rs - 100, availT = RB - RT;
-  const body = '\u201C' + o.text + '\u201D';
+  const MAXW = CW - 2 * 96 * k;
+  let rs = Math.round(44 * k); x.font = `700 ${rs}px ${fam}`;
+  while (rs > 22 && x.measureText(o.ref).width > MAXW){ rs -= 2; x.font = `700 ${rs}px ${fam}`; }
+  const REF_Y = CT + CH - 90 * k;
+  x.fillStyle = T.acc; x.fillText(o.ref, CX, REF_Y);
+  /* lời trích: tự chọn cỡ chữ lớn nhất còn vừa, rồi cân đều độ dài các dòng */
+  const RT = CT + 96 * k, RB = REF_Y - rs - 64 * k, availT = RB - RT;
+  const body = o.text;
   const wrapAt = (sz, mw) => {
     x.font = `400 ${sz}px ${fam}`;
     const lines = []; let cur = '';
     body.split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cur && x.measureText(t2).width > mw){ lines.push(cur); cur = w; } else cur = t2; });
     if (cur) lines.push(cur); return lines;
   };
-  let sz = 74, lines = wrapAt(sz, MAXW), lh = sz * 1.55;
-  while (sz > 28 && lines.length * lh > availT){ sz -= 2; lines = wrapAt(sz, MAXW); lh = sz * 1.55; }
-  if (lines.length * lh > availT){                                    // quá dài: cắt bớt và thêm …
+  const MIN = 24;
+  let sz = Math.round(Math.min(CW, CH) * .078), lines = wrapAt(sz, MAXW), lh = sz * 1.5;
+  while (sz > MIN && lines.length * lh > availT){ sz -= 2; lines = wrapAt(sz, MAXW); lh = sz * 1.5; }
+  if (lines.length * lh > availT){                                      // quá dài: cắt bớt và thêm …
     const n = Math.max(1, Math.floor(availT / lh)); lines = lines.slice(0, n);
-    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?\u201D]*$/, '') + '\u2026\u201D';
+    lines[n - 1] = lines[n - 1].replace(/[\s,;.:!?]*$/, '') + '\u2026';
   } else if (lines.length > 1){
     let lo = MAXW * .55, hi = MAXW;
-    for (let k = 0; k < 14; k++){ const mid = (lo + hi) / 2; if (wrapAt(sz, mid).length <= lines.length) hi = mid; else lo = mid; }
+    for (let q = 0; q < 14; q++){ const mid = (lo + hi) / 2; if (wrapAt(sz, mid).length <= lines.length) hi = mid; else lo = mid; }
     lines = wrapAt(sz, hi);
   }
   const ty = RT + Math.max(0, (availT - lines.length * lh) / 2);
@@ -5683,38 +5671,56 @@ async function verseImage(nums){
   const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, ' ')).join(' ').replace(/\s+/g, ' ').trim();
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());   // Sáng Thế Ký, Xuất Ê-díp-tô Ký
   const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
-  let fam = (FONTS[S.font] && FONTS[S.font].s) || PDF_SERIF;
-  try { await Promise.race([loadFont('Playfair Display'), new Promise(r => setTimeout(r, 4000))]); } catch(e){}
-  const pfOk = [...document.fonts].some(f => f.family.replace(/["']/g, '') === 'Playfair Display' && f.status === 'loaded');
-  if (pfOk) fam = FONTS['Playfair Display'].s;                          // chưa tải được (mất mạng) → dùng font đang đọc, ảnh vẫn tạo bình thường
-  try { await Promise.all([document.fonts.load('400 40px ' + fam, 'Ếệặ'), document.fonts.load('700 40px ' + fam, 'Ếệặ')]); } catch(e){}
-  const W = 1080, H = 1350;
-  const mk = async th => {
+  const SIZES = { p:{ w:1080, h:1350, t:'▯ Dọc 4:5' }, s:{ w:1080, h:1920, t:'📱 Story 9:16' }, q:{ w:1080, h:1080, t:'▢ Vuông' }, l:{ w:1600, h:900, t:'▭ Ngang 16:9' } };
+  const THEMES = ['white', 'cream', 'dark'], THEME_LABEL = { white:'⚪ Trắng', cream:'🟡 Kem', dark:'🌙 Tối' };
+  const IMG_FONTS = ['Playfair Display', 'EB Garamond', 'Lora', 'Merriweather', 'Inter', 'Open Sans', 'Roboto'].filter(n => FONTS[n]);
+  let th = 'cream', fn = 'Playfair Display', sk = 'p';
+  try { const t0 = localStorage.getItem('kt.imgTheme'), f0 = localStorage.getItem('kt.imgFont'), z0 = localStorage.getItem('kt.imgSize'); if (THEMES.includes(t0)) th = t0; if (IMG_FONTS.includes(f0)) fn = f0; if (SIZES[z0]) sk = z0; } catch(e){}
+  const ensure = async name => {                                        // tải font (tối đa 4 giây); chưa tải được thì canvas tự dùng font dự phòng trong danh sách
+    try { await Promise.race([loadFont(name), new Promise(r => setTimeout(r, 4000))]); await Promise.all([document.fonts.load('400 40px ' + FONTS[name].s, 'Ếệặ'), document.fonts.load('700 40px ' + FONTS[name].s, 'Ếệặ')]); } catch(e){}
+  };
+  const mk = async (theme, font, size) => {
+    await ensure(font);
+    const W = SIZES[size].w, H = SIZES[size].h;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    drawVerseCard(cv.getContext('2d'), W, H, { text, ref, fam, theme:th });
+    drawVerseCard(cv.getContext('2d'), W, H, { text, ref, fam:FONTS[font].s, theme });
     return await new Promise(r => cv.toBlob(r, 'image/png'));
   };
-  let th = 'light'; try { if (localStorage.getItem('kt.imgTheme') === 'dark') th = 'dark'; } catch(e){}
-  let blob = await mk(th);
+  let blob = await mk(th, fn, sk);
   if (!blob) return toast('Không tạo được ảnh');
   const fname = (fold(ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cau-kinh-thanh') + '.png';
   let file = new File([blob], fname, { type:'image/png' }), url = URL.createObjectURL(blob);
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet" style="text-align:center"><h3>Chia sẻ thành ảnh</h3>
-    <img id="imgPrev" src="${url}" alt="" style="width:100%;max-width:340px;border-radius:10px;border:1px solid var(--line);margin-bottom:12px">
-    <div class="seg" id="imgTh" style="margin:0 auto 12px"><button data-t="light" class="${th === 'light' ? 'on' : ''}">☀ Nền sáng</button><button data-t="dark" class="${th === 'dark' ? 'on' : ''}">🌙 Nền tối</button></div>
+    <img id="imgPrev" src="${url}" alt="" style="display:block;margin:0 auto 12px;width:auto;height:auto;max-width:100%;max-height:38vh;object-fit:contain;border-radius:10px;border:1px solid var(--line)">
+    <div class="seg" id="imgSz" style="margin:0 auto 10px;max-width:100%;overflow-x:auto">${Object.keys(SIZES).map(z => `<button data-z="${z}" class="${z === sk ? 'on' : ''}" style="white-space:nowrap">${SIZES[z].t}</button>`).join('')}</div>
+    <div class="seg" id="imgTh" style="margin:0 auto 10px">${THEMES.map(t => `<button data-t="${t}" class="${t === th ? 'on' : ''}">${THEME_LABEL[t]}</button>`).join('')}</div>
+    <label class="fld" style="display:block;text-align:left;margin-bottom:12px"><span>Kiểu chữ trong ảnh</span><select id="imgFont" style="width:100%">${IMG_FONTS.map(n => `<option value="${n}" style="font-family:${FONTS[n].s.replace(/"/g, "'")}"${n === fn ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
     <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="a">💾 Lưu vào thư viện ảnh</button><button class="btn" data-k="s">↗ Chia sẻ (Zalo, Facebook…)</button><button class="btn" data-k="x">Đóng</button></div>
     <p class="bmhint" style="margin:10px 0 0" id="imgHint">${IS_IOS ? 'Trên iPhone: chọn “Lưu hình ảnh” trong bảng hiện ra.' : 'Ảnh được lưu vào mục Tải xuống và hiện trong Thư viện / Ảnh.'}</p></div>`;
+  let seq = 0;
+  const redo = async () => {                                            // vẽ lại khi đổi nền / đổi font; nhớ lựa chọn cho lần sau
+    const my = ++seq; o.querySelector('#imgPrev').style.opacity = '.5';
+    const nb = await mk(th, fn, sk); if (my !== seq) return;
+    o.querySelector('#imgPrev').style.opacity = ''; if (!nb) return;
+    try { localStorage.setItem('kt.imgTheme', th); localStorage.setItem('kt.imgFont', fn); localStorage.setItem('kt.imgSize', sk); } catch(err){}
+    URL.revokeObjectURL(url); blob = nb; file = new File([nb], fname, { type:'image/png' }); url = URL.createObjectURL(nb);
+    o.querySelector('#imgPrev').src = url;
+  };
   const close = () => { URL.revokeObjectURL(url); o.remove(); };
+  o.addEventListener('change', e => { if (e.target.id === 'imgFont'){ fn = e.target.value; redo(); } });
   o.addEventListener('click', async e => {
+    const zb = e.target.closest('[data-z]');
+    if (zb){                                                           // đổi kích thước ảnh (dọc / story / vuông / ngang)
+      if (zb.dataset.z === sk) return;
+      sk = zb.dataset.z; o.querySelectorAll('#imgSz button').forEach(x => x.classList.toggle('on', x.dataset.z === sk));
+      redo(); return;
+    }
     const tb = e.target.closest('[data-t]');
-    if (tb){                                                           // đổi nền sáng ↔ tối: vẽ lại ngay, nhớ lựa chọn cho lần sau
+    if (tb){                                                           // đổi nền (trắng / kem / tối): vẽ lại ngay
       if (tb.dataset.t === th) return;
-      const nb = await mk(tb.dataset.t); if (!nb) return;
-      th = tb.dataset.t; try { localStorage.setItem('kt.imgTheme', th); } catch(err){}
-      URL.revokeObjectURL(url); blob = nb; file = new File([nb], fname, { type:'image/png' }); url = URL.createObjectURL(nb);
-      o.querySelector('#imgPrev').src = url; o.querySelectorAll('#imgTh button').forEach(x => x.classList.toggle('on', x.dataset.t === th));
-      return;
+      th = tb.dataset.t; o.querySelectorAll('#imgTh button').forEach(x => x.classList.toggle('on', x.dataset.t === th));
+      redo(); return;
     }
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) close(); return; }
