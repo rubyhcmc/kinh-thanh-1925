@@ -1286,7 +1286,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5616,42 +5616,54 @@ $('#obShow').onclick = () => { show('#settings', false); showOnboard(); };
 
 /* Chia sẻ câu Kinh Thánh thành ảnh: thẻ nổi, nền trắng / kem / tối, chọn khổ ảnh (mặc định dọc 4:5 cho Facebook), font, định dạng chữ, giấy cũ + hạt, khung mỏng */
 /* Vẽ "thẻ Lời Chúa" lên canvas 2D (ảnh chia sẻ câu Kinh Thánh), bố cục tự co giãn theo khung W×H (dọc, vuông, ngang…).
-   o = { text, ref, fam, theme:'white'|'cream'|'dark', scale (hệ số cỡ chữ), weight:'light'|'normal'|'bold', italic, color ('#rrggbb' hoặc rỗng = tự động), age 0-100 (ngả vàng + vân giấy), grain 0-100 (hạt nhiễu), frame (khung viền mỏng) }. Thẻ nổi có bóng đổ trên nền mềm; lời trích cân giữa; địa chỉ câu ở cuối. */
+   o = { text, ref, fam, theme:'white'|'cream'|'dark', scale (hệ số cỡ chữ), weight:'light'|'normal'|'bold', italic, color ('#rrggbb' hoặc rỗng = tự động),
+         age 0-100 (ngả vàng + vân giấy), grain 0-100 (hạt nhiễu), frame (khung viền mỏng), cache (đối tượng {} để dùng lại lớp nền khi xem trước) }. */
 function drawVerseCard(x, W, H, o){
   const TH = {
     white:{ bgA:'#f8fafd', bgB:'#e1e8f2', orb:['rgba(110,150,215,.30)', 'rgba(245,190,120,.30)'], card0:'#ffffff', card1:'#fbf9f5', edge:'rgba(255,255,255,.95)', shadow:'rgba(35,55,95,.30)',  ink:'#26221d', acc:'#b5832a', grain:'60,60,70' },
     cream:{ bgA:'#f7ecd6', bgB:'#e2cb9e', orb:['rgba(214,150,70,.32)', 'rgba(255,246,222,.60)'], card0:'#fffaf0', card1:'#fbf0da', edge:'rgba(255,255,255,.85)', shadow:'rgba(95,58,15,.34)',  ink:'#33220f', acc:'#9a6420', grain:'80,50,10' },
     dark: { bgA:'#18263d', bgB:'#060b13', orb:['rgba(70,110,195,.38)', 'rgba(232,188,105,.18)'], card0:'#213253', card1:'#152238', edge:'rgba(255,255,255,.13)', shadow:'rgba(0,0,0,.65)',     ink:'#f6ebd0', acc:'#e8c479', grain:'255,235,190' }
   };
-  const T = TH[o.theme] || TH.cream, fam = o.fam, CX = W / 2, k = Math.min(W, H) / 1080;
-  /* nền mềm + vệt sáng + hạt mịn */
-  let g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, T.bgA); g.addColorStop(1, T.bgB);
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
-  const OR = Math.max(W, H) * .5;
-  [[W * .18, H * .16, OR * .95, T.orb[0]], [W * .90, H * .88, OR * 1.05, T.orb[1]]].forEach(([ox, oy, r, c]) => {
-    const og = x.createRadialGradient(ox, oy, 0, ox, oy, r); og.addColorStop(0, c); og.addColorStop(1, c.replace(/[\d.]+\)$/, '0)'));
-    x.fillStyle = og; x.fillRect(0, 0, W, H);
-  });
-  let seed = 7; for (const c of String(o.ref)) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const T = TH[o.theme] || TH.cream, fam = o.fam, CX = W / 2, k = Math.min(W, H) / 1080, dk = o.theme === 'dark';
+  let seed = 7, h0 = 7; for (const c of String(o.ref)) h0 = (h0 * 31 + c.charCodeAt(0)) >>> 0;
+  const reseed = n => { seed = (h0 + n * 7919) >>> 0; };                  // mỗi lớp có dãy số ngẫu nhiên riêng → vẽ lại vẫn y hệt, dù lớp nền lấy từ bộ nhớ đệm
   const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const nGr = Math.round(W * H / 650); for (let i = 0; i < nGr; i++){ x.fillStyle = `rgba(${T.grain},${(.025 + rnd() * .04).toFixed(3)})`; x.fillRect(rnd() * W, rnd() * H, 1.4, 1.4); }
-  /* thẻ nổi: bóng đổ mềm + viền sáng mảnh */
+  /* thẻ nổi */
   const M = 84 * k, CL = M, CT = M, CW = W - 2 * M, CH = H - 2 * M, R = 46 * k;
   const rrect = (l, t, w, h, r) => { x.beginPath(); x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r); x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath(); };
   const rr = () => rrect(CL, CT, CW, CH, R);
-  const cg = x.createLinearGradient(0, CT, 0, CT + CH); cg.addColorStop(0, T.card0); cg.addColorStop(1, T.card1);
-  x.save(); x.shadowColor = T.shadow; x.shadowBlur = 70 * k; x.shadowOffsetY = 28 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
-  x.save(); x.shadowColor = T.shadow; x.shadowBlur = 14 * k; x.shadowOffsetY = 4 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
-  x.lineWidth = 2; x.strokeStyle = T.edge; rr(); x.stroke();
-  if (o.theme === 'dark'){                                              // quầng sáng ấm sau lời trích cho nền tối
-    x.save(); rr(); x.clip(); const gl = x.createRadialGradient(CX, H * .48, 0, CX, H * .48, Math.min(CW, CH) * .62); gl.addColorStop(0, 'rgba(232,196,121,.10)'); gl.addColorStop(1, 'rgba(232,196,121,0)');
-    x.fillStyle = gl; x.fillRect(CL, CT, CW, CH); x.restore();
+  /* lớp nền (không đổi khi kéo thanh trượt): nền mềm + vệt sáng + hạt mịn + thẻ có bóng đổ + viền sáng */
+  const drawBase = () => {
+    let g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, T.bgA); g.addColorStop(1, T.bgB);
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const OR = Math.max(W, H) * .5;
+    [[W * .18, H * .16, OR * .95, T.orb[0]], [W * .90, H * .88, OR * 1.05, T.orb[1]]].forEach(([ox, oy, r, c]) => {
+      const og = x.createRadialGradient(ox, oy, 0, ox, oy, r); og.addColorStop(0, c); og.addColorStop(1, c.replace(/[\d.]+\)$/, '0)'));
+      x.fillStyle = og; x.fillRect(0, 0, W, H);
+    });
+    reseed(1);
+    const nGr = Math.round(W * H / 650); for (let i = 0; i < nGr; i++){ x.fillStyle = `rgba(${T.grain},${(.025 + rnd() * .04).toFixed(3)})`; x.fillRect(rnd() * W, rnd() * H, 1.4, 1.4); }
+    const cg = x.createLinearGradient(0, CT, 0, CT + CH); cg.addColorStop(0, T.card0); cg.addColorStop(1, T.card1);
+    x.save(); x.shadowColor = T.shadow; x.shadowBlur = 70 * k; x.shadowOffsetY = 28 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
+    x.save(); x.shadowColor = T.shadow; x.shadowBlur = 14 * k; x.shadowOffsetY = 4 * k; x.fillStyle = cg; rr(); x.fill(); x.restore();
+    x.lineWidth = 2; x.strokeStyle = T.edge; rr(); x.stroke();
+    if (dk){                                                              // quầng sáng ấm sau lời trích cho nền tối
+      x.save(); rr(); x.clip(); const gl = x.createRadialGradient(CX, H * .48, 0, CX, H * .48, Math.min(CW, CH) * .62); gl.addColorStop(0, 'rgba(232,196,121,.10)'); gl.addColorStop(1, 'rgba(232,196,121,0)');
+      x.fillStyle = gl; x.fillRect(CL, CT, CW, CH); x.restore();
+    }
+  };
+  const bk = [W, H, o.theme, o.ref].join('|'), ch = o.cache;
+  if (ch && ch.key === bk && ch.canvas) x.drawImage(ch.canvas, 0, 0);
+  else {
+    drawBase();
+    if (ch && typeof document !== 'undefined' && x.canvas){ const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(x.canvas, 0, 0); ch.key = bk; ch.canvas = c; }
   }
   /* giấy cũ: ngả vàng, cháy xém mép, sợi giấy, đốm ố (foxing) và hạt nhiễu — giả lập sách in năm 1925 */
-  const age = Math.max(0, Math.min(100, o.age || 0)) / 100, gr = Math.max(0, Math.min(100, o.grain || 0)) / 100, dk = o.theme === 'dark';
+  const age = Math.max(0, Math.min(100, o.age || 0)) / 100, gr = Math.max(0, Math.min(100, o.grain || 0)) / 100;
   if (age > 0 || gr > 0){
     x.save(); rr(); x.clip();
     if (age > 0){
+      reseed(2);
       x.globalCompositeOperation = dk ? 'source-over' : 'multiply';
       x.fillStyle = dk ? `rgba(205,150,70,${(.12 * age).toFixed(3)})` : `rgba(222,176,88,${(.62 * age).toFixed(3)})`; x.fillRect(CL, CT, CW, CH);
       x.globalCompositeOperation = 'source-over';
@@ -5670,10 +5682,24 @@ function drawVerseCard(x, W, H, o){
         bg2.addColorStop(0, `rgba(130,80,25,${(.07 * age).toFixed(3)})`); bg2.addColorStop(1, 'rgba(130,80,25,0)'); x.fillStyle = bg2; x.fillRect(fx - r, fy - r, 2 * r, 2 * r);
       }
     }
-    if (gr > 0){                                                                                // hạt nhiễu
-      for (let i = 0, n = Math.round(CW * CH / 70 * gr); i < n; i++){
-        const dark = rnd() < .62; x.fillStyle = dark ? `rgba(${dk ? '0,0,0' : '70,45,15'},${(.05 + rnd() * .13).toFixed(3)})` : `rgba(255,255,255,${(.04 + rnd() * .10).toFixed(3)})`;
-        x.fillRect(CL + rnd() * CW, CT + rnd() * CH, 1.3 * Math.max(1, k), 1.3 * Math.max(1, k));
+    if (gr > 0){                                                                                // hạt nhiễu: lát một mảnh hạt tạo sẵn (nhanh, kéo thanh trượt không giật); độ mạnh = gr
+      const gs = Math.max(.7, 1.3 * k), TS = 384, tk = (dk ? 'd' : 'l') + gs.toFixed(2);
+      const GT = drawVerseCard.gt || (drawVerseCard.gt = {});
+      if (!GT[tk] && typeof document !== 'undefined'){
+        const tc = document.createElement('canvas'); tc.width = TS; tc.height = TS; const tx = tc.getContext('2d'); reseed(3);
+        for (let i = 0, n = Math.round(TS * TS / 38); i < n; i++){
+          const dark = rnd() < .62; tx.fillStyle = dark ? `rgba(${dk ? '0,0,0' : '70,45,15'},${(.07 + rnd() * .17).toFixed(3)})` : `rgba(255,255,255,${(.05 + rnd() * .13).toFixed(3)})`;
+          tx.fillRect(rnd() * TS, rnd() * TS, gs, gs);
+        }
+        GT[tk] = tc;
+      }
+      if (GT[tk]){ x.globalAlpha = Math.min(1, gr * 1.15); x.fillStyle = x.createPattern(GT[tk], 'repeat'); x.fillRect(CL, CT, CW, CH); x.globalAlpha = 1; }
+      else {
+        reseed(3);
+        for (let i = 0, n = Math.round(CW * CH / 70 * gr); i < n; i++){
+          const dark = rnd() < .62; x.fillStyle = dark ? `rgba(${dk ? '0,0,0' : '70,45,15'},${(.05 + rnd() * .13).toFixed(3)})` : `rgba(255,255,255,${(.04 + rnd() * .10).toFixed(3)})`;
+          x.fillRect(CL + rnd() * CW, CT + rnd() * CH, gs, gs);
+        }
       }
     }
     x.restore();
@@ -5753,11 +5779,11 @@ async function verseImage(nums){
   let blob = await mk(opt);
   if (!blob) return toast('Không tạo được ảnh');
   const fname = (fold(ref).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cau-kinh-thanh') + '.png';
-  let file = new File([blob], fname, { type:'image/png' }), url = URL.createObjectURL(blob);
+  let file = new File([blob], fname, { type:'image/png' });
   const segBtns = (attr, items, cur) => items.map(([v, t]) => `<button data-${attr}="${v}" class="${String(v) === String(cur) ? 'on' : ''}" style="white-space:nowrap">${t}</button>`).join('');
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   o.innerHTML = `<div class="sheet" style="text-align:center"><h3>Chia sẻ thành ảnh</h3>
-    <div style="position:sticky;top:0;z-index:5;background:var(--card);padding:2px 0 8px"><img id="imgPrev" src="${url}" alt="" style="display:block;margin:0 auto;width:auto;height:auto;max-width:100%;max-height:34vh;object-fit:contain;border-radius:10px;border:1px solid var(--line)"></div>
+    <div style="position:sticky;top:0;z-index:5;background:var(--card);padding:2px 0 8px"><canvas id="imgPrev" width="560" height="700" style="display:block;margin:0 auto;width:auto;height:auto;max-width:100%;max-height:34vh;border-radius:10px;border:1px solid var(--line)"></canvas></div>
     <div class="seg" id="imgSz" style="margin:0 auto 8px;max-width:100%;overflow-x:auto">${segBtns('z', Object.keys(SIZES).map(z => [z, SIZES[z].t]), opt.size)}</div>
     <p class="bmhint" style="margin:0 0 10px">Khổ dọc 4:5 là khổ đẹp nhất cho Facebook.</p>
     <div class="seg" id="imgTh" style="margin:0 auto 10px">${segBtns('t', THEMES.map(t => [t, THEME_LABEL[t]]), opt.theme)}</div>
@@ -5793,37 +5819,58 @@ async function verseImage(nums){
     if (opt.color) qs('#igColor').value = opt.color;
   };
   syncUI();
-  let seq = 0, tmr = 0;
-  const redo = async () => {                                            // vẽ lại khi đổi tùy chọn; nhớ lựa chọn cho lần sau
-    const my = ++seq; qs('#imgPrev').style.opacity = '.5';
-    const nb = await mk(opt); if (my !== seq) return;
-    qs('#imgPrev').style.opacity = ''; if (!nb) return;
-    try { localStorage.setItem('kt.imgOpt', JSON.stringify(opt)); } catch(err){}
-    URL.revokeObjectURL(url); blob = nb; file = new File([nb], fname, { type:'image/png' }); url = URL.createObjectURL(nb);
-    qs('#imgPrev').src = url;
+  /* Xem trước nhanh: khi kéo thanh trượt chỉ vẽ một bản nhỏ (vài ms) theo từng khung hình; ảnh đầy đủ (nặng, nén PNG) chỉ tạo khi dừng tay hoặc khi bấm Lưu / Chia sẻ */
+  const fkey = q => q.font + '|' + q.italic;
+  let loadedKey = fkey(opt), raf = 0, stale = false, tmr = 0, seq = 0; const pcache = {};
+  const prevParams = q => ({ cache:pcache, text, ref, fam:FONTS[q.font].s, theme:q.theme, scale:q.scale / 100, weight:q.weight, italic:q.italic, color:q.color, age:q.age, grain:q.grain, frame:q.frame });
+  const drawPrev = () => {
+    const c = qs('#imgPrev'), z = SIZES[opt.size], PW = 560, PH = Math.round(PW * z.h / z.w);
+    if (c.width !== PW || c.height !== PH){ c.width = PW; c.height = PH; }
+    const x = c.getContext('2d'); x.clearRect(0, 0, PW, PH); drawVerseCard(x, PW, PH, prevParams(opt));
   };
-  const schedule = () => { clearTimeout(tmr); tmr = setTimeout(redo, 140); };
-  const close = () => { URL.revokeObjectURL(url); o.remove(); };
+  const livePrev = async () => {
+    if (loadedKey !== fkey(opt)){ const k0 = fkey(opt); await ensure(opt); loadedKey = k0; }     // chỉ đợi tải font khi đổi font / chữ nghiêng
+    if (raf) return; raf = requestAnimationFrame(() => { raf = 0; drawPrev(); });
+  };
+  const buildFull = async () => {
+    do {
+      clearTimeout(tmr); const my = ++seq; stale = false;
+      const nb = await mk({ ...opt });
+      if (my === seq && nb){ blob = nb; file = new File([nb], fname, { type:'image/png' }); }
+    } while (stale);
+    return file;
+  };
+  const change = live => {
+    stale = true; try { localStorage.setItem('kt.imgOpt', JSON.stringify(opt)); } catch(err){}
+    livePrev(); clearTimeout(tmr); tmr = setTimeout(buildFull, live ? 700 : 300);
+  };
+  const getFile = async () => { clearTimeout(tmr); if (stale) await buildFull(); return file; };
+  const close = () => { clearTimeout(tmr); cancelAnimationFrame(raf); o.remove(); };
+  const syncLabels = () => {
+    qs('#igScaleV').textContent = opt.scale + '%';
+    qs('#igAgeV').textContent = opt.age ? opt.age + '%' : 'Tắt'; qs('#igGrainV').textContent = opt.grain ? opt.grain + '%' : 'Tắt';
+  };
   o.addEventListener('input', e => {
     const id = e.target.id;
     if (id === 'igScale') opt.scale = +e.target.value; else if (id === 'igAge') opt.age = +e.target.value; else if (id === 'igGrain') opt.grain = +e.target.value;
-    else if (id === 'igColor'){ opt.color = e.target.value; qa('#igC [data-c]').forEach(b => b.classList.remove('on')); schedule(); return; }
+    else if (id === 'igColor'){ opt.color = e.target.value; qa('#igC [data-c]').forEach(b => b.classList.remove('on')); change(true); return; }
     else return;
-    syncUI(); schedule();
+    syncLabels(); change(true);                                         // kéo thanh trượt: chỉ cập nhật nhãn + xem trước nhanh
   });
-  o.addEventListener('change', e => { if (e.target.id === 'imgFont'){ opt.font = e.target.value; redo(); } });
+  o.addEventListener('change', e => { if (e.target.id === 'imgFont'){ opt.font = e.target.value; change(false); } });
   o.addEventListener('click', async e => {
-    const t = e.target, pick = (attr, fn) => { const b = t.closest('[data-' + attr + ']'); if (!b) return false; fn(b.dataset[attr]); syncUI(); redo(); return true; };
+    const t = e.target, pick = (attr, fn) => { const b = t.closest('[data-' + attr + ']'); if (!b) return false; fn(b.dataset[attr]); syncUI(); change(false); return true; };
     if (pick('z', v => { opt.size = v; }) || pick('t', v => { opt.theme = v; }) || pick('w', v => { opt.weight = v; }) || pick('i', v => { opt.italic = +v; }) || pick('f', v => { opt.frame = +v; })) return;
     if (pick('c', v => { opt.color = v; })) return;
     if (pick('p', v => { opt = v === 'old' ? clean({ ...opt, ...OLD1925 }) : clean({ ...DEF, size:opt.size }); })) return;
     const b = t.closest('[data-k]');
     if (!b){ if (t === o) close(); return; }
     if (b.dataset.k === 'x') return close();
-    if (b.dataset.k === 's'){ try { if (navigator.canShare && navigator.canShare({ files:[file] })) await navigator.share({ files:[file], title:ref }); else await saveImage(file, o); } catch(err){ if (err && err.name !== 'AbortError') await saveImage(file, o); } return; }
-    await saveImage(file, o);
+    const f = await getFile();
+    if (b.dataset.k === 's'){ try { if (navigator.canShare && navigator.canShare({ files:[f] })) await navigator.share({ files:[f], title:ref }); else await saveImage(f, o); } catch(err){ if (err && err.name !== 'AbortError') await saveImage(f, o); } return; }
+    await saveImage(f, o);
   });
-  document.body.appendChild(o);
+  document.body.appendChild(o); drawPrev();
 }
 $('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (ns.length) verseImage(ns); };
 
