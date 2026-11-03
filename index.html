@@ -1274,7 +1274,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2430,7 +2430,7 @@ function showVerseMenu(n, x, y){
     timer = setTimeout(() => {
       timer = null;
       if (flipping()){ stopBlink(); return; }               // đang vuốt lật trang → không mở menu
-      fired = true; stopBlink();
+      fired = true; stopBlink(); setTimeout(() => { fired = false; }, 800);
       if (selected.size){                                   // đang chọn câu → giữ lại thì mở thẳng cửa sổ viết bài học cho các câu đã chọn
         selected.add(+p.dataset.n);
         const ns = [...selected].sort((a, b) => a - b);
@@ -2459,7 +2459,10 @@ function showVerseMenu(n, x, y){
   ['mouseup', 'mouseleave'].forEach(k => root.addEventListener(k, cancel));
   root.addEventListener('contextmenu', e => { if (e.target.closest('.v')) e.preventDefault(); });
   // không để iOS/Android bôi đen chữ (và hiện thanh Sao chép · Tra cứu · Dịch) khi giữ hoặc khi menu đang mở
-  const noSel = () => { try { const g = getSelection(); if (g && g.rangeCount && (timer || fired || document.querySelector('.vmenu-bg'))) g.removeAllRanges(); } catch(e){} };
+  const noSel = () => { try {
+    const ae = document.activeElement; if (ae && (ae.matches && ae.matches('input,textarea,[contenteditable="true"],[contenteditable=""]'))) return;   // đang gõ chữ → tuyệt đối không đụng tới con trỏ
+    const g = getSelection(); if (g && g.rangeCount && (timer || fired || document.querySelector('.vmenu-bg'))) g.removeAllRanges();
+  } catch(e){} };
   document.addEventListener('selectionchange', noSel);
   root.addEventListener('selectstart', e => { if (e.target.closest && e.target.closest('.v')) e.preventDefault(); });
   // thả tay sau khi giữ không bị tính là chạm chọn câu
