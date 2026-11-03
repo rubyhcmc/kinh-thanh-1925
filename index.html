@@ -157,6 +157,10 @@ select{min-width:0}
 /* Số mờ cho biết tổng: ô Chương hiện "/30" (sách có 30 chương), ô Câu hiện "/24" (chương có 24 câu) */
 .nrg{position:absolute;right:4px;top:50%;transform:translateY(-50%);font:600 10px var(--sans);letter-spacing:0;color:var(--muted);opacity:.75;pointer-events:none;white-space:nowrap}
 .nf:focus-within .nrg,.nf.vf .nrg,.nf.bad .nrg{display:none}
+.ntip{position:absolute;top:calc(100% + 6px);left:0;z-index:60;padding:7px 12px;border-radius:12px;background:var(--card);border:1px solid var(--accent);box-shadow:0 4px 14px rgba(0,0,0,.25);font:600 13px/1.35 var(--sans);color:var(--accent);white-space:nowrap;pointer-events:none}
+.ntip.r{left:auto;right:0}
+.ntip.bad{color:var(--danger);border-color:var(--danger)}
+.ntip[hidden]{display:none}
 .rng{display:none!important}
 .nf.bad input{color:var(--danger);border-color:var(--danger)}
 .rng{position:absolute;top:calc(100% + 6px);left:0;z-index:35;display:flex;align-items:center;gap:8px;white-space:nowrap;padding:5px 6px 5px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
@@ -1295,7 +1299,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1626,14 +1630,16 @@ function setupNav(kind){
     return { nums:new Set(nums), max:nums.length ? Math.max(...nums) : 0 };
   };
   const nf = inp.closest('.nf');                            // không còn bong bóng gợi ý: chỉ đổi màu ô khi nhập sai, dải số nằm trong placeholder
-  const say = (m, bad) => { pill.hidden = true; nf.classList.toggle('bad', !!bad); };
-  const range = c => { say('', false); inp.placeholder = `1–${c.max}`; };
+  let tip = nf.querySelector('.ntip');                      // thẻ gợi ý nổi dưới ô: cho biết sách có bao nhiêu chương / chương có bao nhiêu câu
+  if (!tip){ tip = document.createElement('div'); tip.className = 'ntip' + (isC ? '' : ' r'); tip.hidden = true; nf.appendChild(tip); }
+  const say = (m, bad) => { pill.hidden = true; nf.classList.toggle('bad', !!bad); tip.textContent = m || ''; tip.hidden = !m; tip.classList.toggle('bad', !!bad); };
+  const range = c => { say(isC ? `Sách này có ${c.max} chương (nhập từ 1 đến ${c.max})` : `Chương này có ${c.max} câu (nhập từ 1 đến ${c.max})`, false); inp.placeholder = `1–${c.max}`; };
   const bad = (c, n) => say(isC ? `Chỉ có 1-${c.max} ${LB}` : (n > c.max || n < 1 ? `Chỉ có 1-${c.max} ${LB}` : `Không có câu ${n} (1-${c.max} ${LB})`), true);
   const canExtend = (c, n) => { const s = String(n); for (const m of c.nums) if (m > n && String(m).startsWith(s)) return true; return false; };
   const jump = (n, adv) => {
     if (!(isC && n === S.chapter)){ sel.value = n; sel.onchange({ target:sel }); }
     if (!isC) inp.value = '';
-    pill.hidden = true; nf.classList.remove('bad');
+    pill.hidden = true; tip.hidden = true; nf.classList.remove('bad');
     if (adv && isC) $('#niVerse').focus();     // nhập chương xong → con trỏ tự nhảy sang ô Câu
     else inp.blur();
   };
@@ -1653,7 +1659,7 @@ function setupNav(kind){
       const mm = inp.value.match(/^\s*(\d{1,3})\s*[:.,;\/\-–\s]\s*(\d{0,3})\s*$/), c0 = cfg();
       if (mm && c0 && c0.nums.has(+mm[1])){
         const ch = +mm[1], vn = mm[2] ? +mm[2] : 0;
-        inp.value = ''; pill.hidden = true; nf.classList.remove('bad');
+        inp.value = ''; pill.hidden = true; tip.hidden = true; nf.classList.remove('bad');
         if (ch !== S.chapter){ sel.value = ch; sel.onchange({ target:sel }); }
         if (!vn){ $('#niVerse').focus(); return; }
         if ($('#v' + vn)) $('#selVerse').onchange({ target:{ value:String(vn) } }); else toast(`Chương ${ch} không có câu ${vn}`);
@@ -1675,7 +1681,7 @@ function setupNav(kind){
     if (busy) return; busy = true;
     const c = cfg(), v = inp.value;
     if (c && v && !commit()) toast(isC ? `Chỉ có 1-${c.max} chương` : `Không có câu ${parseInt(v, 10)} (1-${c.max})`);
-    pill.hidden = true; nf.classList.remove('bad'); inp.value = ''; syncNav(); busy = false;
+    pill.hidden = true; tip.hidden = true; nf.classList.remove('bad'); inp.value = ''; syncNav(); busy = false;
   });
   pill.addEventListener('mousedown', e => e.preventDefault());   // giữ bàn phím khi bấm nút Xong
   pill.querySelector('button').addEventListener('click', () => { if (!commit(true)){ const c = cfg(); if (c && inp.value) bad(c, parseInt(inp.value, 10)); else inp.blur(); } });
