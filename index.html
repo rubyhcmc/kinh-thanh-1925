@@ -823,7 +823,6 @@ html[data-paper] .reader.print{text-align:justify}
 
 <div class="copybar" id="copyBar" hidden>
   <button class="btn" id="copyClear">Bỏ chọn</button>
-  <button class="btn" id="copyImg">Ảnh</button>
   <button class="btn primary" id="copyGo">Sao chép</button>
 </div>
 
@@ -1293,7 +1292,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5909,7 +5908,6 @@ async function verseImage(nums){
   });
   document.body.appendChild(o); drawPrev();
 }
-$('#copyImg').onclick = () => { const ns = [...selected]; clearSelection(); if (ns.length) verseImage(ns); };
 
 
 /* ============ KẾ HOẠCH ĐỌC (3 lộ trình chuẩn + 1 lộ trình tự thiết kế) + BỘ ĐẾM ANH EM ============ */
