@@ -1302,7 +1302,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5844,7 +5844,7 @@ async function verseImage(nums){
   const IMG_FONTS = ['Playfair Display', 'EB Garamond', 'Lora', 'Merriweather', 'Inter', 'Open Sans', 'Roboto'].filter(n => FONTS[n]);
   const COLORS = [['', 'Tự động'], ['#3b2a1a', 'Nâu'], ['#1a1a1a', 'Đen'], ['#1f3a5f', 'Xanh navy'], ['#7a1f2b', 'Đỏ rượu'], ['#2f5d3a', 'Xanh lá'], ['#f6ebd0', 'Kem sáng'], ['#ffffff', 'Trắng']];
   const DEF = { theme:'cream', font:'Playfair Display', size:'p', scale:100, weight:'normal', italic:0, color:'', age:0, grain:0, frame:0 };
-  const OLD1925 = { theme:'cream', font:'EB Garamond', weight:'normal', italic:0, color:'', scale:100, age:0, grain:0, frame:1 };   // kiểu sách cổ 1925 (nền kem + chữ Garamond + khung mỏng)
+  const OLD1925 = { theme:'cream', font:'EB Garamond', weight:'normal', italic:0, color:'#3b2a1a', scale:100, age:0, grain:0, frame:1 };   // kiểu sách cổ 1925 (nền kem + chữ Garamond + mực nâu đen như sách in xưa + khung mỏng cùng màu mực)
   const clean = q => {
     const r = { ...DEF }; if (!q) return r;
     const nn = (v, lo, hi, d) => { v = +v; return isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d; };
