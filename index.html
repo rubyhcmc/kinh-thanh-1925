@@ -145,7 +145,7 @@ select{min-width:0}
 
 /* Một hàng duy nhất: chọn Sách/Chương/Câu bên trái, biểu tượng bên phải */
 .top h1{display:none}
-.top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.05fr);gap:5px;padding:0;border:0;background:none;transform:none}
+.top .navrow{position:static;flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,1.15fr);gap:5px;padding:0;border:0;background:none;transform:none}
 .nf{position:relative;min-width:0}
 .top .navrow .nf input{height:36px;padding:0 6px 0 8px;border-radius:8px;font-size:16px;background:transparent;text-overflow:ellipsis;-webkit-appearance:none;appearance:none}
 .nf input::placeholder{color:var(--fg);opacity:1}
@@ -154,6 +154,9 @@ select{min-width:0}
 #kbProxy{position:fixed;top:70px;left:0;width:40px;height:30px;opacity:.01;font-size:16px;border:0;padding:0;margin:0;background:transparent;color:transparent;caret-color:transparent;pointer-events:none;z-index:-1;-webkit-user-select:text;user-select:text}
 .nf input:focus::placeholder{color:var(--muted);opacity:.55}
 .nf input:disabled{opacity:.5}
+/* Số mờ cho biết tổng: ô Chương hiện "/30" (sách có 30 chương), ô Câu hiện "/24" (chương có 24 câu) */
+.nrg{position:absolute;right:4px;top:50%;transform:translateY(-50%);font:600 10px var(--sans);letter-spacing:0;color:var(--muted);opacity:.75;pointer-events:none;white-space:nowrap}
+.nf:focus-within .nrg,.nf.vf .nrg,.nf.bad .nrg{display:none}
 .rng{display:none!important}
 .nf.bad input{color:var(--danger);border-color:var(--danger)}
 .rng{position:absolute;top:calc(100% + 6px);left:0;z-index:35;display:flex;align-items:center;gap:8px;white-space:nowrap;padding:5px 6px 5px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
@@ -760,8 +763,8 @@ html[data-paper] .reader.print{text-align:justify}
   <h1 id="title">Kinh Thánh</h1>
   <div class="navrow">
     <select id="selBook" aria-label="Sách"></select>
-    <div class="nf" id="nfChap"><input type="text" id="niChap" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" aria-label="Chương" disabled><select id="selChap" hidden></select><div class="rng" id="rngChap" hidden><span></span><button type="button">Xong</button></div></div>
-    <div class="nf" id="nfVerse"><input type="text" id="niVerse" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" placeholder="Câu" aria-label="Câu" disabled><select id="selVerse" hidden></select><div class="rng" id="rngVerse" hidden><span></span><button type="button">Xong</button></div></div>
+    <div class="nf" id="nfChap"><input type="text" id="niChap" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" aria-label="Chương" disabled><span class="nrg" id="nrgChap" aria-hidden="true"></span><select id="selChap" hidden></select><div class="rng" id="rngChap" hidden><span></span><button type="button">Xong</button></div></div>
+    <div class="nf" id="nfVerse"><input type="text" id="niVerse" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" placeholder="Câu" aria-label="Câu" disabled><span class="nrg" id="nrgVerse" aria-hidden="true"></span><select id="selVerse" hidden></select><div class="rng" id="rngVerse" hidden><span></span><button type="button">Xong</button></div></div>
   </div>
   <div class="right">
     <span class="offtag" id="offlineBadge" hidden>Ngoại tuyến</span>
@@ -1292,7 +1295,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.03o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.03p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1581,6 +1584,11 @@ function syncNav(){
   c.placeholder = on ? S.chapter : '';
   if (document.activeElement !== c) c.value = on ? S.chapter : '';
   if (document.activeElement !== v) v.value = '';
+  /* số mờ tổng chương / tổng câu */
+  const vsN = on ? (curBook.chapters[S.chapter - 1] || []) : [], nvTot = vsN.reduce((m, x) => Math.max(m, x.n || 0), 0) || vsN.length;
+  const tc = on ? curBook.chapters.length : 0;
+  const setRg = (id, inp, n) => { const e = $(id); if (!e) return; const t = n ? '/' + n : ''; e.textContent = t; inp.style.paddingRight = t ? (t.length * 6 + 4) + 'px' : ''; };
+  setRg('#nrgChap', c, tc); setRg('#nrgVerse', v, nvTot);
   syncVerse();
 }
 /* Ô "Câu" hiển thị số câu đang đọc (câu đầu tiên trên màn hình) */
