@@ -1320,7 +1320,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4358,18 +4358,29 @@ $('#edNote').onclick = () => {
   t.setSelectionRange(c - ph.length, c); edSel.s = c - ph.length; edSel.e = c;
   toast('Đã gắn chú thích [' + n + '] – gõ nội dung thay cho dòng được bôi chọn');
 };
-/* Nút 🔢 Số câu: đặt con trỏ ngay trước chữ đầu của câu mà app chưa nhận dạng, bấm nút → chèn "n " (n = số câu trước + 1) và tự xuống dòng nếu con trỏ đang ở giữa dòng.
-   Con trỏ nằm sau số vừa chèn, gõ tiếp được ngay; sai số thì sửa tay. */
+/* Nút 🔢 Số câu có 2 cách dùng:
+   (1) BÔI ĐEN số câu đã gõ (vd "8", "8-9", "8_9", "(8–9)") → bấm nút: số được chuẩn hóa thành "8-9", dính liền câu, thừa khoảng trắng bị gọn, nếu đang nằm giữa dòng thì tự xuống dòng
+       (dòng thơ giữ nguyên dấu > hay >>). Số câu sẽ được app nhận dạng đúng.
+   (2) Chỉ đặt con trỏ (không bôi đen) → chèn số kế tiếp (câu trước + 1, câu ghép tính theo số cuối) tại con trỏ, xuống dòng nếu cần.
+   Con trỏ nằm sau số vừa tạo để gõ tiếp. */
 $('#edVNum').onclick = () => {
-  const t = ed.Text, v = t.value, [s] = edRange(), st = +ed.Start.value || 1, before = v.slice(0, s);
-  const prev = before.trim() ? parseMarkup(before, st) : [];
-  const n = prev.length ? (prev[prev.length - 1].e || prev[prev.length - 1].n) + 1 : st;
-  let a = s, b = s;
-  if (!(s === 0 || v[s - 1] === '\n')) while (a > 0 && /[ \t]/.test(v[a - 1])) a--;     // bỏ khoảng trắng thừa ngay trước con trỏ
-  while (b < v.length && /[ \t]/.test(v[b])) b++;                                      // và ngay sau con trỏ
-  const ins = (a === 0 || v[a - 1] === '\n' ? '' : '\n') + n + ' ';
-  edReplace(a, b, ins);
-  toast('Đã thêm số câu ' + n);
+  const t = ed.Text, v = t.value, [s, e] = edRange(), st = +ed.Start.value || 1;
+  const sel = v.slice(s, e), pm = s < e && sel.trim().match(/^\(?\s*(\d{1,3})(?:\s*[_\-–—]\s*(\d{1,3}))?\s*\)?$/);
+  let label, a = s, b = e;
+  if (pm){
+    const x = +pm[1], y = +(pm[2] || 0);
+    label = y > x && y - x <= 20 ? x + '-' + y : String(x);
+  } else {
+    const before = v.slice(0, s), prev = before.trim() ? parseMarkup(before, st) : [];
+    label = String(prev.length ? (prev[prev.length - 1].e || prev[prev.length - 1].n) + 1 : st); b = s;
+  }
+  const ls = v.lastIndexOf('\n', a - 1) + 1, head = v.slice(ls, a), qm = head.match(/^\s*(>{1,2})\s*/);
+  const atLine = /^\s*(?:>{1,2}\s*)?$/.test(head);                       // trước con trỏ trên dòng chỉ có (dấu > và) khoảng trắng → đã ở đầu câu
+  if (!atLine) while (a > 0 && /[ \t]/.test(v[a - 1])) a--;                // bỏ khoảng trắng thừa ngay trước số
+  while (b < v.length && /[ \t]/.test(v[b])) b++;                         // và ngay sau số (vd 2 dấu cách sau "8-9")
+  const brk = atLine ? '' : '\n' + (qm ? qm[1] + ' ' : '');
+  edReplace(a, b, brk + label + ' ');
+  toast(pm ? 'Đã đặt số câu ' + label : 'Đã thêm số câu ' + label);
 };
 $('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' + stripPre(l));
 $('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
