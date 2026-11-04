@@ -1330,7 +1330,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04y';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4608,7 +4608,19 @@ function edApplyPoem(){
 }
 ed.Poem.onchange = edApplyPoem;
 // Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
-ed.Chap.onchange = async () => { await edAuto(); edLoad(); };
+// Chuyển sang chương vừa gõ (dùng chung cho onchange và phím Enter; nếu đã đang ở đúng chương đó thì không nạp lại)
+async function edGoChap(){
+  const ch = parseInt(ed.Chap.value, 10);
+  if (ch >= 1 && ch === edCur.ch && ed.Book.value.trim() === edCur.name) return;
+  await edAuto(); edLoad();
+}
+ed.Chap.onchange = edGoChap;
+ed.Chap.addEventListener('keydown', async e => {       // gõ số chương rồi nhấn Enter → nạp ngay chương đó vào ô soạn + xem trước
+  if (e.key !== 'Enter' && e.key !== 'Go' && e.key !== 'Done') return;
+  e.preventDefault();
+  await edGoChap();
+  ed.Chap.blur();
+});
 ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; ed.Title.value = bm.title || ''; ed.SubPos.value = bm.subPos === 'below' ? 'below' : ''; edSubFit(); edLoad(); };
 $('#edPrev').onclick = async () => { await edAuto(); ed.Chap.value = Math.max(1, (parseInt(ed.Chap.value, 10) || 1) - 1); edLoad(); };
 $('#edNext').onclick = async () => { await edAuto(); ed.Chap.value = (parseInt(ed.Chap.value, 10) || 0) + 1; edLoad(); };
