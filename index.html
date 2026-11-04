@@ -213,6 +213,13 @@ html[data-paper] .v.flash .vn{background:#000;color:#f4f3ee;box-shadow:0 0 0 2px
 .vn{font-family:var(--sans);font-size:.58em;font-weight:700;vertical-align:super;line-height:0;margin:0 .22em 0 .12em;color:var(--accent)}
 .v{border-radius:4px;scroll-margin-top:14px}
 .v.sel{background:var(--hl)}
+/* Trang giấy: bôi chọn câu dùng đúng màu vàng nhạt như trang chính (trước đây là mảng xám đặc, xấu và dính liền nhau giữa các câu thơ) */
+html[data-paper] .v.sel,html[data-paper] .v.bm.sel,html[data-paper] .v.holding.hb{background:#fff1c2}
+html[data-paper][data-theme=dark] .v.sel,html[data-paper][data-theme=dark] .v.bm.sel,html[data-paper][data-theme=dark] .v.holding.hb{background:#4a3d1a}
+html[data-paper] .v.holding.hb{box-shadow:0 0 0 4px #fff1c2!important}
+html[data-paper][data-theme=dark] .v.holding.hb{box-shadow:0 0 0 4px #4a3d1a!important}
+html[data-paper] .poem .v.sel,html[data-paper] .poem .v.bm.sel{background:linear-gradient(#fff1c2,#fff1c2) center/100% calc(100% - 2px) no-repeat}   /* chừa 1px giữa hai câu thơ liền nhau để thấy rõ từng câu, không dính thành một khối */
+html[data-paper][data-theme=dark] .poem .v.sel,html[data-paper][data-theme=dark] .poem .v.bm.sel{background:linear-gradient(#4a3d1a,#4a3d1a) center/100% calc(100% - 2px) no-repeat}
 .poem{margin:0 0 .9em;text-align:left}
 .poem .v{display:block}
 .pl{display:block;padding-left:1.3em;text-indent:-1.3em}
@@ -915,7 +922,6 @@ html[data-paper] .reader.print{text-align:justify}
       </div>
       <div class="abtxt" id="abText"></div>
       <div class="abfeatbox"><ul class="abfeat" id="abFeat"></ul></div>
-      <div id="verTag" class="abver"></div>
       <div class="updwarn" id="updWarn">
         <b>⚠ Sao lưu trước khi cập nhật</b>
         <p>Hãy lưu một bản sao lưu ra <b style="display:inline">file JSON</b> trước khi cập nhật phiên bản. Nếu chưa sao lưu, ghi chú, kế hoạch đọc và dấu trang của bạn có thể bị mất khi có sự cố.</p>
@@ -923,6 +929,7 @@ html[data-paper] .reader.print{text-align:justify}
         <button class="btn primary" id="updBkNow">💾 Sao lưu ra file JSON ngay</button>
       </div>
       <div class="updwrap"><button class="btn" id="btnUpd">🔄 Kiểm tra cập nhật</button><div class="updmsg" id="updMsg" aria-live="polite"></div></div>
+      <div id="verTag" class="abver"></div>
     </div>
 
     <!-- Chế độ chỉ đọc: không có nút quản trị công khai. Quản trị viên mở bảng đăng nhập bằng cách chạm 5 lần liên tiếp vào chữ “Cài đặt” hoặc tên ứng dụng. -->
@@ -1313,7 +1320,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1922,7 +1929,7 @@ $('#nextChap').onclick = () => stepChapter(1);
      Bộ máy lật trang (buildStage / apply / tween / finish / begin + CSS .fl-*) đã được chốt: mép trên/dưới đứng yên tuyệt đối.
      Mỗi lần mở app, đoạn dưới tự kiểm tra: mã bị sửa hoặc CSS bị thêm perspective → hiện cảnh báo ở Cài đặt và Console.
      Muốn sửa chủ ý: sửa xong, mở Console đọc giá trị KT_FLIP_HASH rồi dán vào FLIP_HASH_OK bên dưới. */
-  const FLIP_HASH_OK = 'd3c82e2d';
+  const FLIP_HASH_OK = '41e0d058';
   const fnv = t => { let h = 2166136261; for (let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); };
   window.KT_FLIP_HASH = fnv([buildStage, apply, tween, finish, begin].map(f => String(f).replace(/\s+/g, ' ')).join('|'));
   setTimeout(() => {
@@ -3515,7 +3522,7 @@ $('#btnUpd').onclick = async () => {
   } catch(e){ say('Không kiểm tra được: ' + (e.message || e)); }
   btn.disabled = false;
 };
-$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION + (window.KT_FLIP_LOCK === 'BROKEN' ? ' · ⚠ Mã lật trang đã bị sửa' : ''); $('#updMsg').textContent = ''; try { window.updBkRefresh(); } catch(e){} show('#settings'); };
+$('#btnSettings').onclick = () => { $('#verTag').textContent = 'Phiên bản ' + APP_VERSION; $('#updMsg').textContent = ''; try { window.updBkRefresh(); } catch(e){} show('#settings'); };
 $('#closeSettings').onclick = () => show('#settings', false);
 $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings', false); };
 const openAdminLogin = () => { show('#settings', false); isAdmin() ? openAdmin() : (show('#login'), $('#pw').value = '', $('#pw').type = 'password', $('#loginErr').textContent = '', loginLockUI(), setTimeout(() => $('#pw').focus(), 50)); };
