@@ -1331,7 +1331,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5601,7 +5601,7 @@ function pgTween(sg, from, to, ms, ease){
 async function pgFinish(sg, from, go, commit, ms, ease){
   try {
     const to = go ? 1 : 0;
-    await pgTween(sg, from, to, ms || (90 + 250 * Math.abs(to - from)), ease || pgEase);
+    await pgTween(sg, from, to, ms || (go ? 70 + 150 * (1 - from) : 80 + 140 * from), ease || pgEase);
     if (go){ await commit(); await new Promise(r => requestAnimationFrame(r)); }
   } finally { sg.cleanup(); }
 }
@@ -5632,13 +5632,18 @@ async function pgFlip(dir){                                        // chạm mé
       if (document.querySelector('.vmenu-bg')){ st = null; return; }              // menu chạm giữ đang mở → không lật trang
       /* Ngưỡng chống run tay: chạm / giữ nhẹ mà ngón nhích vài điểm ảnh KHÔNG bị tính là vuốt (trước đây 5px → khóa lật, nuốt mất cú chạm chọn câu và cú giữ mở menu).
          Vuốt nhanh vẫn nhạy (9px); giữ lâu hơn 0,22 giây thì cần nhích hẳn 18px mới coi là vuốt */
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < (e.timeStamp - st.ts > 220 ? 18 : 9)) return;
-      if (Math.abs(dy) > Math.abs(dx) * 1.1){ st = null; return; }
+      const adx = Math.abs(dx), ady = Math.abs(dy), big = Math.max(adx, ady);
+      if (big < (e.timeStamp - st.ts > 220 ? 18 : 9)) return;
+      if (ady > adx * 1.8 && ady > 14){ st = null; return; }              // chỉ bỏ khi thật sự vuốt dọc (trước đây lệch nhẹ 1,1 lần là bỏ luôn cả cú vuốt → "trượt")
+      if (adx < ady * 0.75 && big < 30) return;                           // còn mơ hồ (mấy điểm ảnh đầu hay chéo): chờ thêm một chút rồi mới quyết định
       st.lock = true; st.dir = dx < 0 ? 1 : -1; pg.busy = true; pg.swallow = Date.now() + 900;
       const s = st;
       pgBegin(s.dir).then(r => {
         if (!r){ if (st === s) s.none = true; pg.busy = false; return; }
-        if (st !== s){ r.sg.cleanup(); pg.busy = false; return; }
+        if (st !== s){
+          if (s.ended){ pgFinish(r.sg, s.prog, s.go, r.commit).finally(() => { pg.busy = false; }); return; }   // ngón đã nhả (vuốt nhanh) → hoàn tất lật theo quyết định đã tính
+          r.sg.cleanup(); pg.busy = false; return;
+        }
         s.sg = r.sg; s.commit = r.commit; pgApply(s.sg, s.prog);
       }, () => { pg.busy = false; });
     }
@@ -5650,11 +5655,13 @@ async function pgFlip(dir){                                        // chạm mé
   const end = cancelled => {
     const s = st; st = null; if (!s || !s.lock) return;
     pg.swallow = Date.now() + 700;
-    if (!s.sg){ if (s.none) pg.busy = false; return; }           // sg chưa dựng xong: nhánh then() sẽ tự dọn
     const last = s.pts[s.pts.length - 1]; let first = s.pts[0];
     for (const p of s.pts) if (last.t - p.t <= 120){ first = p; break; }
     const v = last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0, vf = v * (s.dir > 0 ? -1 : 1);
-    const go = !cancelled && (s.prog > 0.22 ? vf > -0.25 : (vf > 0.3 && s.prog > 0.015));
+    const dur = last.t - s.ts, fx = s.prog * innerWidth * 0.7;       // thời gian & quãng đường thật của cú vuốt
+    const far = s.prog > 0.14;                                        // kéo quá ~1/7 chiều rộng (trước đây 0,22)
+    const go = !cancelled && (far ? vf > -0.22 : ((vf > 0.22 && s.prog > 0.012) || (dur <= 320 && fx >= 22 && vf > -0.05)));   // vuốt nhanh/ngắn cũng lật; chỉ không lật khi kéo lại hoặc chưa đủ
+    if (!s.sg){ if (s.none){ pg.busy = false; return; } s.ended = true; s.go = go; return; }   // tờ giấy chưa dựng xong: nhánh then() sẽ lật tiếp
     pgFinish(s.sg, s.prog, go, s.commit).finally(() => { pg.busy = false; });
   };
   view.addEventListener('touchend', () => { pg.touching = false; end(false); });
