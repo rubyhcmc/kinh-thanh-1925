@@ -1320,7 +1320,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2617,7 +2617,7 @@ function clearSelection(){ selected.clear(); $$('.v.sel').forEach(e => e.classLi
 $('#copyClear').onclick = clearSelection;
 $('#copyGo').onclick = async () => {
   const verses = curBook.chapters[S.chapter - 1].filter(v => selected.has(v.n));
-  const nums = verses.map(v => v.n);
+  const nums = verses.flatMap(v => v.e > v.n ? Array.from({ length:v.e - v.n + 1 }, (_, k) => v.n + k) : [v.n]);     // câu ghép 8-9 → ghi đủ 8-9 trong địa chỉ
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, x, y) => x + y.toUpperCase());   // Sáng Thế Ký
   const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
   const body = verses.map(v => v.t.replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');   // không kèm số câu, bỏ dấu chú thích
@@ -2931,7 +2931,7 @@ function normVerses(ch){
     ? { n:i + 1, t:v }
     : Object.assign(
         { n:Number(v.n ?? v.verse ?? v.number ?? i + 1), t:String(v.t ?? v.text ?? '') },
-        v.h ? { h:String(v.h) } : {}, v.p ? { p:true } : {},
+        v.h ? { h:String(v.h) } : {}, v.p ? { p:true } : {}, +v.e > +v.n ? { e:+v.e } : {},
         Array.isArray(v.q) && v.q.length ? { q:v.q.map(x => +x === 2 ? 2 : 1) } : {},
         Array.isArray(v.fn) && v.fn.length ? { fn:v.fn.map(String) } : {}));
   if (ch && typeof ch === 'object') return Object.keys(ch).sort((a, b) => a - b).map(k => ({ n:Number(k), t:String(ch[k]) }));
@@ -3917,9 +3917,9 @@ function serializeVerses(vs){
     if (Array.isArray(v.q) && v.q.length){
       v.t.split('\n').forEach((ln, k) => {
         const pre = '>'.repeat(Math.min(2, v.q[k] || 1));
-        out.push(k === 0 ? `${pre} ${v.n} ${ln}` : `${pre} ${ln}`);
+        out.push(k === 0 ? `${pre} ${v.n}${v.e > v.n ? '-' + v.e : ''} ${ln}` : `${pre} ${ln}`);
       });
-    } else out.push(`${v.n} ${v.t}`);
+    } else out.push(`${v.n}${v.e > v.n ? '-' + v.e : ''} ${v.t}`);
     (v.fn || []).forEach(f => out.push(f));
   });
   return out.join('\n');
@@ -3927,7 +3927,7 @@ function serializeVerses(vs){
 // Văn bản soạn thảo → câu
 function parseMarkup(text, startAt){
   const vs = []; let pendH = null, pendP = false, lastFn = null, pendFn = [];     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
-  const accept = n => !vs.length || (n > vs[vs.length - 1].n && n - vs[vs.length - 1].n <= 6);
+  const accept = n => !vs.length || (n > (vs[vs.length - 1].e || vs[vs.length - 1].n) && n - (vs[vs.length - 1].e || vs[vs.length - 1].n) <= 6);
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
   for (let li = 0; li < lines.length; li++){
     const line = lines[li].trim();
@@ -3941,13 +3941,16 @@ function parseMarkup(text, startAt){
       pendFn.push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; continue;
     }
     if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
-    const nm = body.match(/^(?:\((\d{1,3})\)|(\d{1,3}))[.:]?(?:\s+(.*))?$/);
-    const nn = nm ? +(nm[1] || nm[2]) : 0;
-    const lastN = vs.length ? vs[vs.length - 1].n : 0, nextVerse = !!nm && nn > lastN && nn - lastN <= 2 && !FN_REF.test(body);
+    /* Số câu ghép: "8_9", "8-9", "8–9" (hoặc "(8-9)") = câu 8 nối liền câu 9 trong cùng một đoạn văn (bản gốc không tách được); hiện "8–9", câu kế tiếp là 10 */
+    let nm = body.match(/^(?:\((\d{1,3})(?:\s*[_\-–—]\s*(\d{1,3}))?\)|(\d{1,3})(?:\s*[_\-–—]\s*(\d{1,3}))?)[.:]?(?:\s+(.*))?$/), ne = 0;
+    if (nm){ const a = +(nm[1] || nm[3]), b = +(nm[2] || nm[4] || 0); if (b && (b <= a || b - a > 20)) nm = null; else ne = b; }
+    const nn = nm ? +(nm[1] || nm[3]) : 0;
+    const lastN = vs.length ? (vs[vs.length - 1].e || vs[vs.length - 1].n) : 0, nextVerse = !!nm && nn > lastN && nn - lastN <= 2 && !FN_REF.test(body);
     if (lastFn && !lvl && !nextVerse){ lastFn.v.fn[lastFn.i] += '\n' + body; continue; }   // chú thích dài: mọi dòng sau (kể cả cách dòng trống, dài bao nhiêu cũng được) đều nối vào chú thích cho tới khi gặp câu kế tiếp, tiêu đề # hoặc dòng thơ >
     lastFn = null;
     if (nm && accept(nn)){
-      const v = { n:nn, t:(nm[3] || '').trim() };
+      const v = { n:nn, t:(nm[5] || '').trim() };
+      if (ne) v.e = ne;
       if (lvl) v.q = [lvl];
       if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
       if (pendFn.length){ v.fn = pendFn; pendFn = []; }
@@ -3971,7 +3974,7 @@ function checkVerses(vs){
   const w = [], miss = [], dup = [], back = [], jump = [];
   const list = a => { const u = [...new Set(a)]; return u.slice(0, 10).join(', ') + (u.length > 10 ? '… (+' + (u.length - 10) + ')' : ''); };
   for (let i = 1; i < vs.length; i++){
-    const a = vs[i - 1].n, b = vs[i].n;
+    const a = vs[i - 1].e || vs[i - 1].n, b = vs[i].n;
     if (b === a) dup.push(b);
     else if (b < a) back.push(a + '→' + b);
     else if (b - a > 1){ jump.push(a + '→' + b); for (let k = a + 1; k < b; k++) miss.push(k); }
@@ -4071,7 +4074,7 @@ function paperHTML(book, ch, verses, view, idp){
     if (v.h){ close(); out += secHTML(v.h, vm); }
     const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
     const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
-    const num = `<sup class="vn">${v.n}</sup>`;
+    const num = `<sup class="vn">${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>`;
     const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
     if (!print){
       close();
@@ -4343,7 +4346,7 @@ $('#edNote').onclick = () => {
   if (/^\s*\[\d{1,3}\]/.test(lines[li])) return toast('Hãy đặt con trỏ trong câu hoặc tiêu đề cần chú thích (không phải trong dòng chú thích)');
   let mx = 0; (v.match(/\[(\d{1,3})\]/g) || []).forEach(x => { mx = Math.max(mx, +x.slice(1, -1)); });
   const n = mx + 1;
-  const isHead = l => /^\s*#\s/.test(l), isDef = l => /^\s*\[\d{1,3}\]/.test(l), isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s|$)/.test(l);
+  const isHead = l => /^\s*#\s/.test(l), isDef = l => /^\s*\[\d{1,3}\]/.test(l), isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?\)|\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?)(?:[.:]|\s|$)/.test(l);
   let k = li;                                                                  // dòng cuối của đoạn đang viết: dòng chú thích chèn ngay sau đó
   if (isHead(lines[li])){ while (k + 1 < lines.length && isHead(lines[k + 1])) k++; }
   else { while (k + 1 < lines.length && lines[k + 1].trim() && !isHead(lines[k + 1]) && !isDef(lines[k + 1]) && !isVerse(lines[k + 1])) k++; }
@@ -4360,7 +4363,7 @@ $('#edNote').onclick = () => {
 $('#edVNum').onclick = () => {
   const t = ed.Text, v = t.value, [s] = edRange(), st = +ed.Start.value || 1, before = v.slice(0, s);
   const prev = before.trim() ? parseMarkup(before, st) : [];
-  const n = prev.length ? prev[prev.length - 1].n + 1 : st;
+  const n = prev.length ? (prev[prev.length - 1].e || prev[prev.length - 1].n) + 1 : st;
   let a = s, b = s;
   if (!(s === 0 || v[s - 1] === '\n')) while (a > 0 && /[ \t]/.test(v[a - 1])) a--;     // bỏ khoảng trắng thừa ngay trước con trỏ
   while (b < v.length && /[ \t]/.test(v[b])) b++;                                      // và ngay sau con trỏ
@@ -5910,7 +5913,7 @@ async function verseImage(nums){
   if (!vs.length) return;
   const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, ' ')).join(' ').replace(/\s+/g, ' ').trim();
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());   // Sáng Thế Ký, Xuất Ê-díp-tô Ký
-  const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
+  const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange([...new Set(vs.flatMap(v => v.e > v.n ? Array.from({ length:v.e - v.n + 1 }, (_, k) => v.n + k) : [v.n]))])}`;
   const SIZES = { p:{ w:1080, h:1350, t:'▯ Dọc 4:5' }, s:{ w:1080, h:1920, t:'📱 Story 9:16' }, q:{ w:1080, h:1080, t:'▢ Vuông' }, l:{ w:1600, h:900, t:'▭ Ngang 16:9' } };
   const THEMES = ['white', 'cream', 'dark'], THEME_LABEL = { white:'⚪ Trắng', cream:'🟡 Kem', dark:'🌙 Tối' };
   const IMG_FONTS = ['Playfair Display', 'EB Garamond', 'Lora', 'Merriweather', 'Inter', 'Open Sans', 'Roboto'].filter(n => FONTS[n]);
