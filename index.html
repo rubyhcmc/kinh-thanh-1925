@@ -421,6 +421,7 @@ details a{color:var(--accent)}
 .fnk{cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
 .fnk::after{content:'';position:absolute;inset:-12px -8px}
 .fnk:active{opacity:.55}
+.sela{font-style:italic}
 .fnk[aria-expanded=true]{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.22em}
 .fnk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* Trang giấy: chú thích hiện trong khung nổi cố định phía dưới (KHÔNG bung xen vào dòng chữ → chữ và số trang đứng yên, không nhảy) */
@@ -1312,7 +1313,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3749,9 +3750,12 @@ function fnMapOf(list){
   (list || []).forEach(f => { const x = String(f).match(/^\[(\d{1,3})\]\s*([\s\S]*)$/); if (x && x[2].trim()) m[x[1]] = esc(x[2].trim()); });
   return m;
 }
+/* "(Sê-la)" — dấu nghỉ / dấu nhạc trong Thi Thiên, Ha-ba-cúc… luôn viết trong ngoặc đơn → in nghiêng cả ngoặc (ví dụ Thi Thiên 9:20).
+   Chỉ nhận dạng CÓ ngoặc, nên "Sê-la" là tên riêng (con của Giu-đa…) không bao giờ bị nghiêng nhầm. */
+const SELA_RE = /\(\s*(?:Sê[- ]?[Ll]ah?|SÊ[- ]?LAH?)\s*\)/gu;
 function richText(s, fm){
   fm = fm || {};
-  return esc(s).replace(BRACKET_RE, (m, c) => {
+  return esc(s).replace(SELA_RE, m => '<i class="sela">' + m + '</i>').replace(BRACKET_RE, (m, c) => {
     const t = c.trim();
     if (/^\d{1,3}$/.test(t))
       return fm[t] ? `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích ${t}">[${t}]</sup><span class="fnx" hidden>${fm[t]}</span>`
