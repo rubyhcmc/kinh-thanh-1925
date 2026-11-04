@@ -1222,6 +1222,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edPasteBtn" title="Dán từ bộ nhớ tạm vào vị trí con trỏ (tự nhận dạng số câu, tiêu đề, thơ)">📥 Dán</button>
           <button class="btn" id="edDelBtn" title="Xóa phần đang bôi chọn; không chọn gì thì xóa dòng đang đứng">⌫ Xóa</button>
           <button class="btn" id="edH">＃ Tiêu đề</button>
+          <button class="btn" id="edVNum" title="Thêm số câu tại con trỏ: tự lấy số kế tiếp (câu trước + 1) và xuống dòng, dùng khi app không tự nhận dạng được số câu">🔢 Số câu</button>
           <button class="btn" id="edNote" title="Gắn chú thích tại vị trí con trỏ (trong câu, tiêu đề, tiểu mục… bất kỳ đâu)">📝 Chú thích</button>
           <button class="btn" id="edQ1">＞ Thơ</button>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
@@ -1311,7 +1312,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2264,7 +2265,7 @@ function openLessons(){
         planBox = (t.over ? `<div class="hjbig"><span>Đã hoàn thành kế hoạch ${esc(pl.name)} 🎉</span></div>`
           : t.none ? `<div class="hjbig"><span>Kế hoạch ${esc(pl.name)} sắp bắt đầu</span></div>`
           : `<div class="hjbig"><span><b>${t.d}</b> / ${pl.days} ngày</span></div>`)
-          + `<small>${t.over || t.none ? '' : (!t.items.length ? `Hôm nay bạn đã đọc ${dn} chương` : `Hôm nay bạn đã đọc ${dn}/${t.items.length} chương` + (dn >= t.items.length ? ' ✔' : '')) + (t.ahead ? `<br>🌟 Bạn đang đọc trước kế hoạch ${t.ahead} chương` : '')}</small>`
+          + `<small>${t.over || t.none ? '' : (!t.items.length ? `Hôm nay bạn đã đọc ${dn} chương` : `Hôm nay bạn đã đọc ${dn}/${t.items.length} chương` + (dn >= t.items.length ? ' ✔' : '')) + (t.items.length && dn > t.items.length ? '<br>🌟 Rất tốt! Hôm nay bạn đọc vượt kế hoạch rồi đó. Cứ giữ tinh thần trung tín mỗi ngày nhé!' : '') + (t.ahead ? `<br>🌟 Bạn đang đọc trước kế hoạch ${t.ahead} chương` : '')}</small>`
           + `<button class="btn primary hjplanbtn" data-plan="1">Mở kế hoạch</button>`;
       } }
     const quote = 'Hôm nay bạn đã đọc Lời CHÚA chưa?';
@@ -4230,7 +4231,7 @@ const edSel = { s:0, e:0 };
   document.addEventListener('selectionchange', keep);
   t.addEventListener('blur', () => { edSel.s = t.selectionStart; edSel.e = t.selectionEnd; });
   // giữ tiêu điểm khi bấm nút công cụ (không bàn phím nhảy, không mất vùng chọn)
-  ['#edPasteBtn', '#edDelBtn', '#edNote'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
+  ['#edPasteBtn', '#edDelBtn', '#edNote', '#edVNum'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
 }
 const edRange = () => { const n = ed.Text.value.length; let s = Math.min(edSel.s, n), e = Math.min(edSel.e, n); if (s > e) [s, e] = [e, s]; return [s, e]; };
 // Thay đoạn [s,e) bằng txt. Ưu tiên execCommand (giữ Hoàn tác); nếu trình duyệt không làm thật thì ghi trực tiếp vào ô.
@@ -4342,6 +4343,19 @@ $('#edNote').onclick = () => {
   try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); }
   t.setSelectionRange(c - ph.length, c); edSel.s = c - ph.length; edSel.e = c;
   toast('Đã gắn chú thích [' + n + '] – gõ nội dung thay cho dòng được bôi chọn');
+};
+/* Nút 🔢 Số câu: đặt con trỏ ngay trước chữ đầu của câu mà app chưa nhận dạng, bấm nút → chèn "n " (n = số câu trước + 1) và tự xuống dòng nếu con trỏ đang ở giữa dòng.
+   Con trỏ nằm sau số vừa chèn, gõ tiếp được ngay; sai số thì sửa tay. */
+$('#edVNum').onclick = () => {
+  const t = ed.Text, v = t.value, [s] = edRange(), st = +ed.Start.value || 1, before = v.slice(0, s);
+  const prev = before.trim() ? parseMarkup(before, st) : [];
+  const n = prev.length ? prev[prev.length - 1].n + 1 : st;
+  let a = s, b = s;
+  if (!(s === 0 || v[s - 1] === '\n')) while (a > 0 && /[ \t]/.test(v[a - 1])) a--;     // bỏ khoảng trắng thừa ngay trước con trỏ
+  while (b < v.length && /[ \t]/.test(v[b])) b++;                                      // và ngay sau con trỏ
+  const ins = (a === 0 || v[a - 1] === '\n' ? '' : '\n') + n + ' ';
+  edReplace(a, b, ins);
+  toast('Đã thêm số câu ' + n);
 };
 $('#edQ1').onclick = () => edLines(l => /^>(?!>)/.test(l) ? stripPre(l) : '> ' + stripPre(l));
 $('#edQ2').onclick = () => edLines(l => /^>>/.test(l) ? stripPre(l) : '>> ' + stripPre(l));
@@ -5510,7 +5524,7 @@ async function pgFlip(dir){                                        // chạm mé
     t0 = Date.now(); pg.touching = true;
     if (!pgOn() || pg.busy || e.touches.length !== 1){ st = null; return; }
     pgSync();
-    const t = e.touches[0]; st = { x:t.clientX, y:t.clientY, lock:false, dir:0, sg:null, commit:null, prog:0, pts:[{ x:t.clientX, t:e.timeStamp }] };
+    const t = e.touches[0]; st = { x:t.clientX, y:t.clientY, ts:e.timeStamp, lock:false, dir:0, sg:null, commit:null, prog:0, pts:[{ x:t.clientX, t:e.timeStamp }] };
     if (pg.prep.key !== pgKey()){ clearTimeout(pg.prepT); pgPrepNow(); }     // chưa kịp dựng sẵn → dựng ngay khi vừa chạm
   }, { passive:true });
   view.addEventListener('touchmove', e => {                        // tờ giấy đi theo ngón tay
@@ -5518,7 +5532,10 @@ async function pgFlip(dir){                                        // chạm mé
     if (e.touches.length !== 1){ if (st.sg) st.sg.cleanup(); if (st.lock) pg.busy = false; st = null; return; }
     const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
     if (!st.lock){
-      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      if (document.querySelector('.vmenu-bg')){ st = null; return; }              // menu chạm giữ đang mở → không lật trang
+      /* Ngưỡng chống run tay: chạm / giữ nhẹ mà ngón nhích vài điểm ảnh KHÔNG bị tính là vuốt (trước đây 5px → khóa lật, nuốt mất cú chạm chọn câu và cú giữ mở menu).
+         Vuốt nhanh vẫn nhạy (9px); giữ lâu hơn 0,22 giây thì cần nhích hẳn 18px mới coi là vuốt */
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < (e.timeStamp - st.ts > 220 ? 18 : 9)) return;
       if (Math.abs(dy) > Math.abs(dx) * 1.1){ st = null; return; }
       st.lock = true; st.dir = dx < 0 ? 1 : -1; pg.busy = true; pg.swallow = Date.now() + 900;
       const s = st;
