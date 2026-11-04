@@ -200,7 +200,7 @@ html[data-paper] .v.flash .vn{background:#000;color:#f4f3ee;box-shadow:0 0 0 2px
 /* ===== Kiểu sách in ===== */
 .reader.print{text-align:justify;-webkit-hyphens:auto;hyphens:auto;line-height:1.75}
 .chhead{text-align:center;margin:.1em 0 1.1em;min-height:4.6em;display:flex;flex-direction:column;justify-content:center}   /* chiều cao cố định: đổi sách không làm chữ bên dưới nhảy */
-.chhead .bk{font-size:1.3em;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.25;min-height:1.25em}
+.chhead .bk{font-size:min(1.1em,5.4vw);font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.25;min-height:1.25em}
 .chhead .ch{font-family:var(--sans);font-size:.55em;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:.2em;min-height:1.3em}
 .sec{font-size:1.08em;font-weight:700;text-align:center;margin:1.5em 0 .55em;line-height:1.35}
 .sec .ref{display:block;font-weight:400;font-style:italic;font-size:.8em;color:var(--muted);margin-top:.15em}
@@ -392,11 +392,11 @@ details a{color:var(--accent)}
 .edsub{display:block;width:100%;margin:6px 0 0;padding:8px 12px;min-height:38px;max-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:inherit;font:inherit;font-size:13.5px;line-height:1.4;resize:none;overflow:auto;box-sizing:border-box}
 .chhead.tp{min-height:0;margin:.5em 0 1.5em;align-items:center}
 .chhead.tp .tpl{font-weight:800;text-transform:uppercase;line-height:1.15;letter-spacing:.015em;color:var(--fg);text-wrap:balance;overflow-wrap:anywhere}
-.chhead.tp .t1{font-size:min(1.5em,6.4vw)}
-.chhead.tp .t2{font-size:min(1.7em,7.6vw);margin-top:.2em}
-.chhead.tp .t3{font-size:min(1em,4.6vw);margin-top:.25em;letter-spacing:.05em}
+.chhead.tp .t1{font-size:min(1.05em,4.6vw)}
+.chhead.tp .t2{font-size:min(1.15em,5.2vw);margin-top:.2em}
+.chhead.tp .t3{font-size:min(.75em,3.4vw);margin-top:.25em;letter-spacing:.05em}
 .chhead.tp .tprule{width:42%;height:0;border:0;border-top:1px solid var(--fg);margin:.65em auto .55em;opacity:.85}
-.chhead.tp .bk{font-size:min(2.3em,9vw);font-weight:800;letter-spacing:.01em;line-height:1.1;margin-top:.2em;overflow-wrap:anywhere;text-wrap:balance}
+.chhead.tp .bk{font-size:min(1.55em,6.6vw);font-weight:800;letter-spacing:.01em;line-height:1.1;margin-top:.2em;overflow-wrap:anywhere;text-wrap:balance}
 .chhead.tp .ch{margin-top:.8em}
 .chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
 .chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}   /* tiêu đề phụ dưới tên sách: lớn hơn, thưa chữ, cách xa dòng CHƯƠNG */
@@ -1328,7 +1328,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
