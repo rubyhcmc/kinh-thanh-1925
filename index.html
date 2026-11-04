@@ -1330,7 +1330,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3753,8 +3753,11 @@ function cleanRaw(s){
 // Dòng bắt đầu bằng địa chỉ Kinh Thánh (Lê-vi Ký 19:36; 2 Các Vua 4:1; St 1,1): dùng để nhận ra các câu trích nằm trong chú thích dài
 const FN_REF = /^(?:\d{1,2}\s+)?\p{Lu}[\p{L}\-\s.]{0,40}?\s\d{1,3}\s*[:,.]\s*\d{1,3}/u;
 const quoteOpen = x => ((x.match(/"/g) || []).length % 2) === 1 || (x.match(/“/g) || []).length > (x.match(/”/g) || []).length;
-const isHeadLine = s => s.length <= 110 && /^\p{Lu}/u.test(s) && (/\([^()]*\)$/.test(s) || !/[.,;:!?…”"’')\]]$/.test(s));
-const isRefLine  = s => /^\(.{2,40}\)$/.test(s);
+/* Dòng kết thúc bằng "(Sê-la)" là câu thơ (dấu nghỉ Thi Thiên), KHÔNG phải tiêu đề; và "… câu văn. (xxx)" (có dấu câu ngay trước ngoặc) cũng là lời văn chứ không phải "Tiêu đề (tham chiếu)" */
+const SELA_END = /\(\s*S[êe][- ]?lah?\s*\)\s*$/iu;
+const isHeadLine = s => s.length <= 110 && /^\p{Lu}/u.test(s) && !SELA_END.test(s) &&
+  ((/\([^()]*\)$/.test(s) && !/[.,;:!?…”"’']\s*\([^()]*\)$/.test(s)) || !/[.,;:!?…”"’')\]]$/.test(s));
+const isRefLine  = s => /^\(.{2,40}\)$/.test(s) && !SELA_END.test(s);
 // Chú thích [ … ] (không phải số câu như [3]): tự xuống dòng riêng, chữ nghiêng nhỏ hơn
 const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
 // Chú thích bấm để bung/ẩn: quét mọi đoạn [ … ] bằng một regex duy nhất
