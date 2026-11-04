@@ -390,6 +390,14 @@ details a{color:var(--accent)}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
 /* ===== Quản lý tên sách trong trình soạn thảo ===== */
 .edsub{display:block;width:100%;margin:6px 0 0;padding:8px 12px;min-height:38px;max-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:inherit;font:inherit;font-size:13.5px;line-height:1.4;resize:none;overflow:auto;box-sizing:border-box}
+.chhead.tp{min-height:0;margin:.5em 0 1.5em;align-items:center}
+.chhead.tp .tpl{font-weight:800;text-transform:uppercase;line-height:1.15;letter-spacing:.015em;color:var(--fg);text-wrap:balance;overflow-wrap:anywhere}
+.chhead.tp .t1{font-size:min(1.5em,6.4vw)}
+.chhead.tp .t2{font-size:min(1.7em,7.6vw);margin-top:.2em}
+.chhead.tp .t3{font-size:min(1em,4.6vw);margin-top:.25em;letter-spacing:.05em}
+.chhead.tp .tprule{width:42%;height:0;border:0;border-top:1px solid var(--fg);margin:.65em auto .55em;opacity:.85}
+.chhead.tp .bk{font-size:min(2.3em,9vw);font-weight:800;letter-spacing:.01em;line-height:1.1;margin-top:.2em;overflow-wrap:anywhere;text-wrap:balance}
+.chhead.tp .ch{margin-top:.8em}
 .chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
 .chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}   /* tiêu đề phụ dưới tên sách: lớn hơn, thưa chữ, cách xa dòng CHƯƠNG */
 .edbook{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
@@ -1320,7 +1328,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04u';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4062,9 +4070,20 @@ function paperHTML(book, ch, verses, view, idp){
   verses.forEach(v => (String(v.t) + '\n' + String(v.h || '')).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));   // dấu [n] nằm trong tiêu đề cũng tính là đã gắn
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
-  const subHTML = sub.length && +ch === 1 ? `<div class="bksub${subBelowOf(book) ? ' below' : ''}">${sub.map(esc).join('<br>')}</div>` : '';
-  const below = !!subHTML && subBelowOf(book);
-  let out = `<div class="chhead">${below ? '' : subHTML}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div>${below ? subHTML : ''}<div class="ch">Chương ${esc(ch)}</div></div>`;
+  const subIsBelow = subBelowOf(book);
+  /* Trang tựa chương 1 như Kinh Thánh in: mỗi dòng của "Tiêu đề trên tên sách" (Enter = xuống dòng) là một hàng chữ in đậm;
+     dòng đầu (khi có từ 2 dòng trở lên, chưa kể chữ "CỦA" cuối) là tên nhóm sách, to, kèm vạch kẻ mảnh ở dưới; các dòng giữa là "SÁCH…" cỡ lớn; chữ "CỦA" ở cuối nhỏ hơn; rồi tên sách thật lớn.
+     Tự tách "SÁCH CỦA" / "SÁCH THỨ NHẤT - CỦA" thành hai hàng; tiêu đề phụ đặt DƯỚI tên sách vẫn giữ kiểu cũ. */
+  let tpHTML = '';
+  if (sub.length && +ch === 1 && !subIsBelow){
+    const L = sub.slice(), cm = L[L.length - 1].match(/^(.*\S)[\s\-–—]+(CỦA)$/i);
+    if (cm){ L[L.length - 1] = cm[1]; L.push(cm[2]); }
+    const hasOf = L.length > 1 && /^CỦA$/i.test(L[L.length - 1]), core = hasOf ? L.slice(0, -1) : L;
+    tpHTML = core.map((x, i) => `<div class="tpl ${core.length > 1 && i === 0 ? 't1' : 't2'}">${esc(x)}</div>` + (core.length > 1 && i === 0 ? '<hr class="tprule">' : '')).join('') + (hasOf ? `<div class="tpl t3">${esc(L[L.length - 1])}</div>` : '');
+  }
+  const subHTML = !tpHTML && sub.length && +ch === 1 ? `<div class="bksub${subIsBelow ? ' below' : ''}">${sub.map(esc).join('<br>')}</div>` : '';
+  const below = !!subHTML && subIsBelow;
+  let out = `<div class="chhead${tpHTML ? ' tp' : ''}">${tpHTML}${below ? '' : subHTML}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div>${below ? subHTML : ''}<div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
