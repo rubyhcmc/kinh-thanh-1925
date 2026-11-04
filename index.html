@@ -1263,6 +1263,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
       <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
+      <button class="btn" id="edWord">📄 Xuất Word</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -1330,7 +1331,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5007,6 +5008,17 @@ async function saveSmart(files){
   }
   await saveFiles(files); return 'default';
 }
+async function exportBookWord(name){          // Xuất Word cả sách (dùng cho nút ở hộp thoại "Đã xuất xong" và ở thanh dưới trình soạn thảo)
+  name = String(name || '').trim(); if (!name) return toast('Hãy chọn sách cần xuất');
+  const rec = await dbGet('books', name);
+  const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
+  if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
+  const meta = bibleMeta.find(m => m.name === name) || {}, fname = bookFileBase(name) + '.docx';
+  try {
+    const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
+    const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
+  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
+}
 function exportResult(name, pdf, json, pages, rep){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
@@ -5020,12 +5032,14 @@ function exportResult(name, pdf, json, pages, rep){
       <button class="btn primary" data-k="both">📁 Lưu cả hai tệp</button>
       <button class="btn" data-k="pdf">📕 Chỉ lưu PDF</button>
       <button class="btn" data-k="json">🧾 Chỉ lưu JSON</button>
+      <button class="btn" data-k="word">📄 Xuất Word</button>
       <button class="btn" data-k="x">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) o.remove(); return; }
     const k = b.dataset.k;
     if (k === 'x') return o.remove();
+    if (k === 'word') return exportBookWord(name);
     await saveSmart(k === 'pdf' ? [pdf] : k === 'json' ? [json] : [pdf, json]);
   });
   o.addEventListener('change', e => { if (e.target.id === 'exAsk'){ try { localStorage.setItem('kt.askDir', e.target.checked ? '1' : '0'); } catch(err){} } });
@@ -5073,6 +5087,7 @@ async function exportBook(name){
 }
 $('#exGo').onclick = () => exportBook($('#exBook').value);
 $('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
+$('#edWord').onclick = async () => { try { await edAuto(); } catch(e){} exportBookWord(ed.Book.value); };
 
 /* ---- Xuất Word (.docx) từ trình soạn thảo: chương đang soạn hoặc cả sách ---- */
 function wRun(t, o){
