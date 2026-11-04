@@ -1263,7 +1263,6 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
       <button class="btn" id="edSaveNext">Lưu &amp; chương sau</button>
       <button class="btn" id="edView">Xem ở trang chủ</button>
       <button class="btn" id="edExport">📕 Hoàn thành sách &amp; xuất</button>
-      <button class="btn" id="edWord">📄 Xuất Word</button>
       <button class="btn danger" id="edDel" style="margin-left:auto">Xóa chương</button>
     </div>
   </div>
@@ -1331,7 +1330,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5087,7 +5086,6 @@ async function exportBook(name){
 }
 $('#exGo').onclick = () => exportBook($('#exBook').value);
 $('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
-$('#edWord').onclick = async () => { try { await edAuto(); } catch(e){} exportBookWord(ed.Book.value); };
 
 /* ---- Xuất Word (.docx) từ trình soạn thảo: chương đang soạn hoặc cả sách ---- */
 function wRun(t, o){
