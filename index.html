@@ -1330,7 +1330,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5007,15 +5007,27 @@ async function saveSmart(files){
   }
   await saveFiles(files); return 'default';
 }
-async function exportBookWord(name){          // Xuất Word cả sách (dùng cho nút ở hộp thoại "Đã xuất xong" và ở thanh dưới trình soạn thảo)
+async function exportBookWord(name, autoSave){   // Xuất Word cả sách: hỏi chọn thư mục NGAY khi bấm (trình duyệt chỉ cho mở hộp chọn thư mục ngay sau thao tác bấm), rồi mới dựng file
   name = String(name || '').trim(); if (!name) return toast('Hãy chọn sách cần xuất');
-  const rec = await dbGet('books', name);
-  const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
-  if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
-  const meta = bibleMeta.find(m => m.name === name) || {}, fname = bookFileBase(name) + '.docx';
+  let dir = null;
+  if (canPickDir() && askDirPref()){
+    try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); }
+    catch(e){ if (e && e.name === 'AbortError'){ toast('Đã hủy – chưa lưu tệp nào'); return; } }
+  }
   try {
+    if (autoSave){ try { await edAuto(); } catch(e){} }
+    const rec = await dbGet('books', name);
+    const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
+    if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
+    const meta = bibleMeta.find(m => m.name === name) || {}, fname = bookFileBase(name) + '.docx';
     const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
-    const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
+    if (dir){
+      try {
+        const fh = await dir.getFileHandle(f.name, { create:true }); const w = await fh.createWritable(); await w.write(f); await w.close();
+        return toast(`📁 Đã lưu file Word “${f.name}” vào thư mục “${dir.name}”`);
+      } catch(e){ toast('Không ghi được vào thư mục đã chọn, chuyển sang tải về máy: ' + (e.message || e)); }
+    }
+    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
   } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 }
 function exportResult(name, pdf, json, pages, rep){
@@ -5147,18 +5159,7 @@ function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        /
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
-$('#exWord').onclick = async () => {              // Xuất file Word cả sách đang chọn (nằm trong mục 4 của Quản lý dữ liệu)
-  try { await edAuto(); } catch(e){}
-  const name = $('#exBook').value; if (!name) return toast('Hãy chọn sách cần xuất');
-  const rec = await dbGet('books', name);
-  const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
-  if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
-  const meta = bibleMeta.find(m => m.name === name) || {}, fname = bookFileBase(name) + '.docx';
-  try {
-    const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
-    const st = await saveSmart([f]); if (st !== 'cancel' && st !== 'dir') toast('📄 Đã tạo file Word: ' + fname);
-  } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
-};
+$('#exWord').onclick = () => exportBookWord($('#exBook').value, true);   // Xuất file Word cả sách đang chọn (mục 4 của Quản lý dữ liệu)
 $('#exRestore').onclick = () => $('#exFile').click();
 $('#exFile').onchange = async e => {
   const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
