@@ -1328,7 +1328,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6890,6 +6890,26 @@ PStore.init();
   ctJoin();                             // mỗi lần mở app tính 1 lượt truy cập
   setTimeout(() => { try { if (bibleMeta.length) bsBuild(); } catch(e){} }, 8000);   // lập sẵn chỉ mục tìm kiếm lúc rảnh (từng lát nhỏ) để lần mở tìm kiếm sau không phải chờ
   if (syncOn()) syncNow({ auto:true });   // mở app là tự kiểm tra nội dung mới trên nơi lưu trữ
+})();
+</script>
+<script>
+/* Trang Giấy: khi hiện thanh menu trên cùng, thu nhỏ nhẹ cả trang để nó nằm gọn DƯỚI thanh (không bị che chữ, không dàn trang lại → số trang giữ nguyên) */
+(function(){
+  var b = document.body, v = document.getElementById('pgView'), tp = document.querySelector('.top');
+  if (!v || !tp) return;
+  function fit(){
+    try {
+      var on = b.classList.contains('pg') && b.classList.contains('pgchrome') && !b.classList.contains('searching');
+      v.style.transform = ''; v.style.transformOrigin = '';
+      if (!on) return;
+      var r = v.getBoundingClientRect(), sh = tp.getBoundingClientRect().bottom - r.top;
+      if (sh <= 0 || r.height <= sh + 40) return;
+      v.style.transformOrigin = '50% 100%';
+      v.style.transform = 'scale(' + ((r.height - sh) / r.height).toFixed(4) + ')';
+    } catch(e){}
+  }
+  new MutationObserver(fit).observe(b, { attributes:true, attributeFilter:['class'] });
+  addEventListener('resize', fit);
 })();
 </script>
 </body>
