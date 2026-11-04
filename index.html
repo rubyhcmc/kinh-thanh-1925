@@ -582,6 +582,7 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 /* Chỗ đọc tiếp (📍): số câu được tô đặc – không đổi độ rộng nên không làm dàn lại trang */
 .v.rs .vn{background:var(--accent);color:var(--card);border-radius:3px;outline:2px solid var(--accent);outline-offset:0}
 .vmenu button.on{color:var(--accent);font-weight:700}
+#copyBar{display:none!important}   /* thanh "Bỏ chọn · Sao chép" bên ngoài đã bỏ: mọi thao tác nằm trong menu chạm giữ */
 .vmenu button small{display:block;margin-top:3px;font-size:12px;font-weight:400;color:var(--muted);line-height:1.35}
 .bmitem.rsitem{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;margin:0 0 10px;padding:0 4px}
 .toast button{margin-left:10px;border:0;background:none;color:#ffd27a;font:inherit;font-weight:700;padding:2px 4px}
@@ -1330,7 +1331,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2462,17 +2463,15 @@ function showVerseMenu(n, x, y, ns){
   const m = document.createElement('div'); m.className = 'vmenu';
   const book = curBook.name, ch = S.chapter;
   const isBmN = k => BM.some(b => b.book === book && b.ch === ch && b.n === k);
-  if (multi){
+  {   // Một menu gọn duy nhất: Ghim đã đọc đến đây · Đánh dấu · Viết bài học · Tạo ảnh · Sao chép (áp dụng cho câu đang giữ / các câu đã chọn)
     const allBm = list.every(isBmN);
-    m.innerHTML = `<div class="vh">${esc(book)} ${ch}:${esc(compressRange(list))}</div>
+    const isRs = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
+    m.innerHTML = `<div class="vh">${esc(book)} ${ch}:${esc(multi ? compressRange(list) : n)}</div>
+    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang ghim · chạm để bỏ ghim' : '📍 Ghim đã đọc đến đây' + (multi ? ' (câu ' + n + ')' : '')}</button>
     <button data-a="mark" class="${allBm ? 'on' : ''}">${allBm ? '🔖 Bỏ đánh dấu câu này' : '🔖 Đánh dấu câu này'}</button>
     <button data-a="lesson">✍️ Viết bài học cá nhân</button>
     <button data-a="img">🖼️ Tạo ảnh</button>
     <button data-a="copy">📋 Sao chép</button>`;
-  } else {
-    const isRs = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
-    m.innerHTML = `<div class="vh">${esc(book)} ${ch}:${n}</div>
-    <button data-a="resume" class="${isRs ? 'on' : ''}">${isRs ? '✔ Đang ghim đã đọc đến đây' : '📍 Ghim đã đọc đến đây'}<small>${isRs ? 'Chạm để bỏ ghim' : 'Lần sau mở app sẽ tiếp tục từ câu này'}</small></button>`;
   }
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
@@ -2481,7 +2480,8 @@ function showVerseMenu(n, x, y, ns){
   m.style.top = top + 'px';
   const hv = $('#v' + n); if (hv) hv.classList.add('hold');          // in đậm câu đang thao tác
   const opened = Date.now(), close = () => { bg.remove(); $$('#bibleText .v.hold').forEach(e => e.classList.remove('hold')); };
-  const onScroll = () => { close(); SCR.removeEventListener('scroll', onScroll); };
+  const st0 = SCR.scrollTop;
+  const onScroll = () => { if (Date.now() - opened < 700 || Math.abs(SCR.scrollTop - st0) <= 8) return; close(); SCR.removeEventListener('scroll', onScroll); };   // chỉ đóng khi thật sự cuộn; bỏ qua “scroll giả” lúc vừa mở menu
   SCR.addEventListener('scroll', onScroll, { passive:true });
   bg.addEventListener('click', e => {
     e.stopPropagation(); e.preventDefault();
@@ -2526,8 +2526,21 @@ function showVerseMenu(n, x, y, ns){
   const stopBlink = () => { clearTimeout(hDelay); if (hEl){ hEl.classList.remove('holding', 'hb'); hEl = null; } };
   const cancel = () => { clearTimeout(timer); timer = null; stopBlink(); };
   const flipping = () => { try { return !!(pg && pg.busy); } catch(e){ return false; } };
+  // Ngón tay hay rơi vào khoảng trống giữa hai dòng (khoảng cách dòng không thuộc câu nào) → trước đây không nhận cú giữ. Tìm câu sát nhất quanh điểm chạm.
+  const nearVerse = (el, x, y) => {
+    if (!el || !el.closest) return null;
+    const own = el.closest('.v'); if (own) return own;
+    if (el.closest('.hd,.fnk,.fnx,.fnpop,button,a,input,textarea,select') || !root.contains(el)) return null;
+    let best = null, bd = 1e9;
+    root.querySelectorAll('.v').forEach(v => { for (const r of v.getClientRects()){
+      const dx = x < r.left ? r.left - x : x > r.right ? x - r.right : 0, dy = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+      if (dx > 28 || dy > 16) continue;
+      const d = dx * dx + dy * dy; if (d < bd){ bd = d; best = v; }
+    } });
+    return best;
+  };
   const start = (el, x, y) => {
-    const p = el.closest && el.closest('.v'); fired = false; cancel();
+    const p = nearVerse(el, x, y); fired = false; cancel();
     if (!p || !curBook) return;
     sx = x; sy = y; sTop = SCR.scrollTop;
     hEl = p; hDelay = setTimeout(() => { if (hEl === p) p.classList.add('holding', 'hb'); }, 90);   // sáng nhẹ rồi giữ nguyên (không nhấp nháy → không vẽ lại liên tục)
@@ -6120,8 +6133,8 @@ const PLANS = [
 ];
 const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const planOK = q => !!q && isDate(q.start) && (PLANS.some(x => x.id === q.id) || (q.id === 'custom' && Number.isInteger(q.days) && q.days >= 1 && q.days <= 5000));
-const planNorm = q => q.id === 'custom' ? { id:'custom', start:q.start, days:q.days } : { id:q.id, start:q.start };
-const planDef = q => q.id === 'custom' ? { id:'custom', name:'Tự thiết kế', days:q.days } : PLANS.find(x => x.id === q.id);   // thông tin kế hoạch đang dùng
+const planNorm = q => q.id === 'custom' ? (Number.isInteger(q.per) && q.per >= 1 ? { id:'custom', start:q.start, days:q.days, per:q.per } : { id:'custom', start:q.start, days:q.days }) : { id:q.id, start:q.start };
+const planDef = q => q.id === 'custom' ? { id:'custom', name:'Tự thiết kế', days:q.days, per:(Number.isInteger(q.per) && q.per >= 1 ? q.per : 0) } : PLANS.find(x => x.id === q.id);   // thông tin kế hoạch đang dùng
 let PCUST = null; try { PCUST = JSON.parse(localStorage.getItem('kt.planCustom') || 'null'); } catch(e){}   // lựa chọn tự nhập gần nhất (kiểu + số)
 let PLAN = null; try { PLAN = JSON.parse(localStorage.getItem('kt.plan') || 'null'); } catch(e){}
 if (PLAN && PLAN.id === 'd90' && isDate(PLAN.start)) PLAN = { id:'custom', start:PLAN.start, days:90 };   // kế hoạch 90 ngày cũ → chuyển thành kế hoạch tự thiết kế 90 ngày
@@ -6137,12 +6150,13 @@ const plPer = (days, T) => {                                         // nhãn "c
   return f === c ? `${f} chương/ngày` : per < 2 ? `khoảng ${Math.round(per)} chương/ngày` : `${f}–${c} chương/ngày`;
 };
 const plDay = start => { const [y, m, d] = start.split('-').map(Number), t = new Date(); return Math.floor((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(y, m - 1, d)) / 864e5) + 1; };
+const plEnd = (d, pl, T) => pl.per ? Math.min(d * pl.per, T) : Math.floor(d * T / pl.days);   // chương cuối (không tính) của ngày d: kiểu "N chương mỗi ngày" thì đúng N chương/ngày
 function plToday(){                                                  // các chương cần đọc hôm nay
   const pl = planDef(PLAN), d = plDay(PLAN.start);
   if (d < 1) return { d, pl, T:0, items:[], none:true };
   const ctx = plCtx(), seq = ctx.seq, T = ctx.T;
   if (d > pl.days) return { d, pl, T, items:[], over:true };
-  const a = Math.floor((d - 1) * T / pl.days), b = Math.floor(d * T / pl.days);
+  const a = plEnd(d - 1, pl, T), b = plEnd(d, pl, T);
   const cr = T ? plCredit(ctx, pl) : { all:new Set(), front:0 };
   if (T && cr.front >= T) return { d, pl, T, items:[], over:true, early:true };      // đọc dư, cộng dồn đủ cả Kinh Thánh → về đích sớm hơn lịch
   let next = a; while (next < T && cr.all.has(next)) next++;                       // chương đầu tiên của phần hôm nay mà chưa đọc
@@ -6173,7 +6187,7 @@ function plCredit(ctx, pl){                                          // tính m�
     if (d > days){ map.set(k, ids); return; }                          // sau khi hết hạn kế hoạch: không còn lọc
     initHi();
     const set = new Set(); ids.forEach(id => { const i = ctx.idx.get(id); if (i != null) set.add(i); });
-    let L = Math.max(Math.floor(d * T / days), hi + 1);                // mọi chương trước mốc này đều được tính; vượt mốc thì phải nối liền
+    let L = Math.max(plEnd(d, pl, T), hi + 1);                // mọi chương trước mốc này đều được tính; vượt mốc thì phải nối liền
     const got = [];
     [...set].sort((p, q) => p - q).forEach(i => { if (i <= L){ got.push(i); all.add(i); if (i + 1 > L) L = i + 1; if (i > hi) hi = i; } });
     map.set(k, got.map(i => ctx.seq[i].book + '|' + ctx.seq[i].ch));
@@ -6295,7 +6309,7 @@ function openPlan(opts){
     if (!plSeq().length) return toast('Chưa có dữ liệu Kinh Thánh trong máy');
     const d = custDays(); if (!d){ custPv(); const i = o.querySelector('#plCv'); if (i) i.focus(); return toast(`Hãy nhập số từ 1 đến ${BIBLE_CHAPTERS}`); }
     PCUST = { mode:cust.mode, val:cust.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){}   // nhớ lựa chọn tự nhập
-    PLAN = { id:'custom', start:dayKey(), days:d }; savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
+    PLAN = { id:'custom', start:dayKey(), days:d }; if (cust.mode === 'chap') PLAN.per = parseInt(cust.val, 10); savePlan(); draw(); toast(`Đã bắt đầu kế hoạch tự thiết kế (${d} ngày)`);
     ctJoin().then(() => { const b = o.querySelector('#plComm'); if (b && b.isConnected) ctRender(b); });
   };
   o.addEventListener('input', e => { if (e.target.id !== 'plCv') return; e.target.value = cust.val = e.target.value.replace(/\D/g, '').slice(0, 5); custPv(); });
