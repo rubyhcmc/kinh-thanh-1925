@@ -680,6 +680,8 @@ body.pg:not(.searching) #chapNav{display:none!important}
 /* Trang giấy: ẩn/hiện thanh trên bằng visibility (KHÔNG dùng transform) → chữ thanh trên luôn sắc nét */
 body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:none!important;transition:none!important;visibility:hidden}
 body.pg.pgchrome:not(.searching) .top{visibility:visible}
+/* Menu trên hiện ra: thu nhẹ khung trang (chỉ bằng CSS, theo biến --pgfit) để dòng đầu nằm dưới thanh menu. Gỡ class pgchrome là hết hiệu lực NGAY, nên lật trang không bị ảnh hưởng */
+body.pg.pgchrome:not(.searching) #pgView{transform:scale(var(--pgfit,1));transform-origin:50% 100%}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
 body.pg .fl-stage .pgv{position:absolute;inset:0;touch-action:auto}
 body.pg .pgv>.reader{--pgm:max(28px, calc((100vw - 680px) / 2));position:static;margin:0;width:100vw;height:100%;padding:20px var(--pgm) 0;box-sizing:border-box;column-width:calc(100vw - 2 * var(--pgm));column-gap:calc(2 * var(--pgm));column-fill:auto;text-align:justify;line-height:1.8;-webkit-user-select:none;user-select:none}
@@ -1328,7 +1330,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.04w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.04x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6893,23 +6895,20 @@ PStore.init();
 })();
 </script>
 <script>
-/* Trang Giấy: khi hiện thanh menu trên cùng, thu nhỏ nhẹ cả trang để nó nằm gọn DƯỚI thanh (không bị che chữ, không dàn trang lại → số trang giữ nguyên) */
+/* Chỉ TÍNH hệ số --pgfit (không đụng vào khung trang, không đụng vào code lật trang) */
 (function(){
-  var b = document.body, v = document.getElementById('pgView'), tp = document.querySelector('.top');
+  var root = document.documentElement, v = document.getElementById('pgView'), tp = document.querySelector('.top'), last = 1;
   if (!v || !tp) return;
-  function fit(){
+  function calc(){
     try {
-      var on = b.classList.contains('pg') && b.classList.contains('pgchrome') && !b.classList.contains('searching');
-      v.style.transform = ''; v.style.transformOrigin = '';
-      if (!on) return;
-      var r = v.getBoundingClientRect(), sh = tp.getBoundingClientRect().bottom - r.top;
-      if (sh <= 0 || r.height <= sh + 40) return;
-      v.style.transformOrigin = '50% 100%';
-      v.style.transform = 'scale(' + ((r.height - sh) / r.height).toFixed(4) + ')';
+      var H = v.offsetHeight, top = parseFloat(getComputedStyle(v).top) || 0, sh = tp.offsetHeight - top, f = 1;
+      if (H > 120 && sh > 0 && sh < H / 2) f = (H - sh) / H;
+      if (Math.abs(f - last) > 0.001){ last = f; root.style.setProperty('--pgfit', f.toFixed(4)); }
     } catch(e){}
   }
-  new MutationObserver(fit).observe(b, { attributes:true, attributeFilter:['class'] });
-  addEventListener('resize', fit);
+  new MutationObserver(function(){ if (document.body.classList.contains('pgchrome')) calc(); }).observe(document.body, { attributes:true, attributeFilter:['class'] });
+  addEventListener('resize', calc); addEventListener('orientationchange', calc); addEventListener('load', calc);
+  setTimeout(calc, 1500);
 })();
 </script>
 </body>
