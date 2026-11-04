@@ -1331,7 +1331,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05g';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6959,6 +6959,53 @@ PStore.init();
   new MutationObserver(function(){ if (document.body.classList.contains('pgchrome')) calc(); }).observe(document.body, { attributes:true, attributeFilter:['class'] });
   addEventListener('resize', calc); addEventListener('orientationchange', calc); addEventListener('load', calc);
   setTimeout(calc, 1500);
+})();
+</script>
+<script>
+/* THẺ THÔNG BÁO BẢN CẬP NHẬT MỚI — mỗi lần mở app (và khi quay lại app sau ≥ 30 phút) tự so số phiên bản với bản mới nhất trên máy chủ;
+   khác nhau thì hiện thẻ ở cuối màn hình: [Cập nhật ngay] (dùng đúng quy trình của nút "Kiểm tra cập nhật": nhắc sao lưu rồi tải lại) · [Để sau].
+   Không hiện khi đang offline, đang ở màn Soạn thảo / Quản lý dữ liệu. Chỉ ĐỌC số phiên bản, không đụng tới bất kỳ chức năng nào khác. */
+(function(){
+  var css = document.createElement('style');
+  css.textContent = '.updcard{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 56px);margin:0 auto;max-width:440px;z-index:70;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.28);padding:14px 16px 12px;animation:updIn .22s ease-out}'
+    + '.updcard b{display:block;font-size:16px;color:var(--accent);margin-bottom:4px}.updcard p{margin:0 0 12px;font-size:14px;line-height:1.45;color:var(--muted)}'
+    + '.updcard .updrow{display:flex;gap:8px}.updcard .updrow .btn{flex:1;margin:0}@keyframes updIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
+    + '@media (prefers-reduced-motion:reduce){.updcard{animation:none}}';
+  document.head.appendChild(css);
+  var shown = '', dismissed = '', lastCheck = 0, busy = false, tries = 0;
+  var busyUI = function(){ var e = document.getElementById('editor'), a = document.getElementById('admin'); return !!((e && !e.hidden) || (a && !a.hidden)); };
+  function close(){ var c = document.getElementById('updCard'); if (c) c.remove(); shown = ''; }
+  function show(ver){
+    if (document.getElementById('updCard')) return;
+    var c = document.createElement('div'); c.id = 'updCard'; c.className = 'updcard'; c.setAttribute('role', 'alert');
+    c.innerHTML = '<b>🆕 Có bản cập nhật mới</b><p>Phiên bản <span id="updNew"></span> đã sẵn sàng (bạn đang dùng <span id="updOld"></span>). Cập nhật để dùng các cải tiến mới nhất.</p>'
+      + '<div class="updrow"><button class="btn primary" id="updGo">Cập nhật ngay</button><button class="btn" id="updLater">Để sau</button></div>';
+    c.querySelector('#updNew').textContent = ver; c.querySelector('#updOld').textContent = APP_VERSION;
+    c.querySelector('#updLater').onclick = function(){ dismissed = ver; close(); };
+    c.querySelector('#updGo').onclick = function(){
+      close();
+      var b = document.getElementById('btnUpd');
+      if (b){ try { if (typeof toast === 'function') toast('Đang cập nhật…'); } catch(e){} b.click(); }
+      else location.reload();
+    };
+    document.body.appendChild(c); shown = ver;
+  }
+  async function check(){
+    if (busy || !navigator.onLine) return;
+    if (busyUI()){ if (tries++ < 8) setTimeout(check, 60000); return; }       // đang soạn thảo → thử lại sau, không làm gián đoạn
+    busy = true; lastCheck = Date.now();
+    try {
+      var u = new URL(location.href); u.hash = ''; u.searchParams.set('_u', Date.now());           // đuôi ngẫu nhiên để vượt bộ nhớ đệm CDN
+      var res = await fetch(u.href, { cache:'no-store' }); if (!res.ok) throw 0;
+      var m = (await res.text()).match(/const APP_VERSION\s*=\s*'([^']+)'/);
+      if (m && m[1] && m[1] !== APP_VERSION && m[1] !== dismissed) show(m[1]);
+      else if (m && m[1] === APP_VERSION) close();
+    } catch(e){}
+    busy = false;
+  }
+  window.addEventListener('load', function(){ setTimeout(check, 3500); });
+  window.addEventListener('online', function(){ setTimeout(check, 1500); });
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible' && Date.now() - lastCheck > 30 * 60000) check(); });
 })();
 </script>
 </body>
