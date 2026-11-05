@@ -1370,7 +1370,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05s';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2478,6 +2478,7 @@ function wPara(text, o){
   const ppr = `<w:pPr>${o.keep ? '<w:keepNext/>' : ''}${pbdr}${o.shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 320}" w:lineRule="auto"/>${ind}<w:jc w:val="${o.align || 'left'}"/></w:pPr>`;
   return `<w:p>${ppr}${runs}</w:p>`;
 }
+const niceRef = r => { const m = String(r || '').match(/^(.*?)\s+(\d+[:\d,\-–]*)$/); if (!m) return String(r || ''); return m[1].replace(/-/g, ' ').toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' ' + m[2]; };
 function docxFile(items, title, fname){                               // items: [{ref, quote, text, at}]
   const when = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const rule = (after, before) => wPara('', { sz:8, line:240, before:before || 0, after, left:2900, right:2900, border:true, borderSz:8 });   // vạch vàng ngắn ở giữa trang
@@ -2485,15 +2486,12 @@ function docxFile(items, title, fname){                               // items: 
   let body = '';
   if (multi) body += wPara(title, { b:true, sz:44, color:'5C3A12', align:'center', after:80 }) + wPara(`${items.length} bài chia sẻ · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:120 }) + rule(480);
   items.forEach((it, i) => {
-    const first = !i;
-    body += wPara(multi ? 'Bài chia sẻ số ' + (i + 1) : 'Bài học cá nhân', { b:true, caps:true, sz:20, color:'B08840', spc:60, align:'center', before:first ? 0 : 720, after:80, keep:true });
-    body += wPara(it.ref, { b:true, sz:multi ? 36 : 44, color:'5C3A12', align:'center', after:100, keep:true });
-    body += rule(320);
+    const ref = niceRef(it.ref);                                       // "Sáng-thế-ký 2:1-2" → "Sáng Thế Ký 2:1-2"
     if (it.quote) {
-      body += wPara('“' + it.quote + '”', { i:true, sz:25, color:'3E3A33', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:350, before:80, after:0, align:'both', keep:true });
-      body += wPara('— ' + it.ref, { b:true, sz:21, color:'8A5A1F', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:300, before:0, after:360, align:'right' });
-    }
-    body += wPara('Lời chia sẻ', { b:true, caps:true, sz:22, color:'8A5A1F', spc:50, before:120, after:160, border:true, borderColor:'E2D3B3', borderSz:4, keep:true });
+      body += wPara('“' + it.quote + '”', { i:true, sz:25, color:'3E3A33', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:350, before:i ? 600 : 80, after:0, align:'both', keep:true });
+      body += wPara('— ' + ref, { b:true, sz:22, color:'8A5A1F', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:300, before:0, after:360, align:'right' });
+    } else body += wPara(ref, { b:true, sz:28, color:'8A5A1F', before:i ? 600 : 0, after:200, keep:true });
+    body += wPara('Bài học cá nhân', { b:true, caps:true, sz:22, color:'8A5A1F', spc:50, before:120, after:160, border:true, borderColor:'E2D3B3', borderSz:4, keep:true });
     String(it.text).split(/\n+/).map(s => s.trim()).filter(Boolean).forEach(para => {
       body += wPara(para, { sz:26, line:370, after:140, first:567, align:'both' });
     });
@@ -2501,16 +2499,12 @@ function docxFile(items, title, fname){                               // items: 
     if (it.at) body += wPara('Cập nhật ' + when(it.at), { i:true, sz:20, color:'7A6E60', align:'right', before:60, after:0 });
   });
   const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
-  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rId1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1300" w:left="1440" w:header="720" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-  const frPr = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:color w:val="9A8C78"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>';
-  const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="6" w:color="E2D3B3"/></w:pBdr><w:jc w:val="center"/></w:pPr><w:r>${frPr}<w:t xml:space="preserve">${wx(title)}  ·  Trang </w:t></w:r><w:r>${frPr}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${frPr}<w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r>${frPr}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${frPr}<w:t>1</w:t></w:r><w:r>${frPr}<w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
   const enc = new TextEncoder();
   const zip = zipStore([
-    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>') },
+    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
     { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
-    { name:'word/_rels/document.xml.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>') },
-    { name:'word/document.xml', data:enc.encode(doc) },
-    { name:'word/footer1.xml', data:enc.encode(footer) }
+    { name:'word/document.xml', data:enc.encode(doc) }
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
