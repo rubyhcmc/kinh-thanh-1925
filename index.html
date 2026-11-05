@@ -649,6 +649,27 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .lsbtns .btn{flex:1;white-space:nowrap}
 .lsbtns .primary{flex:1.6}
 
+/* ===== Chế độ XEM bài học: cửa sổ bung rộng hơn, thu gọn phần menu để nhường chỗ cho nội dung ===== */
+.lspanel.viewing{height:min(95vh,95dvh);max-width:660px}
+.lspanel.viewing .lsgrip{margin-top:7px}
+.lspanel.viewing .lsbody{padding:6px 18px 2px}
+.lspanel.viewing .lshead,.lspanel.viewing .lsnote{display:none}
+.lspanel.viewing .lsread{padding:4px 2px 8px}
+.lsphead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.lsphead .sbtn{padding:6px 11px;font-size:12px;border-radius:9px;white-space:nowrap}
+.lspage .lsphead .lspref{text-align:left;margin:0;flex:1;min-width:0}
+.lspage .lspq.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-bottom:6px;padding-bottom:0;border-bottom:12px solid var(--accent-soft)}
+.lspage .lspq{margin-bottom:6px;font-size:calc(var(--fs) - 3px)}
+.lsmore{display:block;margin:0 0 12px auto;border:0;background:none;color:var(--accent);font:600 12px var(--sans);padding:4px 2px}
+.lspanel.viewing .lslinks{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;margin:4px 0 0;padding:4px 0 2px;border-top:1px solid var(--line);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.lspanel.viewing .lslinks::-webkit-scrollbar{display:none}
+.lspanel.viewing .lslinks[hidden]{display:none}
+.lspanel.viewing .lslinks .lk{flex:none;margin:0;white-space:nowrap;font-size:10.5px}
+.lspanel.viewing .lslinks .chips{display:flex;flex-wrap:nowrap;gap:6px;margin:0;flex:none}
+.lspanel.viewing .lslinks button{flex:none;max-width:none;padding:4px 10px;font-size:12px}
+.lspanel.viewing .lsbtns{gap:6px;padding:6px 16px 10px}
+.lspanel.viewing .lsbtns .btn{padding:8px 6px;min-height:40px;font-size:14px}
+
 .lstabs{display:flex;gap:6px;margin:0 0 10px}
 .lstabs button{flex:1;padding:8px 6px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--muted);font:600 13px var(--sans)}
 .lstabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -1349,7 +1370,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05r';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2361,9 +2382,12 @@ function lsMode(m){
   const v = m === 'view'; lsCur.mode = m;
   lsTa.hidden = v; $('.lspanel', lsEl).classList.toggle('viewing', v); $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
   $('#lsLbl').textContent = v ? 'Bài học của bạn' : 'Bài học cá nhân';
+  $('.lshead', lsEl).appendChild($('#lsWord'));                  // luôn đưa nút Xuất Word về hàng nhãn trước (tránh bị xóa theo vùng xem khi vẽ lại)
   if (v){
-    const o = lsCur.old;
-    $('#lsRead').innerHTML = `<div class="lspage"><div class="lspref">${esc($('#lsRef').textContent)}</div><p class="lspq">${esc(lsCur.quote || '')}</p><hr class="lsprule"><div class="lsrtxt">${esc(lsTa.value.trim())}</div></div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
+    const o = lsCur.old, long = (lsCur.quote || '').length > 150;
+    $('#lsRead').innerHTML = `<div class="lspage"><div class="lsphead"><div class="lspref">${esc($('#lsRef').textContent)}</div></div><p class="lspq${long ? ' clamp' : ''}" id="lsPq">${esc(lsCur.quote || '')}</p>${long ? '<button type="button" class="lsmore" id="lsMore">Xem đủ câu gốc ▾</button>' : ''}<hr class="lsprule"><div class="lsrtxt">${esc(lsTa.value.trim())}</div></div>` + (o ? `<div class="lsrmeta">Cập nhật ${esc(bmWhen(o.at))}</div>` : '');
+    $('.lsphead', $('#lsRead')).appendChild($('#lsWord'));       // xem: nút Xuất Word nằm cùng hàng với địa chỉ câu, đỡ tốn một dòng
+    const mb = $('#lsMore'); if (mb) mb.onclick = () => { const q = $('#lsPq'), open = q.classList.toggle('clamp') === false; mb.textContent = open ? 'Thu gọn câu gốc ▴' : 'Xem đủ câu gốc ▾'; };
     $('#lsRead').scrollTop = 0; try { lsTa.blur(); } catch(e){}
   }
 }
