@@ -790,6 +790,22 @@ html[data-paper] .reader.print{text-align:justify}
 .psnote{font-size:14.5px;line-height:1.55;color:var(--muted);margin:8px 2px 4px}
 .psmore{margin-top:18px}
 .psmore summary{font-size:17px;font-weight:600;padding:12px 2px;cursor:pointer}
+
+/* ============ MÁY TÍNH BẢNG / iPad (màn từ 768px): chỉ thêm, không đổi gì ở điện thoại ============ */
+@media (min-width:768px){
+  .top{justify-content:center;gap:10px}                                         /* thanh trên gom vào giữa, thẳng cột với khung đọc thay vì giãn hết bề ngang */
+  .top .navrow{flex:1 1 auto;max-width:560px}
+  .top .right{margin-left:8px}
+  .top .navrow .nf input,.top .navrow select{height:40px;font-size:17px}      /* ô chọn Sách / Chương / Câu to, dễ chạm hơn */
+  .top .iconbtn{min-width:46px}
+  .top .iconbtn.aa{font-size:21px}
+  .vmenu{min-width:320px}
+  .vmenu button{padding:18px 22px;font-size:18px}
+  .updcard{max-width:480px}
+}
+@media (min-width:768px) and (orientation:landscape){
+  main{max-width:820px}                                                          /* iPad xoay ngang: khung đọc rộng hơn một chút */
+}
 </style>
 </head>
 <body>
@@ -1331,7 +1347,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2476,7 +2492,10 @@ function showVerseMenu(n, x, y, ns){
   bg.appendChild(m); document.body.appendChild(bg);
   const W = innerWidth, H = innerHeight, r = m.getBoundingClientRect();
   m.style.left = Math.max(10, Math.min(x - r.width / 2, W - r.width - 10)) + 'px';
-  const below = y + 24, top = below + r.height > H - 10 ? Math.max(10, y - r.height - 24) : below;
+  const maxH = H - 20; if (r.height > maxH){ m.style.maxHeight = maxH + 'px'; m.style.overflowY = 'auto'; }     // màn thấp (xoay ngang…): menu cuộn được thay vì bị cắt mất mục
+  const hh = Math.min(r.height, maxH);
+  const below = y + 24, top0 = below + hh > H - 10 ? y - hh - 24 : below;
+  const top = Math.max(10, Math.min(top0, H - hh - 10));                                                   // luôn nằm trọn trong màn hình, không tràn trên/dưới
   m.style.top = top + 'px';
   const hv = $('#v' + n); if (hv) hv.classList.add('hold');          // in đậm câu đang thao tác
   const opened = Date.now(), close = () => { bg.remove(); $$('#bibleText .v.hold').forEach(e => e.classList.remove('hold')); };
@@ -5199,7 +5218,7 @@ function paperFullscreen(on){
     const de = document.documentElement, fs = document.fullscreenElement || document.webkitFullscreenElement;
     if (on && !fs && matchMedia('(pointer:coarse)').matches){
       const r = de.requestFullscreen ? de.requestFullscreen({ navigationUI:'hide' }) : (de.webkitRequestFullscreen && de.webkitRequestFullscreen());
-      if (r && r.then) r.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {}); } catch(e){} }, () => {});   // vào được toàn màn hình thì khóa xoay dọc (Android)
+      if (r && r.then) r.then(() => { try { if (Math.min(screen.width, screen.height) < 600 && screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(() => {}); } catch(e){} }, () => {});   // vào được toàn màn hình thì khóa xoay dọc (chỉ điện thoại; máy tính bảng/iPad xoay tự do)
     } else if (!on && fs){
       try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch(e){}
       const r = document.exitFullscreen ? document.exitFullscreen() : (document.webkitExitFullscreen && document.webkitExitFullscreen());
@@ -5265,7 +5284,7 @@ function setupPWA(){
     try { const link = document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = makeIcon(180); document.head.appendChild(link); } catch(e){}
     try {
       const manifest = {
-        name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:'portrait',
+        name:'Kinh Thánh', short_name:'Kinh Thánh', display:'standalone', orientation:(Math.min(screen.width, screen.height) >= 600 ? 'any' : 'portrait'),
         start_url:location.href.split('#')[0].split('?')[0], scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
         background_color:'#f7f3ea', theme_color:'#fffdf8',
         icons:[{ src:makeIcon(192), sizes:'192x192', type:'image/png' }, { src:makeIcon(512), sizes:'512x512', type:'image/png' }]
