@@ -1370,7 +1370,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05t';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2478,7 +2478,11 @@ function wPara(text, o){
   const ppr = `<w:pPr>${o.keep ? '<w:keepNext/>' : ''}${pbdr}${o.shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 320}" w:lineRule="auto"/>${ind}<w:jc w:val="${o.align || 'left'}"/></w:pPr>`;
   return `<w:p>${ppr}${runs}</w:p>`;
 }
-const niceRef = r => { const m = String(r || '').match(/^(.*?)\s+(\d+[:\d,\-–]*)$/); if (!m) return String(r || ''); return m[1].replace(/-/g, ' ').toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' ' + m[2]; };
+/* Tên sách để in ra Word: theo ĐÚNG tên sách trong file Kinh Thánh của app (giữ nguyên dấu gạch, dấu cách, số đầu tên),
+   chỉ đổi kiểu chữ: viết thường rồi hoa chữ cái đầu mỗi từ cách nhau bằng dấu cách (SÁNG THẾ KÝ → Sáng Thế Ký · XUẤT Ê-DÍP-TÔ KÝ → Xuất Ê-díp-tô Ký). */
+function bookDisplay(name){
+  return String(name || '').trim().toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+}
 function docxFile(items, title, fname){                               // items: [{ref, quote, text, at}]
   const when = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const rule = (after, before) => wPara('', { sz:8, line:240, before:before || 0, after, left:2900, right:2900, border:true, borderSz:8 });   // vạch vàng ngắn ở giữa trang
@@ -2486,7 +2490,7 @@ function docxFile(items, title, fname){                               // items: 
   let body = '';
   if (multi) body += wPara(title, { b:true, sz:44, color:'5C3A12', align:'center', after:80 }) + wPara(`${items.length} bài chia sẻ · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:120 }) + rule(480);
   items.forEach((it, i) => {
-    const ref = niceRef(it.ref);                                       // "Sáng-thế-ký 2:1-2" → "Sáng Thế Ký 2:1-2"
+    const ref = it.ref;
     if (it.quote) {
       body += wPara('“' + it.quote + '”', { i:true, sz:25, color:'3E3A33', left:0, right:0, shade:'F6EEDD', bar:'B08840', line:350, before:i ? 600 : 80, after:0, align:'both', keep:true });
       body += wPara('(' + ref + ')', { b:true, sz:22, color:'8A5A1F', left:0, right:0, shade:'F6EEDD', bar:'B08840', line:300, before:0, after:360, align:'right' });
@@ -2511,7 +2515,7 @@ function docxFile(items, title, fname){                               // items: 
 $('#lsWord').onclick = () => {
   const t = lsTa.value.trim(); if (!t) return toast('Hãy viết nội dung ghi chú trước khi xuất');
   const c = lsCur, name = 'bai-hoc-' + (fold(`${c.book} ${c.ch}:${c.key}`).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ghi-chu');
-  saveSmart([docxFile([{ ref:`${c.book} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, e => toast('Không xuất được file Word: ' + (e.message || e)));
+  saveSmart([docxFile([{ ref:`${bookDisplay(c.book)} ${c.ch}:${c.key}`, quote:c.quote, text:t, at:c.old ? c.old.at : Date.now() }], 'Bài học cá nhân', name + '.docx')]).then(st => { if (st === 'default') toast('📄 Đã tạo file Word'); }, e => toast('Không xuất được file Word: ' + (e.message || e)));
 };
 $('#lsShare').onclick = async () => {
   if (!lsTa.value.trim()){ toast('Chưa có nội dung để chia sẻ'); return; }
