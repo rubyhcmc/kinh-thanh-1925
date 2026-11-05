@@ -1349,7 +1349,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2444,27 +2444,49 @@ function zipStore(files){                                             // files: 
 const wx = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function wPara(text, o){
   o = o || {};
-  const rpr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}<w:sz w:val="${o.sz || 26}"/><w:szCs w:val="${o.sz || 26}"/></w:rPr>`;
+  const sz = o.sz || 26, gold = 'B08840';
+  const rpr = `<w:rPr><w:rFonts w:ascii="${o.font || 'Times New Roman'}" w:hAnsi="${o.font || 'Times New Roman'}" w:cs="${o.font || 'Times New Roman'}"/>${o.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.caps ? '<w:caps/>' : ''}${o.color ? `<w:color w:val="${o.color}"/>` : ''}${o.spc ? `<w:spacing w:val="${o.spc}"/>` : ''}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr>`;
   const runs = String(text).split('\n').map((ln, k) => `<w:r>${rpr}${k ? '<w:br/>' : ''}<w:t xml:space="preserve">${wx(ln)}</w:t></w:r>`).join('');
-  const ppr = `<w:pPr>${o.border ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="C9A96A"/></w:pBdr>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 320}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'left'}"/></w:pPr>`;
+  const bar = o.bar ? `<w:left w:val="single" w:sz="24" w:space="12" w:color="${o.bar}"/>` : '';
+  const bot = o.border ? `<w:bottom w:val="single" w:sz="${o.borderSz || 6}" w:space="4" w:color="${o.borderColor || 'C9A96A'}"/>` : '';
+  const pbdr = (bar || bot) ? `<w:pBdr>${bar}${bot}</w:pBdr>` : '';
+  const ind = (o.left || o.right || o.first) ? `<w:ind w:left="${o.left || 0}" w:right="${o.right || 0}"${o.first ? ` w:firstLine="${o.first}"` : ''}/>` : '';
+  const ppr = `<w:pPr>${o.keep ? '<w:keepNext/>' : ''}${pbdr}${o.shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>` : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 320}" w:lineRule="auto"/>${ind}<w:jc w:val="${o.align || 'left'}"/></w:pPr>`;
   return `<w:p>${ppr}${runs}</w:p>`;
 }
 function docxFile(items, title, fname){                               // items: [{ref, quote, text, at}]
   const when = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const rule = (after, before) => wPara('', { sz:8, line:240, before:before || 0, after, left:2900, right:2900, border:true, borderSz:8 });   // vạch vàng ngắn ở giữa trang
+  const multi = items.length > 1;
   let body = '';
-  if (items.length > 1) body += wPara(title, { b:true, sz:36, align:'center', after:80 }) + wPara(`${items.length} ghi chú · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:360 });
+  if (multi) body += wPara(title, { b:true, sz:44, color:'5C3A12', align:'center', after:80 }) + wPara(`${items.length} bài chia sẻ · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:120 }) + rule(480);
   items.forEach((it, i) => {
-    body += wPara(it.ref, { b:true, sz:30, color:'8A5A1F', after:100, before:i ? 200 : 0 });
-    if (it.quote) body += wPara('“' + it.quote + '”', { i:true, sz:24, color:'555555', left:360, after:160, line:340, align:'both' });
-    body += wPara(it.text, { sz:26, after:100, line:340, align:'both' });
-    body += wPara(it.at ? 'Cập nhật ' + when(it.at) : '', { i:true, sz:20, color:'7A6E60', after:240, border:i < items.length - 1 });
+    const first = !i;
+    body += wPara(multi ? 'Bài chia sẻ số ' + (i + 1) : 'Bài học cá nhân', { b:true, caps:true, sz:20, color:'B08840', spc:60, align:'center', before:first ? 0 : 720, after:80, keep:true });
+    body += wPara(it.ref, { b:true, sz:multi ? 36 : 44, color:'5C3A12', align:'center', after:100, keep:true });
+    body += rule(320);
+    if (it.quote) {
+      body += wPara('“' + it.quote + '”', { i:true, sz:25, color:'3E3A33', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:350, before:80, after:0, align:'both', keep:true });
+      body += wPara('— ' + it.ref, { b:true, sz:21, color:'8A5A1F', left:420, right:260, shade:'F6EEDD', bar:'B08840', line:300, before:0, after:360, align:'right' });
+    }
+    body += wPara('Lời chia sẻ', { b:true, caps:true, sz:22, color:'8A5A1F', spc:50, before:120, after:160, border:true, borderColor:'E2D3B3', borderSz:4, keep:true });
+    String(it.text).split(/\n+/).map(s => s.trim()).filter(Boolean).forEach(para => {
+      body += wPara(para, { sz:26, line:370, after:140, first:567, align:'both' });
+    });
+    body += rule(160, 240);
+    if (it.at) body += wPara('Cập nhật ' + when(it.at), { i:true, sz:20, color:'7A6E60', align:'right', before:60, after:0 });
   });
-  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rId1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1300" w:left="1440" w:header="720" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const frPr = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:color w:val="9A8C78"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>';
+  const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="6" w:color="E2D3B3"/></w:pBdr><w:jc w:val="center"/></w:pPr><w:r>${frPr}<w:t xml:space="preserve">${wx(title)}  ·  Trang </w:t></w:r><w:r>${frPr}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${frPr}<w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r>${frPr}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${frPr}<w:t>1</w:t></w:r><w:r>${frPr}<w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
   const enc = new TextEncoder();
   const zip = zipStore([
-    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
+    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>') },
     { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
-    { name:'word/document.xml', data:enc.encode(doc) }
+    { name:'word/_rels/document.xml.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>') },
+    { name:'word/document.xml', data:enc.encode(doc) },
+    { name:'word/footer1.xml', data:enc.encode(footer) }
   ]);
   return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
