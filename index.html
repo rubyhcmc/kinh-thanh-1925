@@ -1158,9 +1158,10 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>4. Xuất trọn bộ 1 sách (PDF + JSON) &amp; khôi phục</h4>
-      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục.</p>
-      <select id="exBook" aria-label="Chọn sách cần xuất"></select>
+      <h4>4. Xuất trọn bộ 1 sách / Cựu Ước / Tân Ước / cả Kinh Thánh &amp; khôi phục</h4>
+      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục. Có thể chọn <b>Cựu Ước (39 sách)</b>, <b>Tân Ước (27 sách)</b> hoặc <b>Toàn bộ Kinh Thánh (66 sách)</b> để xuất 1 tệp JSON gộp hoặc 1 tệp Word trọn bộ. Nút Khôi phục tự nhận diện tệp (1 sách, trọn bộ, PDF, sao lưu).</p>
+      <select id="exBook" aria-label="Chọn sách hoặc trọn bộ cần xuất"></select>
+      <p class="hint" id="exSetHint" hidden style="margin:8px 0 0"></p>
       <div class="btns">
         <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
         <button class="btn" id="exWord">📄 Xuất Word</button>
@@ -3764,8 +3765,19 @@ async function refreshStats(){
   const metas = await dbAll('bookMeta');
   $('#stBible').textContent = metas.length;
   const exSel = $('#exBook'), exCur = exSel.value || S.book;
-  exSel.innerHTML = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('') || '<option value="">(chưa có sách)</option>';
-  if (metas.some(m => m.name === exCur)) exSel.value = exCur;
+  const exOpts = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('');
+  let exSets = '';
+  try {                                                  // Cựu Ước · Tân Ước · Toàn bộ Kinh Thánh
+    if (metas.some(m => m.chapterCount > 0)) exSets = '<optgroup label="Trọn bộ">' + ['ot', 'nt', 'all'].map(k => {
+      const c = exSetCount(metas, k), sp = EX_SETS[k];
+      const txt = (c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách') + (c.extra ? ' + ' + c.extra + ' sách khác' : '');
+      return `<option value="${EX_SET_PREFIX}${k}"${(c.have + c.extra) ? '' : ' disabled'}>${esc(sp.label)} (${txt})</option>`;
+    }).join('') + '</optgroup>';
+  } catch(e){ exSets = ''; }
+  exSel.innerHTML = exSets ? exSets + '<optgroup label="Từng sách">' + exOpts + '</optgroup>' : (exOpts || '<option value="">(chưa có sách)</option>');
+  const exWant = [...exSel.options].find(o => o.value === exCur && !o.disabled), exFirst = [...exSel.options].find(o => o.value && !exSetKey(o.value));
+  if (exWant) exSel.value = exCur; else if (exFirst) exSel.value = exFirst.value;
+  exSyncUI();
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
 }
@@ -5210,7 +5222,7 @@ async function exportBook(name){
   } catch(e){ pr.remove(); console.error(e); toast('Lỗi xuất sách: ' + (e.message || e)); }
   finally { exBusy = false; }
 }
-$('#exGo').onclick = () => exportBook($('#exBook').value);
+$('#exGo').onclick = () => { const k = exSetKey($('#exBook').value); return k ? exportSet(k, 'json') : exportBook($('#exBook').value); };
 $('#edExport').onclick = async () => { await edAuto(); exportBook(ed.Book.value); };
 
 /* ---- Xuất Word (.docx) từ trình soạn thảo: chương đang soạn hoặc cả sách ---- */
@@ -5221,20 +5233,27 @@ function wRun(t, o){
 }
 function wParaX(runs, o){
   o = o || {};
-  return `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.brk ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 340}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'both'}"/></w:pPr>${runs}</w:p>`;
+  return `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}${o.brk ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 120 : o.after}" w:line="${o.line || 340}" w:lineRule="auto"/>${o.left ? `<w:ind w:left="${o.left}"/>` : ''}<w:jc w:val="${o.align || 'both'}"/>${o.lvl != null ? `<w:outlineLvl w:val="${o.lvl}"/>` : ''}</w:pPr>${runs}</w:p>`;
 }
-function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        // chapters: [{ch, vs}]
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const DOCX_CT = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
+const DOCX_RELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+const DOCX_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>';
+const DOCX_TAIL = '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>';
+/* Phần thân Word của MỘT sách (chuỗi XML). opt.breakFirst: chương đầu cũng sang trang mới (khi ghép nhiều sách); opt.outline: gắn cấp đề mục cho ngăn Điều hướng của Word */
+function docxBookBody(bookName, sub, chapters, title, subBelow, opt){        // chapters: [{ch, vs}]
+  opt = opt || {};
   const SZ = 26; let body = '';
   const subL = String(sub || '').split('\n').map(x => x.trim()).filter(Boolean);
   chapters.forEach((c, ci) => {
-    const first = ci === 0;
+    const first = ci === 0 && !opt.breakFirst;
     const hasSub = subL.length && c.ch === 1;
     const subP = () => wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, keep:true });
     const ttl = (c.ch === 1 ? (title || bookName) : bookName).toUpperCase();
     if (hasSub && !subBelow) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
-    body += wParaX(wRun(ttl, { b:true, sz:36 }), { align:'center', after:40, brk:!first && !(hasSub && !subBelow), keep:true });
+    body += wParaX(wRun(ttl, { b:true, sz:36 }), { align:'center', after:40, brk:!first && !(hasSub && !subBelow), keep:true, lvl:(opt.outline && ci === 0) ? 0 : null });
     if (hasSub && subBelow) body += subP();
-    body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true });
+    body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true, lvl:opt.outline ? 1 : null });
     let para = null, lastPoem = false;
     const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
     c.vs.forEach(v => {
@@ -5264,33 +5283,366 @@ function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        /
     const fns = c.vs.flatMap(v => v.fn || []);
     fns.forEach((f, k) => { body += wParaX(wRun(f, { i:true, sz:20, color:'6B6150' }), { align:'left', before:k ? 0 : 200, after:60, line:300 }); });
   });
-  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  return body;
+}
+function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        // chapters: [{ch, vs}]
+  const body = docxBookBody(bookName, sub, chapters, title, subBelow);
   const enc = new TextEncoder();
   const zip = zipStore([
-    { name:'[Content_Types].xml', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
-    { name:'_rels/.rels', data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
-    { name:'word/document.xml', data:enc.encode(doc) }
+    { name:'[Content_Types].xml', data:enc.encode(DOCX_CT) },
+    { name:'_rels/.rels', data:enc.encode(DOCX_RELS) },
+    { name:'word/document.xml', data:enc.encode(DOCX_HEAD + body + DOCX_TAIL) }
   ]);
-  return new File([zip], fname, { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new File([zip], fname, { type:DOCX_MIME });
 }
-$('#exWord').onclick = () => exportBookWord($('#exBook').value, true);   // Xuất file Word cả sách đang chọn (mục 4 của Quản lý dữ liệu)
-$('#exRestore').onclick = () => $('#exFile').click();
-$('#exFile').onchange = async e => {
-  const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
-  const log = $('#exLog'); log.className = 'log ok'; log.textContent = 'Đang đọc tệp…';
-  try {
-    let first = null; const names = [];
-    for (const f of files){
-      const { text } = await fileToText(f);
-      const isJson = /^[\s﻿]*[\[{]/.test(text);
-      const res = await importData(isJson ? 'backup' : 'bible', text, 'merge');
-      first = first || res.first; names.push(f.name);
-    }
-    S.book = first; S.chapter = 1; saveS();
-    await reloadAll(); markDirty();
-    log.textContent = '✔ Đã khôi phục từ: ' + names.join(', '); toast('Đã khôi phục dữ liệu');
-  } catch(err){ log.className = 'log err'; log.textContent = '✖ ' + err.message; }
+
+/* =========================================================
+ *  TRỌN BỘ: Cựu Ước (39 sách) · Tân Ước (27 sách) · Toàn bộ Kinh Thánh (66 sách)
+ *  - Xuất JSON gộp / Word trọn bộ: đọc từng sách một, nhường giao diện giữa các sách, có thanh tiến độ + nút Hủy.
+ *  - Khôi phục: tự nhận diện (1 sách · trọn bộ · sao lưu app · PDF kèm dữ liệu · văn bản), phân tích TOÀN BỘ trước khi ghi,
+ *    ghi theo từng lô nhỏ vào IndexedDB, đọc lại để kiểm tra từng sách; không xóa dữ liệu đang có.
+ * ========================================================= */
+const EX_SETS = {
+  ot:  { label:'Cựu Ước',            from:1, to:39, file:'Cuu-Uoc_01-39' },
+  nt:  { label:'Tân Ước',            from:40, to:66, file:'Tan-Uoc_40-66' },
+  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' }
 };
+const EX_SET_PREFIX = '@set:';
+function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) && EX_SETS[v.slice(EX_SET_PREFIX.length)]) ? v.slice(EX_SET_PREFIX.length) : null; }
+const exNoOf = name => BIBLE_KEYS.get(bkKey(name)) || 0;
+function exSetCount(metas, key){                                  // số sách đang có trong máy / tổng của bộ
+  const sp = EX_SETS[key], have = new Set(); let extra = 0;
+  metas.forEach(m => { if (!(m.chapterCount > 0)) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && key === 'all') extra++; });
+  return { have:have.size, total:sp.to - sp.from + 1, extra };
+}
+async function exSetPlan(key){                                    // danh sách sách sẽ xuất theo đúng thứ tự Kinh Thánh
+  const sp = EX_SETS[key], list = [], have = new Set();
+  (await dbAll('bookMeta')).filter(m => (m.chapterCount || 0) > 0).forEach(m => {
+    const no = exNoOf(m.name);
+    if (no ? (no >= sp.from && no <= sp.to) : key === 'all'){ list.push({ m, no }); if (no) have.add(no); }
+  });
+  list.sort((x, y) => (x.no || 999) - (y.no || 999) || x.m.order - y.m.order);
+  const missing = []; for (let n = sp.from; n <= sp.to; n++) if (!have.has(n)) missing.push(n);
+  return { list, missing, have:have.size };
+}
+/* Nhường giao diện cho trình duyệt (vẽ lại, nhận chạm) nếu đã chạy liên tục > 14 ms → không giật lag */
+let exYieldAt = 0;
+async function exYield(force){
+  const n = performance.now();
+  if (force || n - exYieldAt > 14){ await new Promise(r => setTimeout(r, 0)); exYieldAt = performance.now(); }
+}
+/* Bảng tiến độ (trạng thái loading) có thanh chạy + nút Hủy */
+function exProgUI(title){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
+  o.innerHTML = `<div class="sheet" role="status" aria-live="polite"><h3>${esc(title)}</h3>
+    <p class="exp-t" style="margin:0 0 10px">Đang chuẩn bị…</p>
+    <div style="height:8px;border-radius:99px;background:var(--line);overflow:hidden"><div class="exp-b" style="height:100%;width:2%;background:var(--accent);transition:width .15s"></div></div>
+    <p class="exp-s" style="margin:8px 0 0;font-size:13px;color:var(--muted)">&nbsp;</p>
+    <div class="btns"><button class="btn exp-x" type="button">Hủy</button></div></div>`;
+  document.body.appendChild(o);
+  const tx = o.querySelector('.exp-t'), bar = o.querySelector('.exp-b'), sub = o.querySelector('.exp-s'), x = o.querySelector('.exp-x');
+  const ui = {
+    cancelled:false,
+    say(text, pct, s){ tx.textContent = text; if (pct != null) bar.style.width = Math.max(2, Math.min(100, pct)) + '%'; if (s != null) sub.textContent = s; },
+    async step(){ await exYield(); if (ui.cancelled){ const e = new Error('Đã hủy'); e.exCancel = true; throw e; } },
+    close(){ o.remove(); }
+  };
+  x.onclick = () => { ui.cancelled = true; x.disabled = true; tx.textContent = 'Đang hủy…'; };
+  return ui;
+}
+function exSetBusy(on){
+  ['#exGo', '#exWord', '#exRestore', '#exBook'].forEach(s => { const e = $(s); if (e) e.disabled = on; });
+  const c = $('#exGo') && $('#exGo').closest('.card'); if (c) c.setAttribute('aria-busy', on ? 'true' : 'false');
+}
+function exSyncUI(){                                              // đổi nhãn nút + dòng chú thích theo lựa chọn
+  const sel = $('#exBook'), go = $('#exGo'), h = $('#exSetHint'); if (!sel || !go) return;
+  const k = exSetKey(sel.value);
+  go.textContent = k ? '🧾 Xuất JSON trọn bộ' : '📕 Xuất PDF + JSON';
+  if (h){ h.hidden = !k; h.textContent = k ? `Đang chọn trọn bộ “${EX_SETS[k].label}”: JSON gộp chứa toàn bộ các sách (khôi phục 1 lần bằng nút “Khôi phục”), hoặc xuất 1 tệp Word. PDF chỉ xuất theo từng sách để tệp không quá nặng.` : ''; }
+}
+$('#exBook').addEventListener('change', exSyncUI);
+
+/* ---- ZIP có nén (deflate-raw) + CRC chia lát: tệp Word trọn bộ nhỏ gọn, không đơ máy ---- */
+async function crc32Async(u){
+  let c = 0xFFFFFFFF; const STEP = 1 << 22;
+  for (let s = 0; s < u.length; s += STEP){
+    const e = Math.min(u.length, s + STEP);
+    for (let i = s; i < e; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8);
+    if (e < u.length) await exYield();
+  }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function deflateRawBytes(u){
+  if (typeof CompressionStream === 'undefined') return null;
+  try { return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); }
+  catch(e){ return null; }
+}
+async function zipPackAsync(files, ui){                           // → mảng các mảnh byte (đưa thẳng vào new File([...]))
+  const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
+  for (const f of files){
+    if (ui) await ui.step(); else await exYield();
+    const nm = enc.encode(f.name), sz = f.data.length, crc = await crc32Async(f.data);
+    let data = f.data, method = 0;
+    if (sz > 256){ const z = await deflateRawBytes(f.data); if (z && z.length < sz){ data = z; method = 8; } }
+    const csz = data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, csz, true); lh.setUint32(22, sz, true);
+    lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
+    loc.push(new Uint8Array(lh.buffer), nm, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, method, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, csz, true); ch.setUint32(24, sz, true);
+    ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+    cen.push(new Uint8Array(ch.buffer), nm);
+    off += 30 + nm.length + csz;
+  }
+  const cenSize = cen.reduce((a, u) => a + u.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
+  return [...loc, ...cen, new Uint8Array(end.buffer)];
+}
+async function docxPackAsync(chunks, fname, ui){                  // chunks: các đoạn XML đã mã hóa UTF-8 (Uint8Array)
+  const enc = new TextEncoder(), pieces = [enc.encode(DOCX_HEAD), ...chunks, enc.encode(DOCX_TAIL)];
+  const doc = new Uint8Array(pieces.reduce((a, u) => a + u.length, 0)); let p = 0;
+  pieces.forEach(u => { doc.set(u, p); p += u.length; });
+  pieces.length = 0; chunks.length = 0;
+  const parts = await zipPackAsync([
+    { name:'[Content_Types].xml', data:enc.encode(DOCX_CT) },
+    { name:'_rels/.rels', data:enc.encode(DOCX_RELS) },
+    { name:'word/document.xml', data:doc }
+  ], ui);
+  return new File(parts, fname, { type:DOCX_MIME });
+}
+
+/* ---- Dựng JSON gộp ---- */
+async function exBuildSetJson(key, list, ui){
+  const sp = EX_SETS[key], parts = [], st = { books:0, chapters:0, verses:0, skipped:[] };
+  parts.push('{"app":"kinhthanh","version":1,"kind":"set","scope":' + JSON.stringify(key) + ',"scopeLabel":' + JSON.stringify(sp.label) + ',"updatedAt":' + JSON.stringify(new Date().toISOString()) + ',"bible":{"books":[');
+  for (let i = 0; i < list.length; i++){
+    const { m, no } = list[i];
+    ui.say('Đang gom dữ liệu: ' + m.name, 4 + 82 * i / list.length, (i + 1) + '/' + list.length + ' sách');
+    await ui.step();
+    const rec = await dbGet('books', m.name);
+    if (!rec || !rec.chapters || !rec.chapters.some(c => c && c.length)){ st.skipped.push(m.name); continue; }
+    rec.chapters.forEach(vs => { if (vs && vs.length){ st.chapters++; st.verses += vs.length; } });
+    parts.push((st.books ? ',' : '') + JSON.stringify({ name:rec.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:rec.chapters, no }));
+    st.books++;
+  }
+  if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
+  parts.push(']},"stats":' + JSON.stringify({ books:st.books, chapters:st.chapters, verses:st.verses }) + '}');
+  const file = new File(parts, sp.file + '.json', { type:'application/json' });
+  ui.say('Đang kiểm tra tệp JSON vừa tạo…', 92); await ui.step();
+  let ok = false;
+  try {
+    const j = JSON.parse(await file.text()), bs = j.bible.books;
+    ok = bs.length === st.books && bs.reduce((a, b) => a + normChapters(b.chapters).reduce((x, vs) => x + vs.length, 0), 0) === st.verses;
+  } catch(e){ ok = false; }
+  return { file, st, ok };
+}
+/* ---- Dựng Word trọn bộ ---- */
+async function exBuildSetDocx(key, list, ui){
+  const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, skipped:[] };
+  const put = s => chunks.push(enc.encode(s));
+  put(wParaX('', { before:3200, after:0 }) + wParaX(wRun('KINH THÁNH', { b:true, sz:24, color:'8A5A1F' }), { align:'center', after:160 })
+    + wParaX(wRun(sp.label.toUpperCase(), { b:true, sz:60 }), { align:'center', after:200 }) + wParaX(wRun(list.length + ' sách', { sz:24, color:'7A6E60' }), { align:'center' }));
+  let sect = null;
+  for (let i = 0; i < list.length; i++){
+    const { m, no } = list[i];
+    if (key === 'all'){                                           // trang phân cách Cựu Ước / Tân Ước
+      const s = !no ? 'x' : no <= 39 ? 'ot' : 'nt';
+      if (s !== sect){ sect = s; put(wParaX(wRun(s === 'ot' ? 'CỰU ƯỚC' : s === 'nt' ? 'TÂN ƯỚC' : 'SÁCH KHÁC', { b:true, sz:56 }), { align:'center', before:4200, brk:true, lvl:0 })); }
+    }
+    ui.say('Đang dựng file Word: ' + m.name, 4 + 78 * i / list.length, (i + 1) + '/' + list.length + ' sách');
+    await ui.step();
+    const rec = await dbGet('books', m.name);
+    const chapters = rec && rec.chapters ? rec.chapters.map((vs, k) => ({ ch:k + 1, vs })).filter(c => c.vs && c.vs.length) : [];
+    if (!chapters.length){ st.skipped.push(m.name); continue; }
+    chapters.forEach(c => { st.chapters++; st.verses += c.vs.length; });
+    put(docxBookBody(m.name, m.sub || '', chapters, (m.title || '').trim(), m.subPos === 'below', { breakFirst:true, outline:true }));
+    st.books++;
+  }
+  if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
+  ui.say('Đang nén và đóng gói file Word…', 86); await ui.step();
+  const file = await docxPackAsync(chunks, sp.file + '.docx', ui);
+  return { file, st, ok:true };
+}
+/* Bảng kết quả: nút Lưu là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
+function exSetResult(title, files, lines, ok){
+  const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
+  o.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3>
+    <div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 8px;white-space:pre-wrap">${esc(lines.join('\n'))}</div>
+    <p class="hint" style="margin:0 0 8px;font-size:13px;color:var(--muted)">${files.map(f => esc(f.name) + ' (' + mb(f) + ')').join(' · ')}</p>
+    <div class="btns" style="flex-direction:column">
+      ${canPickDir() ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 2px"><input type="checkbox" id="exAsk" ${askDirPref() ? 'checked' : ''}> Hỏi chọn thư mục lưu mỗi lần</label>`
+        : `<p class="hint" style="margin:0;font-size:13px;color:var(--muted)">Điện thoại: bảng chia sẻ sẽ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
+      <button class="btn primary" data-k="save">📁 Lưu tệp</button>
+      <button class="btn" data-k="x">Xong</button></div></div>`;
+  o.addEventListener('click', async e => {
+    const b = e.target.closest('[data-k]');
+    if (!b){ if (e.target === o) o.remove(); return; }
+    if (b.dataset.k === 'x') return o.remove();
+    await saveSmart(files);
+  });
+  o.addEventListener('change', e => { if (e.target.id === 'exAsk'){ try { localStorage.setItem('kt.askDir', e.target.checked ? '1' : '0'); } catch(err){} } });
+  document.body.appendChild(o);
+}
+async function exportSet(key, kind){                              // kind: 'json' | 'word'
+  if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
+  const sp = EX_SETS[key], isWord = kind === 'word', log = $('#exLog');
+  try { await edAuto(); } catch(e){}                              // lưu nốt chương đang soạn dở (nếu có)
+  const plan = await exSetPlan(key);
+  if (!plan.list.length) return toast('Chưa có sách nào thuộc “' + sp.label + '” trong máy');
+  if (plan.missing.length){
+    const names = plan.missing.slice(0, 8).map(n => BIBLE66[n - 1]).join(', ') + (plan.missing.length > 8 ? '…' : '');
+    if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.\nVẫn xuất những sách đang có?`)) return;
+  }
+  exBusy = true; exSetBusy(true);
+  const ui = exProgUI((isWord ? 'Đang xuất Word: ' : 'Đang xuất JSON: ') + sp.label);
+  log.className = 'log ok'; log.textContent = 'Đang xuất ' + sp.label + '…';
+  const guard = ev => { ev.preventDefault(); ev.returnValue = ''; };
+  window.addEventListener('beforeunload', guard);
+  try {
+    await new Promise(r => setTimeout(r, 30));
+    const r = isWord ? await exBuildSetDocx(key, plan.list, ui) : await exBuildSetJson(key, plan.list, ui);
+    ui.say('Hoàn tất', 100); ui.close();
+    const lines = [`${isWord ? 'Word' : 'JSON'} trọn bộ “${sp.label}”: ${r.st.books} sách · ${r.st.chapters} chương · ${r.st.verses} câu.`];
+    if (!isWord) lines.push(r.ok ? '✔ Đã kiểm tra: đọc lại tệp JSON khớp 100% (số sách, số câu).' : '✖ KHÔNG KHỚP khi đọc lại tệp JSON – đừng dùng bản này, hãy xuất lại.');
+    if (isWord) lines.push('Mở bằng Word: ngăn Điều hướng (Navigation) liệt kê từng sách và từng chương.');
+    if (plan.missing.length) lines.push(`⚠ Thiếu ${plan.missing.length} sách so với bộ chuẩn: ${plan.missing.map(n => BIBLE66[n - 1]).join(', ')}.`);
+    if (r.st.skipped.length) lines.push('⚠ Bỏ qua sách rỗng: ' + r.st.skipped.join(', '));
+    log.className = 'log ' + (r.ok ? 'ok' : 'err'); log.textContent = (r.ok ? '✔ ' : '✖ ') + lines[0];
+    exSetResult('Đã xuất xong: ' + sp.label, [r.file], lines, r.ok);
+  } catch(e){
+    ui.close();
+    if (e && e.exCancel){ log.className = 'log ok'; log.textContent = 'Đã hủy – chưa tạo tệp nào.'; toast('Đã hủy'); }
+    else { console.error(e); log.className = 'log err'; log.textContent = '✖ Không xuất được: ' + (e.message || e); toast('Lỗi xuất ' + sp.label + ': ' + (e.message || e)); }
+  } finally { window.removeEventListener('beforeunload', guard); exBusy = false; exSetBusy(false); }
+}
+
+/* ---- Khôi phục: tự nhận diện + nạp ngược an toàn ---- */
+async function exNormBooks(src, ui){                              // chuẩn hóa từng sách một, nhường giao diện giữa các sách
+  if (!src || typeof src !== 'object') throw new Error('Cấu trúc dữ liệu không đúng.');
+  const raw = (Array.isArray(src) ? src : Array.isArray(src.books) ? src.books : Object.keys(src).map(k => ({ name:k, chapters:src[k] }))).filter(b => b && typeof b === 'object');
+  const out = [];
+  for (let i = 0; i < raw.length; i++){
+    const nb = normBible([raw[i]]); if (nb.length) out.push(nb[0]);
+    if (ui && i % 6 === 0) await ui.step(); else await exYield();
+  }
+  return out;
+}
+async function exParseFile(f, ui){                                // → { books, label }
+  const { text, pdf } = await fileToText(f);
+  const s = String(text).replace(/^\uFEFF/, '').trim();
+  if (!s) throw new Error(`Tệp “${f.name}” trống.`);
+  let books, label;
+  if (/^[\[{]/.test(s)){
+    let j; try { j = JSON.parse(s); } catch(e){ throw new Error(`“${f.name}” không phải JSON hợp lệ (${e.message}).`); }
+    label = j && j.kind === 'set' ? ('trọn bộ ' + (j.scopeLabel || '')).trim() : j && j.kind === 'book' ? 'một sách' : (j && (j.about || j.app)) ? 'bản sao lưu ứng dụng' : 'dữ liệu JSON';
+    books = await exNormBooks(Array.isArray(j) ? j : (j.bible || j), ui);
+  } else { label = 'văn bản'; books = await exNormBooks(parseBibleText(s), ui); }
+  if (pdf) label = 'PDF kèm dữ liệu – ' + label;
+  if (!books.length) throw new Error(`“${f.name}” không có sách Kinh Thánh hợp lệ nào.`);
+  return { books, label };
+}
+async function exImportSafe(books, ui){                           // ghi theo lô nhỏ, đọc lại kiểm tra từng sách
+  const existing = await dbAll('bookMeta');
+  const map = new Map(existing.map(m => [m.name, m])), taken = new Set(existing.map(m => m.order));
+  let max = existing.reduce((a, m) => Math.max(a, m.order), 0);
+  const metaOf = b => {                                           // cùng quy tắc đánh số thứ tự như importBible
+    let m = map.get(b.name);
+    if (!m){
+      let order; if (b.no && !taken.has(b.no)){ order = b.no; max = Math.max(max, b.no); } else order = ++max;
+      taken.add(order); m = { name:b.name, order }; map.set(b.name, m);
+    }
+    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; m.chapterCount = b.chapters.length;
+    return m;
+  };
+  const cnt = b => b.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
+  const res = { done:[], bad:[], first:books[0].name, chapters:0, verses:0, stopped:false };
+  const BATCH_V = 2500, BATCH_B = 8;
+  let i = 0;
+  while (i < books.length){
+    if (ui.cancelled){ res.stopped = true; break; }
+    const batch = []; let v = 0;
+    while (i < books.length && batch.length < BATCH_B && (!batch.length || v < BATCH_V)){ const b = books[i++]; batch.push(b); v += cnt(b); }
+    ui.say('Đang nạp vào máy: ' + batch[0].name + (batch.length > 1 ? ' … ' + batch[batch.length - 1].name : ''), 30 + 66 * res.done.length / books.length, res.done.length + '/' + books.length + ' sách');
+    await exYield(true);
+    try {
+      await dbPut('books', batch.map(b => ({ name:b.name, chapters:b.chapters })));
+      await dbPut('bookMeta', batch.map(metaOf));                 // meta ghi SAU nội dung: sách chỉ hiện ra khi đã có đủ chữ
+    } catch(e){
+      const q = e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''));
+      const err = new Error((q ? 'Bộ nhớ trình duyệt đã đầy. ' : 'Không ghi được vào máy: ' + (e.message || e) + '. ') + `Đã nạp xong ${res.done.length}/${books.length} sách trước đó (vẫn dùng được).`);
+      err.partial = res; throw err;
+    }
+    for (const b of batch){
+      const rec = await dbGet('books', b.name);
+      const got = rec && rec.chapters ? rec.chapters.reduce((a, c) => a + (c ? c.length : 0), 0) : -1;
+      if (got !== cnt(b)) res.bad.push(b.name);
+      res.done.push(b.name); res.chapters += b.chapters.filter(c => c && c.length).length; res.verses += cnt(b);
+    }
+    await exYield(true);
+  }
+  return res;
+}
+async function exRestoreFiles(files){
+  if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
+  exBusy = true; exSetBusy(true);
+  const log = $('#exLog'); log.className = 'log ok'; log.textContent = 'Đang đọc tệp…';
+  const ui = exProgUI('Đang khôi phục dữ liệu…');
+  const guard = ev => { ev.preventDefault(); ev.returnValue = ''; };
+  window.addEventListener('beforeunload', guard);
+  let partial = null;
+  try {
+    const byName = new Map(), srcs = [];
+    for (let i = 0; i < files.length; i++){                       // 1) đọc + phân tích TẤT CẢ tệp trước, chưa ghi gì
+      ui.say(`Đang đọc “${files[i].name}”…`, 3 + 24 * i / files.length, `Tệp ${i + 1}/${files.length}`);
+      await ui.step();
+      const r = await exParseFile(files[i], ui);
+      r.books.forEach(b => byName.set(b.name, b));                // trùng tên: bản sau thay bản trước
+      srcs.push(`${files[i].name}: ${r.books.length} sách (${r.label})`);
+    }
+    let books = [...byName.values()].filter(b => !isDemoBook(b));
+    if (!books.length) throw new Error('Không tìm thấy sách Kinh Thánh hợp lệ trong tệp đã chọn.');
+    ui.say('Đang đối chiếu với dữ liệu trong máy…', 28); await ui.step();
+    const cur = new Map((await dbAll('bookMeta')).map(m => [m.name, m]));
+    const replaced = books.filter(b => cur.has(b.name)).length;
+    const shrink = books.filter(b => cur.has(b.name) && (cur.get(b.name).chapterCount || 0) > b.chapters.length);
+    let skipped = [];
+    if (shrink.length){                                           // 2) chặn việc vô tình thay sách đầy đủ bằng bản thiếu chương
+      const pick = await choose('Có sách sẽ bị thay bằng bản ít chương hơn',
+        `${shrink.length} sách trong tệp có ÍT chương hơn bản đang có trong máy:\n` + shrink.slice(0, 8).map(b => `• ${b.name}: ${b.chapters.length} < ${cur.get(b.name).chapterCount} chương`).join('\n') + (shrink.length > 8 ? '\n…' : '') + '\n\nBạn muốn làm gì?',
+        [{ t:'Chỉ nạp phần an toàn (bỏ qua các sách này)', cls:'primary' }, { t:'Vẫn khôi phục tất cả (ghi đè)' }, { t:'Hủy, không thay đổi gì' }]);
+      if (pick === 2){ const e = new Error('Đã hủy'); e.exCancel = true; throw e; }
+      if (pick === 0){ const sk = new Set(shrink.map(b => b.name)); skipped = [...sk]; books = books.filter(b => !sk.has(b.name)); }
+    }
+    if (!books.length){ ui.close(); log.className = 'log ok'; log.textContent = 'Không có gì để nạp (mọi sách trong tệp đều ngắn hơn bản đang có).'; return toast('Không thay đổi gì'); }
+    const res = await exImportSafe(books, ui);                    // 3) ghi từng lô + kiểm tra
+    partial = res;
+    if (res.done.length === 1 || !bibleMeta.some(m => m.name === S.book)){ S.book = res.first; S.chapter = 1; saveS(); }
+    ui.say('Đang làm mới danh sách…', 98); await exYield(true);
+    await reloadAll(); markDirty();
+    ui.close();
+    const lines = [`${res.stopped ? '⏹ Đã dừng giữa chừng' : '✔ Đã khôi phục'}: ${res.done.length}/${books.length} sách · ${res.chapters} chương · ${res.verses} câu.`];
+    lines.push(...srcs.map(x => '• ' + x));
+    if (replaced) lines.push(`Đã thay thế nội dung của ${replaced} sách có sẵn trùng tên.`);
+    if (skipped.length) lines.push('Đã bỏ qua (giữ bản đang có): ' + skipped.join(', '));
+    if (res.bad.length) lines.push('⚠ Kiểm tra lại thấy sai khác ở: ' + res.bad.join(', ') + ' – hãy khôi phục lại từ tệp.');
+    const ok = !res.bad.length && !res.stopped;
+    log.className = 'log ' + (ok ? 'ok' : 'err'); log.textContent = lines.join('\n'); log.style.whiteSpace = 'pre-wrap';
+    toast(ok ? 'Đã khôi phục dữ liệu' : 'Khôi phục xong nhưng có cảnh báo, xem chi tiết bên dưới', 4000);
+  } catch(err){
+    ui.close();
+    if (partial || err.partial){ try { await reloadAll(); markDirty(); } catch(e){} }
+    if (err && err.exCancel){ log.className = 'log ok'; log.textContent = 'Đã hủy – không thay đổi dữ liệu.'; toast('Đã hủy'); }
+    else { console.error(err); log.className = 'log err'; log.textContent = '✖ ' + (err.message || err); }
+  } finally { window.removeEventListener('beforeunload', guard); exBusy = false; exSetBusy(false); }
+}
+$('#exWord').onclick = () => { const k = exSetKey($('#exBook').value); return k ? exportSet(k, 'word') : exportBookWord($('#exBook').value, true); };   // Xuất file Word cả sách đang chọn (mục 4 của Quản lý dữ liệu)
+$('#exRestore').onclick = () => $('#exFile').click();
+$('#exFile').onchange = e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) exRestoreFiles(files); };
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
 /* Toàn màn hình khi đọc Trang giấy: Android/trình duyệt hỗ trợ Fullscreen API sẽ ẩn hẳn thanh trạng thái (sóng, giờ, pin);
