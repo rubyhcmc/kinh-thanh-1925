@@ -1347,7 +1347,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1543,8 +1543,22 @@ let bibleMeta = [];       // [{name, abbr, order, chapterCount}]
 let curBook = null;       // bản ghi sách đang mở {name, chapters:[[{n,t}]]}
 const selected = new Set();
 
+/* Trật tự sách LUÔN theo Kinh Thánh: Sáng Thế Ký (1) … Khải Huyền (66), bất kể khôi phục/nhập sách nào trước.
+   Nhận ra sách qua tên (kể cả tên gọi khác, vd. \"1 Sa-mu-ên\" ≡ \"I Sa-mu-ên\"); sách không thuộc 66 sách (tự thêm) xếp sau Khải Huyền theo thứ tự cũ. */
+function canonBookOrder(metas){
+  const changed = [], seen = new Map();
+  metas.forEach(m => {
+    const k = BIBLE_KEYS.get(bkKey(m.name)); if (!k) return;
+    const dup = seen.get(k) || 0; seen.set(k, dup + 1);
+    const c = k + dup * 0.01; if (m.order !== c){ m.order = c; changed.push(m); }
+  });
+  metas.filter(m => !BIBLE_KEYS.get(bkKey(m.name))).sort((x, y) => x.order - y.order).forEach((m, i) => { const c = 100 + i; if (m.order !== c){ m.order = c; changed.push(m); } });
+  return changed;
+}
 async function loadBibleMeta(){
-  bibleMeta = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order);
+  const metas = await dbAll('bookMeta');
+  try { const fixed = canonBookOrder(metas); if (fixed.length) await dbPut('bookMeta', fixed); } catch(e){}   // chỉ ghi lại khi thứ tự đang sai
+  bibleMeta = metas.sort((a, b) => a.order - b.order);
 }
 function renderBibleEmpty(){
   $('#bibleText').className = 'reader';
@@ -3864,16 +3878,38 @@ function splitSeg(seg, hasNext, poem, oneLine){
   });
   while (lines.length && !lines[lines.length - 1]) lines.pop();
   if (hasNext && !heads.length){
+    // Dòng đứng riêng sau một dòng trống, ngắn, không kết thúc bằng , ; : và không bắt đầu bằng số → chắc chắn là tiêu đề
+    const strongHead = (ls, i) => i > 0 && ls[i - 1] === '' && ls[i].length <= 70 && /^\p{Lu}/u.test(ls[i]) &&
+      !/[,;:]$/.test(ls[i]) && !SELA_END.test(ls[i]) && !/^(\d{1,3}\b|\[\d)/.test(ls[i]);
     let i = lines.length - 1, first = -1;
     while (i > 0){
       const ln = lines[i];
       if (!ln || isRefLine(ln)){ i--; continue; }
-      if (isHeadLine(ln)){ first = i; i--; continue; }
+      if (isHeadLine(ln) || strongHead(lines, i)){ first = i; i--; continue; }
       break;
     }
-    if (first > 0 && (!poem || lines[first - 1] === '')){
-      heads.push(lines.slice(first).filter(Boolean).join('\n'));
-      lines = lines.slice(0, first);
+    if (first > 0){
+      const blk = lines.slice(first).filter(l => l && !isRefLine(l));
+      let prev = first - 1; while (prev > 0 && !lines[prev]) prev--;
+      const afterBlank = lines[first - 1] === '';
+      const prevEnds = /[.!?…;:"”’')\]]$/.test(lines[prev] || '');
+      const shortBlk = blk.length > 0 && blk.length <= 3 && blk.every(l => l.length <= 80);
+      if (!poem || afterBlank || (prevEnds && shortBlk)){
+        heads.push(lines.slice(first).filter(Boolean).join('\n'));
+        lines = lines.slice(0, first);
+      }
+    }
+    // Tiêu đề dính liền cuối câu trước (cùng dòng): "… câu văn. Tiêu đề ngắn"
+    if (!heads.length && lines.length){
+      const last = lines[lines.length - 1];
+      const m = last.match(/^(.*[.!?…”"’)])\s+(\p{Lu}[^.,;:!?…”"()\d]{3,60})$/u);
+      if (m){
+        const w = m[2].trim().split(/\s+/).length;
+        if (w >= 2 && w <= 7 && m[1].length >= 15){
+          heads.push(m[2].trim());
+          lines[lines.length - 1] = m[1];
+        }
+      }
     }
   }
   return { body: lines.filter(Boolean), h: heads.length ? heads.join('\n') : null, para: endsBlank || (endsNL && !oneLine) };
