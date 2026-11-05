@@ -1349,7 +1349,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2455,8 +2455,8 @@ function docxFile(items, title, fname){                               // items: 
   if (items.length > 1) body += wPara(title, { b:true, sz:36, align:'center', after:80 }) + wPara(`${items.length} ghi chú · xuất ngày ${new Date().toLocaleDateString('vi-VN')}`, { i:true, sz:22, color:'7A6E60', align:'center', after:360 });
   items.forEach((it, i) => {
     body += wPara(it.ref, { b:true, sz:30, color:'8A5A1F', after:100, before:i ? 200 : 0 });
-    if (it.quote) body += wPara('“' + it.quote + '”', { i:true, sz:24, color:'555555', left:360, after:160 });
-    body += wPara(it.text, { sz:26, after:100, line:340 });
+    if (it.quote) body += wPara('“' + it.quote + '”', { i:true, sz:24, color:'555555', left:360, after:160, line:340, align:'both' });
+    body += wPara(it.text, { sz:26, after:100, line:340, align:'both' });
     body += wPara(it.at ? 'Cập nhật ' + when(it.at) : '', { i:true, sz:20, color:'7A6E60', after:240, border:i < items.length - 1 });
   });
   const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
