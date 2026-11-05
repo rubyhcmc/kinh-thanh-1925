@@ -1349,7 +1349,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.05o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5306,15 +5306,31 @@ $$('#wakeSeg button').forEach(b => b.onclick = () => { S.wake = b.dataset.v === 
 document.addEventListener('visibilitychange', () => { if (S.wake && document.visibilityState === 'visible') setWake(true); });
 
 /* ============ OFFLINE: Service Worker, manifest, biểu tượng ============ */
+/* Logo app: sách mở dưới tia sáng (vẽ bằng Path2D trên khung 100×100 → dùng cho icon PWA, apple-touch-icon và favicon) */
+const LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#8a5a1f"/>' +
+  '<path d="M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4" stroke="#f0e3cc" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+  '<path d="M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z" fill="#5c3a12"/>' +
+  '<path d="M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z" fill="#fffdf8"/>' +
+  '<path d="M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z" fill="#f4ead3"/>' +
+  '<path d="M50 43v34" stroke="#c9ad7a" stroke-width="2" fill="none"/>' +
+  '<path d="M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3" stroke="#c9ad7a" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
 function makeIcon(size){
   const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
-  x.fillStyle = '#3b2a1a'; x.fillRect(0, 0, size, size);
-  x.fillStyle = '#e8c675';
-  const w = size * 0.12, h = size * 0.56;
-  x.fillRect(size / 2 - w / 2, size * 0.2, w, h);                 // thân thập giá
-  x.fillRect(size / 2 - h * 0.32, size * 0.34, h * 0.64, w);      // thanh ngang
+  x.fillStyle = '#8a5a1f'; x.fillRect(0, 0, size, size);                    // nền tràn viền (hệ điều hành tự bo góc)
+  const k = size / 100, f = 0.86;                                            // thu nhỏ nhẹ để nằm trong vùng an toàn của icon "maskable"
+  x.save(); x.translate(size * (1 - f) / 2, size * (1 - f) / 2); x.scale(k * f, k * f);
+  const P = d => new Path2D(d), fill = (d, col) => { x.fillStyle = col; x.fill(P(d)); };
+  const line = (d, col, w) => { x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.stroke(P(d)); };
+  line('M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4', '#f0e3cc', 3);
+  fill('M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z', '#5c3a12');
+  fill('M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z', '#fffdf8');
+  fill('M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z', '#f4ead3');
+  line('M50 43v34', '#c9ad7a', 2);
+  line('M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3', '#c9ad7a', 2);
+  x.restore();
   return c.toDataURL('image/png');
 }
+(function(){ try { const l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/svg+xml'; l.href = 'data:image/svg+xml,' + encodeURIComponent(LOGO_SVG); document.head.appendChild(l); } catch(e){} })();
 function setupPWA(){
   /* Khai báo cài đặt: ưu tiên tệp thật manifest.webmanifest nằm cạnh trang (Android/Chrome nhận “Cài đặt ứng dụng” ổn định hơn).
      Chưa có tệp đó (hoặc chưa tải lên) thì tự tạo bằng mã như trước, app vẫn cài được. */
