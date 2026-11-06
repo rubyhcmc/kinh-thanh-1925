@@ -654,16 +654,16 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 /* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS cửa sổ chọn sách KINH-THÁNH (mục lục Cựu-Ước / Tân-Ước) ▼▼▼ */
 .overlay.bkpick{z-index:90;opacity:0;transition:opacity .2s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .overlay.bkpick.in{opacity:1}
-.bkpick .bksheet{padding:0;max-width:560px;display:flex;flex-direction:column;overflow:hidden;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:90vh;max-height:90dvh}
+.bkpick .bksheet{padding:0;max-width:560px;display:block;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:90vh;max-height:90dvh}
 .bkpick.in .bksheet{transform:translateY(0)}
 .bkpick .bksheet:focus{outline:none}
 @media (min-width:640px){.overlay.bkpick{align-items:center}.bkpick .bksheet{border-radius:20px}}
-.bkhead{flex:none;display:flex;align-items:center;gap:10px;padding:14px 10px 12px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
+.bkhead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:14px 10px 12px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
 .bkhead h2{flex:1;margin:0;text-align:center;font-size:20px;letter-spacing:.14em;font-weight:700;color:var(--accent)}
 .bkhead .bkx{flex:none;width:38px;height:38px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;font-size:20px;line-height:1}
 .bkhead .bkx:hover,.bkhead .bkx:active{background:var(--line);color:var(--fg)}
 .bkhead .bksp{flex:none;width:38px}
-.bkbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:4px 16px calc(16px + env(safe-area-inset-bottom))}
+.bkbody{padding:4px 16px calc(16px + env(safe-area-inset-bottom))}
 .bktest{margin:16px 0 4px;text-align:center;font-size:17px;font-weight:700;letter-spacing:.12em;color:var(--accent);padding:8px 0;border-top:2px solid var(--accent);border-bottom:1px solid var(--line)}
 .bktest:first-child{margin-top:10px}
 .bkgrp{margin:14px 0 4px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
@@ -1531,7 +1531,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1878,7 +1878,7 @@ function openBookPick(){
   });
   document.body.appendChild(el); bkPickEl = el;
   document.addEventListener('keydown', bkPickKey, true);
-  requestAnimationFrame(() => { el.classList.add('in'); const c = el.querySelector('.bkrow.cur'), body = el.querySelector('.bkbody'); if (c && body) body.scrollTop = Math.max(0, c.offsetTop - body.clientHeight / 3); });
+  requestAnimationFrame(() => { el.classList.add('in'); const c = el.querySelector('.bkrow.cur'), sh = el.querySelector('.bksheet'); if (c && sh) sh.scrollTop = Math.max(0, c.getBoundingClientRect().top - sh.getBoundingClientRect().top + sh.scrollTop - sh.clientHeight / 3); });
 }
 (function(){
   const sel = $('#selBook'); if (!sel) return;
