@@ -244,6 +244,7 @@ html[data-paper][data-theme=dark] .poem .v.sel,html[data-paper][data-theme=dark]
 .note{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.5;color:var(--muted);margin:.3em 0 .45em}
 .fnm{font-family:var(--sans);font-style:normal;font-weight:700;font-size:.72em;letter-spacing:.01em;line-height:0;color:#c2410c;margin:0 .1em 0 .12em;font-variant-numeric:lining-nums;white-space:nowrap}
 .fnx,.fn{white-space:pre-line}
+.fn.fnv{font-size:1em;line-height:1.65;color:var(--fg);margin:.5em 0 .6em}
 .fns{margin-top:1.5em;padding-top:.7em;border-top:1px solid var(--line);text-align:left}
 .fn{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.55;color:var(--muted);margin:.2em 0}
 
@@ -1429,7 +1430,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v5';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4325,6 +4326,7 @@ function paperHTML(book, ch, verses, view, idp){
   const print = view !== 'verse';
   const fm = fnMapOf(verses.flatMap(v => v.fn || [])), used = new Set();   // chú thích cuối chương nào đã gắn vào dấu [n] thì không in lại ở cuối
   verses.forEach(v => (String(v.t) + '\n' + String(v.h || '')).replace(/\[(\d{1,3})\]/g, (m, k) => { used.add(k); return m; }));   // dấu [n] nằm trong tiêu đề cũng tính là đã gắn
+  const isNumFn = f => /^\[\d{1,3}\]/.test(String(f).trim());
   const showFn = f => { const x = String(f).match(/^\[(\d{1,3})\]/); return !(x && fm[x[1]] && used.has(x[1])); };
   const sub = String(subOf(book)).split('\n').map(x => x.trim()).filter(Boolean);
   const subIsBelow = subBelowOf(book);
@@ -4354,7 +4356,7 @@ function paperHTML(book, ch, verses, view, idp){
     const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
     if (!print){
       close();
-      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t, vm).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).filter(showFn).map(f => `<div class="fn">${esc(f)}</div>`).join('');
+      out += `<p class="vline"><span ${attrs}>${num}${richText(v.t, vm).replace(/\n/g, '<br>')}</span></p>` + (v.fn || []).filter(showFn).map(f => `<div class="fn${isNumFn(f) ? '' : ' fnv'}">${esc(f)}</div>`).join('');
       return;
     }
     const want = isPoem ? 'q' : 'p';
@@ -4363,10 +4365,13 @@ function paperHTML(book, ch, verses, view, idp){
       out += `<span ${attrs}>${dc}` + v.t.split('\n').map((ln, k) =>
         `<span class="pl q${v.q[k] || 1}">${k === 0 ? num : ''}${richText(ln, vm)}</span>`).join('') + '</span>';   // số chương lớn đứng NGOÀI các dòng thơ để nằm đúng lề trái
     } else out += `<span ${attrs}>${dc}${num}${richText(v.t, vm)}</span> `;
+    /* Ghi chú KHÔNG số (vd "(Phó cho quản phường nhạc…)"): xuống dòng ngay sau câu đó, in nghiêng, cỡ chữ thường — không đẩy xuống cuối chương */
+    const un = (v.fn || []).filter(f => !isNumFn(f));
+    if (un.length){ close(); out += un.map(f => `<div class="fn fnv">${esc(f)}</div>`).join(''); }
   });
   close();
   if (print){
-    const fns = verses.flatMap(v => v.fn || []).filter(showFn);
+    const fns = verses.flatMap(v => v.fn || []).filter(f => isNumFn(f) && showFn(f));
     if (fns.length) out += `<div class="fns">${fns.map(f => `<div class="fn">${esc(f)}</div>`).join('')}</div>`;
   }
   return out;
