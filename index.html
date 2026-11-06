@@ -651,6 +651,32 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .abver{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.03em;color:var(--muted);text-align:center}
 .adminlink{display:flex;align-items:center;gap:5px;margin:16px auto 0;border:0;background:none;color:var(--muted);opacity:.65;font-size:11px;letter-spacing:.04em;padding:6px 12px}
 .adminlink:active{opacity:1}
+/* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS cửa sổ chọn sách KINH-THÁNH (mục lục Cựu-Ước / Tân-Ước) ▼▼▼ */
+.overlay.bkpick{z-index:90;opacity:0;transition:opacity .2s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.overlay.bkpick.in{opacity:1}
+.bkpick .bksheet{padding:0;max-width:560px;display:flex;flex-direction:column;overflow:hidden;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:90vh;max-height:90dvh}
+.bkpick.in .bksheet{transform:translateY(0)}
+.bkpick .bksheet:focus{outline:none}
+@media (min-width:640px){.overlay.bkpick{align-items:center}.bkpick .bksheet{border-radius:20px}}
+.bkhead{flex:none;display:flex;align-items:center;gap:10px;padding:14px 10px 12px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
+.bkhead h2{flex:1;margin:0;text-align:center;font-size:20px;letter-spacing:.14em;font-weight:700;color:var(--accent)}
+.bkhead .bkx{flex:none;width:38px;height:38px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;font-size:20px;line-height:1}
+.bkhead .bkx:hover,.bkhead .bkx:active{background:var(--line);color:var(--fg)}
+.bkhead .bksp{flex:none;width:38px}
+.bkbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:4px 16px calc(16px + env(safe-area-inset-bottom))}
+.bktest{margin:16px 0 4px;text-align:center;font-size:17px;font-weight:700;letter-spacing:.12em;color:var(--accent);padding:8px 0;border-top:2px solid var(--accent);border-bottom:1px solid var(--line)}
+.bktest:first-child{margin-top:10px}
+.bkgrp{margin:14px 0 4px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.bkcols{display:flex;align-items:baseline;justify-content:space-between;padding:0 10px;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.bkrow{display:flex;align-items:baseline;gap:10px;width:100%;margin:0;padding:9px 10px;border:0;border-bottom:1px dotted var(--line);border-radius:0;background:transparent;box-shadow:none;color:var(--fg);font:inherit;font-size:16px;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bkrow:hover,.bkrow:active{background:var(--accent-soft)}
+.bkrow .bkn{flex:none;min-width:34px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+.bkrow .bkt{flex:1;min-width:0}
+.bkrow.cur{background:var(--accent-soft);font-weight:700;color:var(--accent)}
+.bkrow[disabled]{opacity:.38;cursor:default}
+.bkrow[disabled]:hover,.bkrow[disabled]:active{background:transparent}
+.bkrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (prefers-reduced-motion:reduce){.overlay.bkpick,.bkpick .bksheet{transition:none}}
 /* §§ ▼▼▼ MỤC 3 · BỘ NHỚ LƯU TRỮ TRÊN MÁY — CSS đánh dấu vị trí đọc (Bookmark) ▼▼▼ */
 /* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
 .reader .v,#bibleText,#bibleText *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -1505,7 +1531,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v19';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1799,6 +1825,68 @@ $('#selBook').onchange = async e => {
   /* Chọn sách xong: KHÔNG tự bật bàn phím. Chỉ bấm vào ô Chương / Câu mới hiện bàn phím. */
   if (document.activeElement === nc) nc.dispatchEvent(new Event('focus'));   // cập nhật lại dải số chương theo sách mới
 };
+/* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — Cửa sổ chọn sách KINH-THÁNH (bấm vào ô tên sách): nhóm · số đoạn · tên sách, không có số trang ▼▼▼ */
+const BK_TOC = [
+  ['CỰU-ƯỚC', [
+    ['NĂM QUYỂN SÁCH CỦA MÔI-SE', [[50,'Sáng-thế Ký'],[40,'Xuất Ê-díp-tô Ký'],[27,'Lê-vi Ký'],[36,'Dân-số Ký'],[34,'Phục-truyền Luật-lệ Ký']]],
+    ['CÁC SÁCH VỀ LỊCH-SỬ', [[24,'Giô-suê'],[21,'Các Quan Xét'],[4,'Ru-tơ'],[31,'I Sa-mu-ên'],[24,'II Sa-mu-ên'],[22,'I Các Vua'],[25,'II Các Vua'],[29,'I Sử-ký'],[36,'II Sử-ký'],[10,'E-xơ-ra'],[13,'Nê-hê-mi'],[10,'Ê-xơ-tê']]],
+    ['CÁC SÁCH VĂN-THƠ', [[42,'Gióp'],[150,'Thi-thiên'],[31,'Châm-ngôn'],[12,'Truyền-đạo'],[8,'Nhã-ca']]],
+    ['CÁC SÁCH TIÊN-TRI', [[66,'Ê-sai'],[52,'Giê-rê-mi'],[5,'Ca-thương'],[48,'Ê-xê-chi-ên'],[12,'Đa-ni-ên'],[14,'Ô-sê'],[3,'Giô-ên'],[9,'A-mốt'],[1,'Áp-đia'],[4,'Giô-na'],[7,'Mi-chê'],[3,'Na-hum'],[3,'Ha-ba-cúc'],[3,'Sô-phô-ni'],[2,'A-ghê'],[14,'Xa-cha-ri'],[4,'Ma-la-chi']]]
+  ]],
+  ['TÂN-ƯỚC', [
+    ['', [[28,'Ma-thi-ơ'],[16,'Mác'],[24,'Lu-ca'],[21,'Giăng'],[28,'Công-vụ các Sứ-đồ'],[16,'Rô-ma'],[16,'I Cô-rinh-tô'],[13,'II Cô-rinh-tô'],[6,'Ga-la-ti'],[6,'Ê-phê-sô'],[4,'Phi-líp'],[4,'Cô-lô-se'],[5,'I Tê-sa-lô-ni-ca'],[3,'II Tê-sa-lô-ni-ca'],[6,'I Ti-mô-thê'],[4,'II Ti-mô-thê'],[3,'Tít'],[1,'Phi-lê-môn'],[13,'Hê-bơ-rơ'],[5,'Gia-cơ'],[5,'I Phi-e-rơ'],[3,'II Phi-e-rơ'],[5,'I Giăng'],[1,'II Giăng'],[1,'III Giăng'],[1,'Giu-đe'],[22,'Khải-huyền']]]
+  ]]
+];
+let bkPickEl = null, bkPickT = 0;
+function bkRealName(label){   // tên in trong mục lục → tên sách thực sự đang có trong máy (null nếu chưa có)
+  const k = bkKey(label), no = BIBLE_KEYS.get(k);
+  const byKey = bibleMeta.find(m => bkKey(m.name) === k);
+  if (byKey) return byKey.name;
+  if (no){ const byNo = bibleMeta.find(m => BIBLE_KEYS.get(bkKey(m.name)) === no); if (byNo) return byNo.name; }
+  return null;
+}
+function closeBookPick(){
+  const el = bkPickEl; if (!el) return;
+  bkPickEl = null; document.removeEventListener('keydown', bkPickKey, true);
+  el.classList.remove('in'); setTimeout(() => el.remove(), 220);
+}
+function bkPickKey(e){ if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeBookPick(); } }
+function openBookPick(){
+  if (bkPickEl || !bibleMeta.length) return;
+  const cur = curBook ? curBook.name : S.book;
+  let h = '';
+  BK_TOC.forEach(([test, groups]) => {
+    h += `<div class="bktest">${esc(test)}</div>`;
+    groups.forEach(([g, books]) => {
+      if (g) h += `<div class="bkgrp">${esc(g)}</div>`;
+      h += `<div class="bkcols"><span>Đoạn</span><span></span></div>`;
+      books.forEach(([n, label]) => {
+        const real = bkRealName(label);
+        h += `<button type="button" class="bkrow${real && real === cur ? ' cur' : ''}"${real ? ` data-bk="${esc(real)}"` : ' disabled'}><span class="bkn">${n}</span><span class="bkt">${esc(label)}</span></button>`;
+      });
+    });
+  });
+  const el = document.createElement('div');
+  el.className = 'overlay bkpick'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'KINH-THÁNH');
+  el.innerHTML = `<div class="sheet bksheet" tabindex="-1"><div class="bkhead"><span class="bksp"></span><h2>KINH-THÁNH</h2><button type="button" class="bkx" aria-label="Đóng">✕</button></div><div class="bkbody">${h}</div></div>`;
+  el.addEventListener('click', async e => {
+    if (e.target === el || e.target.closest('.bkx')) return closeBookPick();
+    const b = e.target.closest('.bkrow[data-bk]'); if (!b) return;
+    const name = b.dataset.bk; closeBookPick();
+    await openBook(name, 1);
+    if (typeof setSearch === 'function'){ try { setSearch(false); } catch (_) {} }
+  });
+  document.body.appendChild(el); bkPickEl = el;
+  document.addEventListener('keydown', bkPickKey, true);
+  requestAnimationFrame(() => { el.classList.add('in'); const c = el.querySelector('.bkrow.cur'), body = el.querySelector('.bkbody'); if (c && body) body.scrollTop = Math.max(0, c.offsetTop - body.clientHeight / 3); });
+}
+(function(){
+  const sel = $('#selBook'); if (!sel) return;
+  const go = e => { e.preventDefault(); e.stopPropagation(); try { sel.blur(); } catch (_) {} const t = Date.now(); if (t - bkPickT < 400) return; bkPickT = t; openBookPick(); };
+  ['mousedown', 'click', 'focus'].forEach(k => sel.addEventListener(k, k === 'focus' ? (() => { try { sel.blur(); } catch (_) {} }) : go, true));
+  sel.addEventListener('touchend', go, { capture:true, passive:false });
+  sel.addEventListener('keydown', e => { if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) go(e); }, true);
+})();
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
 /* Nhảy tới câu n và GIỮ câu ở đầu màn hình: sau khi render lại chương (gõ "7:14"), bố cục/phông chữ chưa ổn định
    nên 1 lần scrollIntoView sẽ lệch. Ở đây định vị lại nhiều lần cho tới khi ổn định hoặc người dùng chạm/cuộn. */
