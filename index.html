@@ -493,27 +493,49 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 /* Dòng tham chiếu / dòng chú thích có thể chạm → mở cửa sổ hiện trọn câu Kinh Thánh được trích dẫn */
 .rfk{cursor:pointer;text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:3px;-webkit-tap-highlight-color:transparent}
 .rfk:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
-.overlay.rpop{z-index:88;opacity:0;transition:opacity .2s ease}
+.overlay.rpop{z-index:88;opacity:0;transition:opacity .2s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .overlay.rpop.in{opacity:1}
-.overlay.rpop .rpsheet{padding:0;max-width:580px;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+.overlay.rpop .rpsheet{padding:0;max-width:600px;display:flex;flex-direction:column;overflow:hidden;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
 .overlay.rpop.in .rpsheet{transform:translateY(0)}
-.rphead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:12px 12px 10px 16px;background:var(--accent-soft);border-bottom:1px solid var(--line);border-radius:18px 18px 0 0}
-.rpk{font-size:12px;font-weight:700;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 9px;flex:none}
-.rpt{flex:1;min-width:0;font-weight:700;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
-.rpx{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--fg);font-size:20px;line-height:1;display:grid;place-items:center;cursor:pointer}
-.rpx:active{background:var(--line)}
-.rpbody{padding:14px 16px 6px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
-.rpnote{font-size:.82em;font-style:italic;color:var(--muted);border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:.4em .7em;margin:0 0 14px}
-.rpref{margin:0 0 16px}
-.rprh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.rprh b{font-size:14px;color:var(--accent)}
-.rpgo{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;font-size:12px;padding:4px 11px;cursor:pointer}
-.rpvl{margin:0}
-.rpvl p{margin:0 0 .45em}
-.rpvl sup{font-size:.62em;font-weight:700;color:var(--accent);margin-right:.25em;vertical-align:super}
-.rpch{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:12px;font-weight:700;color:var(--muted);margin:.7em 0 .3em}
-.rpmore,.rpmiss{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;color:var(--muted);font-style:italic}
-.rpfoot{position:sticky;bottom:0;display:flex;justify-content:flex-end;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+.overlay.rpop .rpsheet:focus{outline:none}
+@media (min-width:640px){.overlay.rpop{align-items:center}.overlay.rpop .rpsheet{border-radius:20px;max-height:82vh;max-height:82dvh}}
+.rphead{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 12px 14px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
+.rpmeta{flex:1;min-width:0}
+.rpeye{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.rpeye svg{width:14px;height:14px;flex:none}
+.rpt{margin-top:7px;font-family:var(--serif);font-weight:700;font-size:21px;line-height:1.25;overflow-wrap:anywhere}
+.rpsub{margin-top:3px;font:12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
+.overlay.rpop .rpx{flex:none;width:38px;height:38px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s}
+.overlay.rpop .rpx svg{width:20px;height:20px}
+.overlay.rpop .rpx:hover,.overlay.rpop .rpx:active{background:var(--line);color:var(--fg)}
+.rptabs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.rptabs::-webkit-scrollbar{display:none}
+.rptab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 13px;font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.rptab[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .rptab[aria-selected=true]{color:#1a1409}
+html[data-paper][data-theme=dark] .rptab[aria-selected=true]{color:#0e0e0d}
+.rpbody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:18px 20px 12px}
+.rpnote{margin:0 0 16px;padding:.6em .85em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;font-style:italic;font-size:.82em;line-height:1.55;color:var(--muted);white-space:pre-line}
+.rpnote b{display:block;margin-bottom:2px;font:700 10.5px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.rpq{position:relative;margin:0;padding:6px 4px 2px 44px;font-family:var(--serif);font-size:calc(var(--fs) * 1.04);line-height:1.75}
+.rpq::before{content:"\201C";position:absolute;left:-2px;top:-14px;font:700 64px/1 var(--serif);color:var(--accent);opacity:.28;pointer-events:none}
+.rpq::after{content:"";position:absolute;left:14px;top:34px;bottom:8px;width:2px;border-radius:2px;background:linear-gradient(var(--accent),transparent);opacity:.35}
+.rpq p{margin:0 0 .5em}
+.rpq sup{font:700 .62em/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--accent);margin-right:.3em;vertical-align:super}
+.rpch{margin:.9em 0 .3em;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rpcite{margin-top:12px;text-align:right;font:600 13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--accent)}
+.rpmore,.rpmiss{margin-top:8px;font:italic 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
+.rpmiss{padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center;font-style:normal}
+.rpfoot{flex:none;display:flex;gap:10px;justify-content:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+.rpbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 20px;border-radius:12px;font:600 15px/1 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+.rpbtn svg{width:16px;height:16px}
+.rpbtn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .rpbtn.pri{color:#1a1409}
+html[data-paper][data-theme=dark] .rpbtn.pri{color:#0e0e0d}
+.rpbtn[disabled]{opacity:.45;pointer-events:none}
+.rpbtn:active,.rptab:active{opacity:.75}
+.rpbtn:focus-visible,.rptab:focus-visible,.rpx:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:420px){.rpfoot .rpbtn.pri{flex:1}.rpt{font-size:19px}}
 @media (prefers-reduced-motion:reduce){.overlay.rpop,.overlay.rpop .rpsheet{transition:none}}
 /* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS trang Cài đặt ▼▼▼ */
 /* ===== Trang cài đặt ===== */
@@ -976,10 +998,21 @@ html[data-paper] .reader.print{text-align:justify}
 
 <!-- §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — HTML cửa sổ xem câu trích dẫn ▼▼▼ -->
 <div class="overlay rpop" id="refPop" role="dialog" aria-modal="true" aria-labelledby="rpTitle" hidden>
-  <div class="sheet rpsheet">
-    <div class="rphead"><span class="rpk" id="rpKind">Câu trích dẫn</span><div class="rpt" id="rpTitle"></div><button type="button" class="rpx" data-a="close" aria-label="Đóng">✕</button></div>
+  <div class="sheet rpsheet" tabindex="-1">
+    <div class="rphead">
+      <div class="rpmeta">
+        <span class="rpeye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 19V5.5M9 7.5h6"/></svg><span id="rpKind">Đối chiếu Kinh Thánh</span></span>
+        <div class="rpt" id="rpTitle"></div>
+        <div class="rpsub" id="rpSub"></div>
+      </div>
+      <button type="button" class="rpx" data-a="close" aria-label="Đóng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="rptabs" id="rpTabs" role="tablist" aria-label="Các câu trích dẫn" hidden></div>
     <div class="rpbody" id="rpBody"></div>
-    <div class="rpfoot"><button type="button" class="btn primary" data-a="close">Đóng</button></div>
+    <div class="rpfoot">
+      <button type="button" class="rpbtn" data-a="close">Đóng</button>
+      <button type="button" class="rpbtn pri" id="rpOpen" data-a="go">Mở trong sách <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
   </div>
 </div>
 
@@ -1465,7 +1498,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v8';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v9';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5460,31 +5493,48 @@ async function rpGet(r){   // → [{ch, verses:[…]}] ; tối đa 60 câu mỗi
   return { res, more, miss:false };
 }
 const rpTxt = t => esc(String(t == null ? '' : t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim());
-let rpToken = 0, rpPrevFocus = null, rpRefs = [], rpHideT = 0;
+/* Phần chữ còn lại của chú thích sau khi bỏ các địa chỉ và từ dẫn ("Xem", "Cũng xem"…): có thì đó là lời chú giải thật → hiện thêm khung chú thích;
+   chú thích chỉ gồm địa chỉ thì không lặp lại (tiêu đề đã nói rồi). */
+const RP_LEAD = new Set(['xem', 'cũng', 'so', 'sánh', 'đối', 'chiếu', 'cf', 'và', 'hay', 'x', 'với', 'xa']);
+function rpHasComment(text){
+  const rest = String(text || '').replace(RP_RE, ' ').replace(/\[\d{1,3}\]/g, ' ');
+  return (rest.match(/\p{L}+/gu) || []).some(w => !RP_LEAD.has(w.toLowerCase()));
+}
+let rpToken = 0, rpPrevFocus = null, rpRefs = [], rpCur = 0, rpData = [], rpNote = '', rpHideT = 0;
+async function rpShow(i){
+  const ov = $('#refPop'), body = $('#rpBody'), r = rpRefs[i]; if (!r) return;
+  const tk = ++rpToken; rpCur = i;
+  $$('#rpTabs .rptab').forEach((t, k) => { t.setAttribute('aria-selected', k === i ? 'true' : 'false'); t.tabIndex = k === i ? 0 : -1; });
+  $('#rpTitle').textContent = rpLabel(r); $('#rpSub').textContent = ''; $('#rpOpen').disabled = true;
+  const noteHTML = rpNote ? `<div class="rpnote"><b>Chú thích</b>${esc(rpNote)}</div>` : '';
+  body.innerHTML = noteHTML + '<div class="rpmore">Đang tải câu Kinh Thánh…</div>';
+  const sh = ov.querySelector('.rpsheet'); body.scrollTop = 0; sh.scrollTop = 0;
+  let g = rpData[i];
+  if (!g){ try { g = await rpGet(r); } catch(_){ g = { res:[], more:false, miss:true }; } rpData[i] = g; }
+  if (tk !== rpToken) return;                                // đã chuyển tab / đóng cửa sổ trong lúc chờ
+  let h = noteHTML;
+  if (!g.res.length) h += `<div class="rpmiss">${g.miss ? 'Sách này chưa có trong máy.' : 'Không tìm thấy câu này trong sách.'}</div>`;
+  else {
+    const multi = g.res.length > 1 || r.c1 !== r.c2, cnt = g.res.reduce((a, b) => a + b.verses.length, 0);
+    h += '<figure class="rpq">' + g.res.map(blk => (multi ? `<div class="rpch">Chương ${blk.ch}</div>` : '') + blk.verses.map(v => `<p><sup>${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>${rpTxt(v.t)}</p>`).join('')).join('') +
+         `<figcaption class="rpcite">— ${esc(rpLabel(r))}</figcaption></figure>`;
+    if (g.more) h += '<div class="rpmore">… còn nhiều câu nữa — bấm “Mở trong sách” để đọc tiếp.</div>';
+    $('#rpSub').textContent = cnt + ' câu' + (multi ? ' · ' + g.res.length + ' chương' : '');
+    $('#rpOpen').disabled = false;
+  }
+  body.innerHTML = h;
+}
 async function openRefPop(o){
   const refs = (o && o.refs || []).slice(0, 12); if (!refs.length) return;
-  const ov = $('#refPop'), body = $('#rpBody'), tk = ++rpToken; rpRefs = refs;
-  clearTimeout(rpHideT);
-  $('#rpTitle').textContent = rpLabel(refs[0]) + (refs.length > 1 ? ' …' : '');
-  $('#rpKind').textContent = o.note ? 'Chú thích' : 'Đối chiếu';
-  body.innerHTML = '<div class="rpmore">Đang tải câu Kinh Thánh…</div>';
+  const ov = $('#refPop'); rpRefs = refs; rpData = []; clearTimeout(rpHideT);
+  rpNote = o.note && rpHasComment(o.note) ? String(o.note).trim() : '';
+  $('#rpKind').textContent = rpNote ? 'Chú thích · Đối chiếu Kinh Thánh' : 'Đối chiếu Kinh Thánh';
+  const tabs = $('#rpTabs');
+  tabs.hidden = refs.length < 2;
+  tabs.innerHTML = refs.length < 2 ? '' : refs.map((r, i) => `<button type="button" class="rptab" role="tab" data-t="${i}" aria-selected="false">${esc(rpLabel(r))}</button>`).join('');
   if (ov.hidden){ rpPrevFocus = document.activeElement; ov.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('in'))); }
-  const sh = ov.querySelector('.rpsheet'); sh.scrollTop = 0;
-  let html = o.note ? `<div class="rpnote">${esc(String(o.note).trim())}</div>` : '';
-  for (let i = 0; i < refs.length; i++){
-    let g; try { g = await rpGet(refs[i]); } catch(_){ g = { res:[], more:false, miss:true }; }
-    if (tk !== rpToken) return;                              // đã mở/đóng cửa sổ khác trong lúc chờ
-    html += `<section class="rpref"><div class="rprh"><b>${esc(rpLabel(refs[i]))}</b>` + (g.res.length ? `<button type="button" class="rpgo" data-go="${i}">Mở trong sách ›</button>` : '') + '</div>';
-    if (!g.res.length) html += `<div class="rpmiss">${g.miss ? 'Sách này chưa có trong máy.' : 'Không tìm thấy câu này trong sách.'}</div>`;
-    else {
-      const multi = g.res.length > 1 || refs[i].c1 !== refs[i].c2;
-      html += '<div class="rpvl">' + g.res.map(blk => (multi ? `<div class="rpch">Chương ${blk.ch}</div>` : '') + blk.verses.map(v => `<p><sup>${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>${rpTxt(v.t)}</p>`).join('')).join('') + '</div>';
-      if (g.more) html += '<div class="rpmore">… còn nhiều câu nữa — bấm “Mở trong sách” để đọc tiếp.</div>';
-    }
-    html += '</section>';
-  }
-  body.innerHTML = html;
-  const cb = ov.querySelector('.rpx'); if (cb && document.activeElement !== cb) try { cb.focus({ preventScroll:true }); } catch(_){}
+  rpShow(0);
+  try { ov.querySelector('.rpsheet').focus({ preventScroll:true }); } catch(_){}   // đưa tiêu điểm vào cửa sổ (Tab/Esc hoạt động) mà không vẽ vòng viền lên nút ✕
 }
 function closeRefPop(){
   const ov = $('#refPop'); if (!ov || ov.hidden) return;
@@ -5497,8 +5547,13 @@ function openRefFrom(text, note){ const list = refsIn(text); if (!list.length) r
   const ov = $('#refPop'); if (!ov) return;
   ov.addEventListener('click', e => {
     if (e.target === ov || e.target.closest('[data-a="close"]')){ closeRefPop(); return; }
-    const g = e.target.closest('[data-go]');
-    if (g){ const r = rpRefs[+g.dataset.go]; if (!r) return; closeRefPop(); goBookmark({ book:r.name, ch:r.c1, n:r.v1 }); }
+    const t = e.target.closest('[data-t]'); if (t){ rpShow(+t.dataset.t); return; }
+    if (e.target.closest('[data-a="go"]')){ const r = rpRefs[rpCur]; if (!r) return; closeRefPop(); goBookmark({ book:r.name, ch:r.c1, n:r.v1 }); }
+  });
+  ov.addEventListener('keydown', e => {                      // ← → chuyển giữa các câu trích dẫn khi đang ở thanh tab
+    if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || !e.target.closest('.rptab') || rpRefs.length < 2) return;
+    e.preventDefault(); const n = (rpCur + (e.key === 'ArrowRight' ? 1 : rpRefs.length - 1)) % rpRefs.length;
+    rpShow(n); const tb = $$('#rpTabs .rptab')[n]; if (tb) tb.focus();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden){ e.stopPropagation(); e.preventDefault(); closeRefPop(); } }, true);
 })();
