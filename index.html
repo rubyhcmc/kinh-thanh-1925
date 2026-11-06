@@ -517,13 +517,11 @@ html[data-paper][data-theme=dark] .rptab[aria-selected=true]{color:#0e0e0d}
 .rpbody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:18px 20px 12px}
 .rpnote{margin:0 0 16px;padding:.6em .85em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;font-style:italic;font-size:.82em;line-height:1.55;color:var(--muted);white-space:pre-line}
 .rpnote b{display:block;margin-bottom:2px;font:700 10.5px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.rpq{position:relative;margin:0;padding:6px 4px 2px 44px;font-family:var(--serif);font-size:calc(var(--fs) * 1.04);line-height:1.75}
-.rpq::before{content:"\201C";position:absolute;left:-2px;top:-14px;font:700 64px/1 var(--serif);color:var(--accent);opacity:.28;pointer-events:none}
-.rpq::after{content:"";position:absolute;left:14px;top:34px;bottom:8px;width:2px;border-radius:2px;background:linear-gradient(var(--accent),transparent);opacity:.35}
+.rpq{position:relative;margin:0;padding:2px 4px 2px 18px;font-family:var(--serif);font-size:calc(var(--fs) * 1.04);line-height:1.75}
+.rpq::after{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:2px;background:linear-gradient(var(--accent),transparent);opacity:.35}
 .rpq p{margin:0 0 .5em}
 .rpq sup{font:700 .62em/1 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--accent);margin-right:.3em;vertical-align:super}
 .rpch{margin:.9em 0 .3em;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.rpcite{margin-top:12px;text-align:right;font:600 13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--accent)}
 .rpmore,.rpmiss{margin-top:8px;font:italic 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
 .rpmiss{padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center;font-style:normal}
 .rpfoot{flex:none;display:flex;gap:10px;justify-content:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
@@ -1498,7 +1496,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v9';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v11';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2632,7 +2630,7 @@ function zipStore(files){                                             // files: 
   let p = 0; all.forEach(u => { out.set(u, p); p += u.length; });
   return out;
 }
-const wx = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const wx = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '').replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '�').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function wPara(text, o){
   o = o || {};
   const sz = o.sz || 26, gold = 'B08840';
@@ -3957,6 +3955,7 @@ async function refreshStats(){
   const exWant = [...exSel.options].find(o => o.value === exCur && !o.disabled), exFirst = [...exSel.options].find(o => o.value && !exSetKey(o.value));
   if (exWant) exSel.value = exCur; else if (exFirst) exSel.value = exFirst.value;
   exSyncUI();
+  exRefreshSetLabels(metas).catch(() => {});                       // cập nhật số sách có nội dung thật (chạy nền)
   $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
   $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
 }
@@ -5516,8 +5515,7 @@ async function rpShow(i){
   if (!g.res.length) h += `<div class="rpmiss">${g.miss ? 'Sách này chưa có trong máy.' : 'Không tìm thấy câu này trong sách.'}</div>`;
   else {
     const multi = g.res.length > 1 || r.c1 !== r.c2, cnt = g.res.reduce((a, b) => a + b.verses.length, 0);
-    h += '<figure class="rpq">' + g.res.map(blk => (multi ? `<div class="rpch">Chương ${blk.ch}</div>` : '') + blk.verses.map(v => `<p><sup>${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>${rpTxt(v.t)}</p>`).join('')).join('') +
-         `<figcaption class="rpcite">— ${esc(rpLabel(r))}</figcaption></figure>`;
+    h += '<figure class="rpq">' + g.res.map(blk => (multi ? `<div class="rpch">Chương ${blk.ch}</div>` : '') + blk.verses.map(v => `<p><sup>${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>${rpTxt(v.t)}</p>`).join('')).join('') + '</figure>';
     if (g.more) h += '<div class="rpmore">… còn nhiều câu nữa — bấm “Mở trong sách” để đọc tiếp.</div>';
     $('#rpSub').textContent = cnt + ' câu' + (multi ? ' · ' + g.res.length + ' chương' : '');
     $('#rpOpen').disabled = false;
@@ -5791,20 +5789,56 @@ const EX_SETS = {
 const EX_SET_PREFIX = '@set:';
 function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) && EX_SETS[v.slice(EX_SET_PREFIX.length)]) ? v.slice(EX_SET_PREFIX.length) : null; }
 const exNoOf = name => BIBLE_KEYS.get(bkKey(name)) || 0;
-function exSetCount(metas, key){                                  // số sách đang có trong máy / tổng của bộ
+function exSetCount(metas, key, filled){                          // số sách đang có trong máy / tổng của bộ (filled: tập tên sách THỰC SỰ có câu; không truyền = chỉ dựa vào số chương)
   const sp = EX_SETS[key], have = new Set(); let extra = 0;
-  metas.forEach(m => { if (!(m.chapterCount > 0)) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && key === 'all') extra++; });
+  metas.forEach(m => { if (!(m.chapterCount > 0) || (filled && !filled.has(m.name))) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && key === 'all') extra++; });
   return { have:have.size, total:sp.to - sp.from + 1, extra };
 }
-async function exSetPlan(key){                                    // danh sách sách sẽ xuất theo đúng thứ tự Kinh Thánh
-  const sp = EX_SETS[key], list = [], have = new Set();
+async function exSetPlan(key){                                    // danh sách sách sẽ xuất theo đúng thứ tự Kinh Thánh — CHỈ những sách thật sự có câu
+  const sp = EX_SETS[key], cand = [], list = [], have = new Set(), empty = [];
   (await dbAll('bookMeta')).filter(m => (m.chapterCount || 0) > 0).forEach(m => {
     const no = exNoOf(m.name);
-    if (no ? (no >= sp.from && no <= sp.to) : key === 'all'){ list.push({ m, no }); if (no) have.add(no); }
+    if (no ? (no >= sp.from && no <= sp.to) : key === 'all') cand.push({ m, no });
   });
-  list.sort((x, y) => (x.no || 999) - (y.no || 999) || x.m.order - y.m.order);
+  cand.sort((x, y) => (x.no || 999) - (y.no || 999) || x.m.order - y.m.order);
+  for (const it of cand){                                         // sách mới tạo khung chương nhưng chưa có câu nào ≠ sách có nội dung
+    await exYield();
+    const rec = await dbGet('books', it.m.name);
+    if (rec && rec.chapters && rec.chapters.some(c => c && c.length)){ list.push(it); if (it.no) have.add(it.no); } else empty.push(it.m.name);
+  }
   const missing = []; for (let n = sp.from; n <= sp.to; n++) if (!have.has(n)) missing.push(n);
-  return { list, missing, have:have.size };
+  return { list, missing, have:have.size, empty };
+}
+/* Tập tên các sách THỰC SỰ có câu (để nhãn "Cựu Ước (x/39 sách)" không báo số ảo khi nhiều sách mới chỉ có khung chương trống) */
+let exScanTk = 0;
+async function exFilledNames(metas){
+  const filled = new Set();
+  for (const m of metas){
+    if (!(m.chapterCount > 0)) continue;
+    const rec = await dbGet('books', m.name);
+    if (rec && rec.chapters && rec.chapters.some(c => c && c.length)) filled.add(m.name);
+    await exYield();
+  }
+  return filled;
+}
+async function exRefreshSetLabels(metas){
+  const tk = ++exScanTk, sel = $('#exBook'); if (!sel) return;
+  let filled; try { filled = await exFilledNames(metas); } catch(e){ return; }
+  if (tk !== exScanTk) return;
+  [...sel.options].forEach(o => {
+    const k = exSetKey(o.value);
+    if (k){
+      const c = exSetCount(metas, k, filled), sp = EX_SETS[k];
+      o.textContent = `${sp.label} (${c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách có nội dung'}${c.extra ? ' + ' + c.extra + ' sách khác' : ''})`;
+      o.disabled = !(c.have + c.extra);
+    } else if (o.value){
+      const m = metas.find(x => x.name === o.value);
+      if (m && m.chapterCount > 0 && !filled.has(m.name)) o.textContent = `${m.name} (${m.chapterCount} ch. – chưa có câu nào)`;
+    }
+  });
+  const cur = sel.selectedOptions[0];
+  if (cur && cur.disabled){ const f = [...sel.options].find(o => !o.disabled && o.value && !exSetKey(o.value)); if (f) sel.value = f.value; }
+  exSyncUI();
 }
 /* Nhường giao diện cho trình duyệt (vẽ lại, nhận chạm) nếu đã chạy liên tục > 14 ms → không giật lag */
 let exYieldAt = 0;
@@ -5858,13 +5892,19 @@ async function deflateRawBytes(u){
   try { return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); }
   catch(e){ return null; }
 }
+async function inflateMatches(z, orig, crc){                      // giải nén thử: đúng độ dài + đúng CRC mới tin
+  try {
+    const back = new Uint8Array(await new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    return back.length === orig.length && await crc32Async(back) === crc;
+  } catch(e){ return false; }
+}
 async function zipPackAsync(files, ui){                           // → mảng các mảnh byte (đưa thẳng vào new File([...]))
   const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
   for (const f of files){
     if (ui) await ui.step(); else await exYield();
     const nm = enc.encode(f.name), sz = f.data.length, crc = await crc32Async(f.data);
     let data = f.data, method = 0;
-    if (sz > 256){ const z = await deflateRawBytes(f.data); if (z && z.length < sz){ data = z; method = 8; } }
+    if (sz > 256){ const z = await deflateRawBytes(f.data); if (z && z.length < sz && await inflateMatches(z, f.data, crc)){ data = z; method = 8; } }   // chỉ dùng bản nén khi giải nén lại ra ĐÚNG từng byte
     const csz = data.length;
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
@@ -5977,7 +6017,7 @@ async function exBuildSetJson(key, list, ui){
 }
 /* ---- Dựng Word trọn bộ ---- */
 async function exBuildSetDocx(key, list, ui){
-  const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, skipped:[] };
+  const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, skipped:[], badXml:[] };
   const put = s => chunks.push(enc.encode(s));
   put(wParaX('', { before:3200, after:0 }) + wParaX(wRun('KINH THÁNH', { b:true, sz:24, color:'8A5A1F' }), { align:'center', after:160 })
     + wParaX(wRun(sp.label.toUpperCase(), { b:true, sz:60 }), { align:'center', after:200 }) + wParaX(wRun(list.length + ' sách', { sz:24, color:'7A6E60' }), { align:'center' }));
@@ -5994,13 +6034,20 @@ async function exBuildSetDocx(key, list, ui){
     const chapters = rec && rec.chapters ? rec.chapters.map((vs, k) => ({ ch:k + 1, vs })).filter(c => c.vs && c.vs.length) : [];
     if (!chapters.length){ st.skipped.push(m.name); continue; }
     chapters.forEach(c => { st.chapters++; st.verses += c.vs.length; });
-    put(docxBookBody(m.name, m.sub || '', chapters, (m.title || '').trim(), m.subPos === 'below', { breakFirst:true, outline:true }));
+    const bx = docxBookBody(m.name, m.sub || '', chapters, (m.title || '').trim(), m.subPos === 'below', { breakFirst:true, outline:true });
+    const dom = new DOMParser().parseFromString('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + bx + '</w:body></w:document>', 'application/xml');
+    if (dom.getElementsByTagName('parsererror').length) st.badXml.push(m.name);         // XML hỏng thì Word sẽ cắt cụt từ chỗ đó → phát hiện ngay lúc xuất
+    if ((bx.match(/<w:outlineLvl w:val="0"\/>/g) || []).length !== 1) st.badXml.push(m.name + ' (thiếu đề mục sách)');
+    put(bx);
     st.books++;
   }
   if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
   ui.say('Đang nén và đóng gói file Word…', 86); await ui.step();
   const file = await docxPackAsync(chunks, sp.file + '.docx', ui);
-  return { file, st, ok:true };
+  const warn = [], ok = !st.badXml.length && st.books === list.length;
+  warn.push(ok ? `✔ Đã kiểm tra: tệp Word chứa đủ ${st.books}/${list.length} sách (${st.chapters} chương, ${st.verses} câu); cấu trúc XML từng sách hợp lệ; gói nén đã giải nén thử khớp từng byte.`
+               : `✖ Tệp Word CHƯA đạt kiểm tra${st.badXml.length ? ': lỗi cấu trúc ở ' + st.badXml.join(', ') : ''}${st.books !== list.length ? ` (chỉ ${st.books}/${list.length} sách được ghi)` : ''} – đừng dùng bản này.`);
+  return { file, st, ok, warn };
 }
 /* Bảng kết quả: nút Lưu là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
 function exSetResult(title, files, lines, ok){
@@ -6028,10 +6075,11 @@ async function exportSet(key, kind){                              // kind: 'json
   const sp = EX_SETS[key], isWord = kind === 'word', log = $('#exLog');
   try { await edAuto(); } catch(e){}                              // lưu nốt chương đang soạn dở (nếu có)
   const plan = await exSetPlan(key);
-  if (!plan.list.length) return toast('Chưa có sách nào thuộc “' + sp.label + '” trong máy');
+  if (!plan.list.length) return toast('Chưa có sách nào CÓ NỘI DUNG thuộc “' + sp.label + '” trong máy');
   if (plan.missing.length){
     const names = plan.missing.slice(0, 8).map(n => BIBLE66[n - 1]).join(', ') + (plan.missing.length > 8 ? '…' : '');
-    if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.\nVẫn xuất những sách đang có?`)) return;
+    const emp = plan.empty && plan.empty.length ? `\n(${plan.empty.length} sách đã tạo khung chương nhưng CHƯA có câu nào nên không được xuất: ${plan.empty.slice(0, 6).join(', ')}${plan.empty.length > 6 ? '…' : ''})` : '';
+    if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách CÓ NỘI DUNG trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.${emp}\nVẫn xuất ${plan.list.length} sách đang có?`)) return;
   }
   exBusy = true; exSetBusy(true);
   const ui = exProgUI((isWord ? 'Đang xuất Word: ' : 'Đang xuất JSON: ') + sp.label);
@@ -6050,6 +6098,8 @@ async function exportSet(key, kind){                              // kind: 'json
     if (isWord) lines.push('Mở bằng Word: ngăn Điều hướng (Navigation) liệt kê từng sách và từng chương.');
     if (plan.missing.length) lines.push(`⚠ Thiếu ${plan.missing.length} sách so với bộ chuẩn: ${plan.missing.map(n => BIBLE66[n - 1]).join(', ')}.`);
     if (r.st.skipped.length) lines.push('⚠ Bỏ qua sách rỗng: ' + r.st.skipped.join(', '));
+    if (plan.empty && plan.empty.length) lines.push(`ℹ ${plan.empty.length} sách đã tạo khung chương nhưng chưa có câu nào nên không nằm trong tệp: ${plan.empty.join(', ')}.`);
+    if (r.warn && r.warn.length) lines.push(...r.warn);
     log.className = 'log ' + (r.ok ? 'ok' : 'err'); log.textContent = (r.ok ? '✔ ' : '✖ ') + lines[0];
     exSetResult('Đã xuất xong: ' + sp.label, [r.file], lines, r.ok);
   } catch(e){
