@@ -438,6 +438,9 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 .hybtn{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .hybtn .sbtn{padding:8px 13px}
 .hytag{font:11.5px var(--sans);color:var(--muted)}
+.arrule.off{opacity:.5}
+.arin{flex:1 1 180px;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:14px var(--sans)}
+.artag{font:13px var(--sans);display:inline-flex;gap:6px;align-items:center}
 /* §§ ▼▼▼ MỤC 6 · QUẢN TRỊ & SAO LƯU — CSS đăng nhập quản trị ▼▼▼ */
 /* ===== Đăng nhập ===== */
 #login .sheet{max-width:380px;padding:26px 22px calc(18px + env(safe-area-inset-bottom));text-align:center;background:var(--card)}
@@ -1416,6 +1419,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edNorm">Chuẩn hóa</button>
           <button class="btn" id="edClean">🧹 Dọn lỗi</button>
           <button class="btn" id="edHy" title="Quét các từ còn dấu gạch ngang giữa chữ (tội-lỗi, phước-hạnh…) để sửa">🔎 Gạch nối</button>
+          <button class="btn" id="edArch" title="Thay các từ cổ theo từ điển do bạn tự nhập, xem trước từng chỗ rồi mới sửa">🔁 Từ cổ</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
         </div>
         <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương · * = ghi chú in nghiêng không số, ví dụ “* (Phó cho quản phường nhạc…)”"></textarea>
@@ -1501,7 +1505,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v18';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v19';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3366,7 +3370,7 @@ async function buildBooks(){
   const map = new Map(recs.map(b => [b.name, b]));
   return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
-const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT });
+const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT, archDict:archGet() });
 
 /* §§ ▼▼▼ MỤC 6 · QUẢN TRỊ & SAO LƯU — Lớp lưu trữ (Store adapter) ▼▼▼ */
 /* =========================================================
@@ -3500,7 +3504,7 @@ Store.active = 'myserver';
 async function applyRemote(A, r){
   const j = r.payload || {}, books = normBible(j.bible || j);
   if (!books.length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
-  await importBible(books, 'replace'); applyAbout(j.about);
+  await importBible(books, 'replace'); applyAbout(j.about); applyArch(j.archDict);
   SY = { sha:r.version, dirty:false, at:Date.now(), store:A.id }; saveSY();
   const y = SCR.scrollTop, kb = curBook && curBook.name, kc = S.chapter, kn = parseInt(curVerseNo(), 10) || 0;
   await reloadAll(); SCR.scrollTop = y;
@@ -4521,6 +4525,7 @@ function edRefresh(){
   ed.Preview.querySelectorAll('.fnk').forEach(k => k.setAttribute('aria-expanded', 'true'));
   edBookHint();
   try { hyBadge(); } catch(e){}
+  try { archBadge(); } catch(e){}
   const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
   ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
   ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
@@ -4906,6 +4911,242 @@ function hyOpen(){
   });
 }
 $('#edHy').onclick = hyOpen;
+/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Thay từ cổ (từ điển do người dùng tự nhập, không có sẵn từ nào) ▼▼▼
+   Mỗi luật: {from, to, whole, cs, except, note, on}
+   - whole  : chỉ khớp trọn từ (mặc định bật) — tắt để khớp cả khi nằm trong từ dài hơn
+   - cs     : phân biệt hoa/thường (mặc định tắt: tự giữ kiểu hoa — nhơn→nhân, Nhơn→Nhân, NHƠN→NHÂN)
+   - except : các từ đầy đủ KHÔNG được sửa (cách nhau bằng dấu phẩy), dùng khi tắt "trọn từ"
+   Một lượt duy nhất, ưu tiên cụm dài nhất, không thay chồng. Chữ hoa giữa câu (có thể là tên riêng) → vàng, không nằm trong "Sửa tất cả".
+   Mọi thay đổi xem trước từng chỗ, có hoàn tác; từ điển lưu máy + đồng bộ GitHub cùng dữ liệu. */
+const ARCH_KEY = 'kt.archDict';
+var archCache = null, archComp = null;
+const archNFC = s => String(s == null ? '' : s).normalize('NFC');
+function archNorm(r){
+  if (!r) return null;
+  const from = archNFC(r.from).replace(/\s+/g, ' ').trim(), to = archNFC(r.to).replace(/\s+/g, ' ').trim();
+  if (!from) return null;
+  return { from, to, whole: r.whole !== false, cs: !!r.cs, except: archNFC(r.except || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean).join(', '), note: String(r.note || '').trim(), on: r.on !== false };
+}
+function archGet(){
+  if (archCache) return archCache;
+  let a = []; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || '[]'); } catch(e){}
+  archCache = (Array.isArray(a) ? a : []).map(archNorm).filter(Boolean); return archCache;
+}
+function archSave(list){
+  archCache = list.map(archNorm).filter(Boolean); archComp = null;
+  try { localStorage.setItem(ARCH_KEY, JSON.stringify(archCache)); } catch(e){ toast('Không lưu được từ điển vào máy'); }
+  try { markDirty(); } catch(e){}
+}
+function applyArch(a){                      // nhận từ điển từ GitHub (bản cũ không có trường này → giữ nguyên bản trên máy)
+  if (!Array.isArray(a)) return;
+  archCache = a.map(archNorm).filter(Boolean); archComp = null;
+  try { localStorage.setItem(ARCH_KEY, JSON.stringify(archCache)); } catch(e){}
+}
+const archEsc = s => s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+const archL = '[\\p{L}\\p{M}\\p{N}]';
+function archCompile(){
+  if (archComp) return archComp;
+  archComp = archGet().filter(r => r.on).map(r => {
+    const body = archEsc(r.from).replace(/ /g, '[ \\u00a0]+').replace(/[-‐‑]/g, '[-‐‑]');
+    const src = (r.whole ? `(?<!${archL})` : '') + body + (r.whole ? `(?!${archL})` : '');
+    let re = null; try { re = new RegExp(src, r.cs ? 'gu' : 'giu'); } catch(e){}
+    const ex = new Set(r.except.split(', ').filter(Boolean).map(x => archNFC(x).toLowerCase()));
+    return re ? { r, re, ex } : null;
+  }).filter(Boolean);
+  return archComp;
+}
+function archCase(m, rep, cs){
+  if (cs || !rep) return rep;
+  const L = m.replace(/[^\p{L}]/gu, '');
+  if (L.length > 1 && L === L.toUpperCase() && L !== L.toLowerCase()) return rep.toUpperCase();
+  if (/^\p{Lu}/u.test(m)) return rep.charAt(0).toUpperCase() + rep.slice(1);
+  return rep;
+}
+const archWordAt = (text, s, e) => {
+  const isW = c => /[\p{L}\p{M}\p{N}]/u.test(c);
+  let a = s, b = e; while (a > 0 && isW(text[a - 1])) a--; while (b < text.length && isW(text[b])) b++;
+  return text.slice(a, b).toLowerCase();
+};
+function archFind(text){
+  const raw = [];
+  archCompile().forEach((c, ri) => {
+    c.re.lastIndex = 0; let m;
+    while ((m = c.re.exec(text))){
+      if (!m[0].length){ c.re.lastIndex++; continue; }
+      const s = m.index, e = s + m[0].length;
+      if (c.ex.size && c.ex.has(archNFC(archWordAt(text, s, e)))) continue;
+      raw.push({ s, e, ri, c });
+    }
+  });
+  raw.sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s) || a.ri - b.ri);
+  const out = []; let end = -1;
+  raw.forEach(x => {
+    if (x.s < end) return;                                   // chồng lấn → giữ cụm dài nhất / luật đứng trước
+    end = x.e;
+    const orig = text.slice(x.s, x.e), rep = archCase(orig, x.c.r.to, x.c.r.cs);
+    if (rep === orig) return;
+    const flag = !x.c.r.cs && /^\p{Lu}/u.test(orig) && orig !== orig.toUpperCase() && !hySentStart(text, x.s);
+    out.push({ s: x.s, e: x.e, orig, cur: orig, rep, rule: x.c.r, flag, state: 'r' });
+  });
+  return out;
+}
+function archBadge(){
+  const b = $('#edArch'); if (!b) return;
+  const n = archGet().length ? archFind(ed.Text.value).length : 0;
+  b.textContent = n ? `🔁 Từ cổ (${n})` : '🔁 Từ cổ';
+}
+function archParseBulk(txt){
+  const rules = [], bad = [];
+  txt.split(/\r?\n/).forEach((ln, i) => {
+    const l = ln.trim(); if (!l || /^(#|\/\/)/.test(l)) return;
+    const p = l.split(/\s*(?:=>|->|→|\t|\|)\s*/);
+    if (p.length < 2 || !p[0].trim()) return bad.push(i + 1);
+    rules.push({ from: p[0], to: p[1] });
+  });
+  return { rules, bad };
+}
+function archOpen(){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới sửa được nội dung');
+  const t = ed.Text;
+  let view = archGet().length ? 'scan' : 'dict', items = [], editIdx = -1, all = null, msg = '';
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(o);
+  const sheet = o.firstChild;
+  const touch = () => t.dispatchEvent(new Event('input', { bubbles: true }));
+  const stale = () => items.some(it => t.value.slice(it.s, it.e) !== it.cur);
+  const rescan = () => { items = archFind(t.value); };
+  const put = (it, to) => {                                   // độ dài đổi → dời các mục phía sau
+    const top = t.scrollTop, nw = to === 'y' ? it.rep : it.orig, d = nw.length - (it.e - it.s), i = items.indexOf(it);
+    t.setRangeText(nw, it.s, it.e, 'preserve');
+    it.cur = nw; it.state = to; it.e = it.s + nw.length;
+    for (let k = i + 1; k < items.length; k++){ items[k].s += d; items[k].e += d; }
+    t.scrollTop = top;
+  };
+  const rid = r => archGet().indexOf(r);
+  const scanAll = async () => {
+    await edAuto(); const res = []; let n = 0;
+    for (const m of bibleMeta){
+      const rec = await dbGet('books', m.name); if (!rec) continue;
+      for (let c = 0; c < rec.chapters.length; c++){
+        const k = archFind(serializeVerses(rec.chapters[c] || [])).length;
+        if (k){ res.push({ name: m.name, ch: c + 1, n: k }); n += k; }
+        if (++n % 40 === 0) await exYield();
+      }
+    }
+    return res;
+  };
+  const drawScan = () => {
+    const v = t.value, c = k => items.filter(i => i.state === k).length;
+    const nr = c('r'), ny = c('y'), ng = c('g'), nrSure = items.filter(i => i.state === 'r' && !i.flag).length;
+    const by = {}; items.filter(i => i.state === 'r').forEach(i => { const k = i.rule.from + ' → ' + i.rule.to; by[k] = (by[k] || 0) + 1; });
+    const rows = items.slice(0, 400).map((it, i) => {
+      const ls = v.lastIndexOf('\n', it.s - 1) + 1, le0 = v.indexOf('\n', it.e), le = le0 < 0 ? v.length : le0;
+      const a = Math.max(ls, it.s - 30), b = Math.min(le, it.e + 30);
+      const ctx = (a > ls ? '…' : '') + esc(v.slice(a, it.s)) + `<span class="hyw ${it.state}">${esc(v.slice(it.s, it.e))}</span>` + esc(v.slice(it.e, b)) + (b < le ? '…' : '');
+      const btns = it.state === 'r'
+        ? `<button class="sbtn" data-a="fix">Sửa → “${esc(it.rep)}”</button><button class="sbtn" data-a="skip">Bỏ qua</button>${it.flag ? '<span class="hytag">chữ hoa giữa câu – có thể là tên riêng</span>' : ''}${it.rule.note ? `<span class="hytag">${esc(it.rule.note)}</span>` : ''}`
+        : it.state === 'y' ? '<span class="hytag">✔ Đã sửa (từ gốc: ' + esc(it.orig) + ')</span><button class="sbtn" data-a="undo">↩ Hoàn tác</button>'
+        : '<span class="hytag">Đã bỏ qua lần này</span><button class="sbtn" data-a="unskip">↩ Bỏ qua → xét lại</button>';
+      return `<div class="hyrow" data-i="${i}"><div class="hyctx">${ctx}</div><div class="hybtn">${btns}</div></div>`;
+    }).join('');
+    const sum = Object.keys(by).map(k => `${esc(k)}: ${by[k]}`).join(' · ');
+    let allBox = '';
+    if (all) allBox = all.length ? `<div class="hynote"><b>Toàn bộ Kinh Thánh:</b> ${all.reduce((a, x) => a + x.n, 0)} chỗ ở ${all.length} chương. Bấm để mở chương cần sửa:</div><div class="hybtn">${all.slice(0, 80).map((x, i) => `<button class="sbtn" data-a="go" data-k="${i}">${esc(x.name)} ${x.ch} (${x.n})</button>`).join('')}</div>${all.length > 80 ? '<p class="hynote">Chỉ hiện 80 chương đầu — sửa xong quét lại để xem tiếp.</p>' : ''}` : '<p class="hynote">Toàn bộ Kinh Thánh: không còn từ cổ nào trong từ điển ✔</p>';
+    sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">Thay từ cổ · ${esc(edCur.name)} ${edCur.ch || ''}</h3>
+      <p class="hysum"><span class="hyw r">${nr} cần sửa</span> <span class="hyw y">${ny} đã sửa</span>${ng ? ` <span class="hyw g">${ng} bỏ qua</span>` : ''}</p>
+      ${sum ? `<p class="hynote">${sum}</p>` : ''}
+      <p class="hynote">Chữ hoa giữa câu (vàng cảnh báo) không nằm trong “Sửa tất cả” — hãy xem từng chỗ. Từ điển đang có ${archGet().length} luật.</p>
+      <div class="hybtn" style="margin-top:0">
+        <button class="sbtn" data-a="all"${nrSure ? '' : ' disabled'}>Sửa tất cả (${nrSure})</button>
+        ${nr > nrSure ? `<button class="sbtn" data-a="allflag">Sửa cả chữ hoa (${nr})</button>` : ''}
+        ${ny ? '<button class="sbtn" data-a="undoall">↩ Hoàn tác tất cả</button>' : ''}
+        <button class="sbtn" data-a="rescan">Quét lại</button>
+        <button class="sbtn" data-a="scanall">Quét toàn bộ Kinh Thánh</button>
+        <button class="sbtn" data-a="dict">📖 Từ điển</button>
+        <button class="sbtn" data-a="close">Đóng</button>
+      </div></div>${allBox}${!archGet().length ? '<p class="hynote">Từ điển đang trống — bấm “📖 Từ điển” để nhập từ cổ và từ thay thế.</p>' : ''}${rows}${items.length > 400 ? '<p class="hynote">Chỉ hiện 400 mục đầu — sửa xong bấm “Quét lại” để xem tiếp.</p>' : ''}`;
+  };
+  const drawDict = () => {
+    const L = archGet(), e = editIdx >= 0 ? L[editIdx] : { whole: true };
+    const rows = L.map((r, i) => `<div class="hyrow arrule${r.on ? '' : ' off'}" data-i="${i}"><div class="hyctx"><span class="hyw r">${esc(r.from)}</span> → <span class="hyw y">${esc(r.to) || '(xóa)'}</span> <span class="hytag">${r.whole ? 'trọn từ' : 'trong từ'}${r.cs ? ' · phân biệt hoa/thường' : ''}${r.except ? ' · ngoại lệ: ' + esc(r.except) : ''}${r.note ? ' · ' + esc(r.note) : ''}</span></div>
+      <div class="hybtn"><button class="sbtn" data-a="tog">${r.on ? 'Tắt' : 'Bật'}</button><button class="sbtn" data-a="edit">Sửa</button><button class="sbtn" data-a="del">Xóa</button></div></div>`).join('');
+    sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">Từ điển từ cổ (${L.length})</h3>
+      <p class="hynote">Tự nhập từng cặp “từ cổ → từ thay”. Mặc định chỉ khớp trọn từ và tự giữ kiểu hoa (nhơn → nhân, Nhơn → Nhân). Dấu gạch nối trong từ khớp được cả “-” lẫn “‐”. Chữ có dấu khác kiểu gõ (hoà / hòa) là hai từ khác nhau — nhập riêng từng dạng.</p>
+      ${msg ? `<p class="hynote" style="color:var(--fg)">${msg}</p>` : ''}
+      <div class="hybtn" style="margin-top:0"><button class="sbtn" data-a="back">← Quay lại quét</button><button class="sbtn" data-a="close">Đóng</button></div></div>
+      <div class="hyrow"><div class="hynote" style="margin:0 0 6px"><b>${editIdx >= 0 ? 'Sửa luật' : 'Thêm luật'}</b></div>
+        <div class="hybtn" style="margin:0"><input class="arin" id="arFrom" placeholder="Từ cổ (vd: …)" value="${esc(e.from || '')}"><input class="arin" id="arTo" placeholder="Thay bằng (để trống = xóa)" value="${esc(e.to || '')}"></div>
+        <div class="hybtn"><label class="artag"><input type="checkbox" id="arWhole"${e.whole !== false ? ' checked' : ''}> Chỉ khớp trọn từ</label><label class="artag"><input type="checkbox" id="arCs"${e.cs ? ' checked' : ''}> Phân biệt hoa/thường</label></div>
+        <div class="hybtn"><input class="arin" id="arEx" placeholder="Từ ngoại lệ không sửa (cách nhau dấu phẩy)" value="${esc(e.except || '')}"><input class="arin" id="arNote" placeholder="Ghi chú (tùy chọn)" value="${esc(e.note || '')}"></div>
+        <div class="hybtn"><button class="sbtn" data-a="save">${editIdx >= 0 ? 'Lưu thay đổi' : 'Thêm vào từ điển'}</button>${editIdx >= 0 ? '<button class="sbtn" data-a="cancel">Hủy sửa</button>' : ''}</div></div>
+      <div class="hyrow"><div class="hynote" style="margin:0 0 6px"><b>Nhập hàng loạt / Xuất</b> — mỗi dòng một cặp: <code>từ cổ => từ mới</code> (hoặc “→”, “|”, Tab). Dòng bắt đầu bằng # là chú thích.</div>
+        <textarea class="arin" id="arBulk" rows="5" style="width:100%" placeholder="vd:&#10;từ_cổ => từ_mới"></textarea>
+        <div class="hybtn"><button class="sbtn" data-a="import">Nhập vào từ điển</button><button class="sbtn" data-a="export">Xuất từ điển ra ô này</button></div></div>${rows}`;
+  };
+  const draw = () => { const k = sheet.scrollTop; view === 'scan' ? drawScan() : drawDict(); sheet.scrollTop = k; };
+  const val = id => (sheet.querySelector('#' + id) || {}).value || '';
+  const chk = id => !!(sheet.querySelector('#' + id) || {}).checked;
+  const warn = (L, r, skip) => {                              // cảnh báo luật trùng / thay chồng
+    const out = [], f = r.from.toLowerCase();
+    L.forEach((x, i) => { if (i === skip) return;
+      if (x.from.toLowerCase() === f) out.push(`“${x.from}” đã có (→ ${x.to})`);
+      else if (x.from.toLowerCase() === r.to.toLowerCase() && r.to) out.push(`“${r.to}” lại là từ cổ của luật khác (→ ${x.to}); mỗi lượt chỉ thay một lần, không chuyền tiếp`);
+    });
+    return out;
+  };
+  rescan(); draw();
+  if (view === 'scan' && archGet().length && /[^\u0000-\u007f]/.test(t.value) && t.value !== t.value.normalize('NFC')) toast('Văn bản có ký tự dạng tổ hợp (NFD) — có thể bỏ sót; hãy dán lại văn bản chuẩn.');
+  o.addEventListener('click', async e => {
+    if (e.target === o){ o.remove(); return archBadge(); }
+    const btn = e.target.closest('button[data-a]'); if (!btn) return;
+    const a = btn.dataset.a, row = btn.closest('.hyrow');
+    if (a === 'close'){ o.remove(); return archBadge(); }
+    if (a === 'dict'){ view = 'dict'; editIdx = -1; msg = ''; return draw(); }
+    if (a === 'back'){ view = 'scan'; rescan(); return draw(); }
+    if (a === 'rescan'){ rescan(); all = null; draw(); return toast('Đã quét lại'); }
+    if (a === 'scanall'){ toast('Đang quét toàn bộ Kinh Thánh…'); all = await scanAll(); rescan(); return draw(); }
+    if (a === 'go'){
+      const x = all[+btn.dataset.k]; await edAuto();
+      ed.Book.value = x.name; ed.Chap.value = x.ch; await edLoad(); all = null; rescan(); return draw();
+    }
+    if (view === 'dict'){
+      const L = archGet().slice(), i = row ? +row.dataset.i : -1;
+      if (a === 'tog'){ L[i] = { ...L[i], on: !L[i].on }; archSave(L); }
+      else if (a === 'del'){ L.splice(i, 1); archSave(L); if (editIdx === i) editIdx = -1; }
+      else if (a === 'edit'){ editIdx = i; msg = ''; }
+      else if (a === 'cancel'){ editIdx = -1; msg = ''; }
+      else if (a === 'save'){
+        const r = archNorm({ from: val('arFrom'), to: val('arTo'), whole: chk('arWhole'), cs: chk('arCs'), except: val('arEx'), note: val('arNote'), on: editIdx >= 0 ? L[editIdx].on : true });
+        if (!r) return toast('Hãy nhập từ cổ');
+        const w = warn(L, r, editIdx);
+        if (w.some(x => x.includes('đã có'))){ msg = '⚠ ' + w[0] + ' — hãy sửa luật cũ thay vì thêm trùng.'; return draw(); }
+        if (editIdx >= 0) L[editIdx] = r; else L.push(r);
+        archSave(L); editIdx = -1; msg = w.length ? '⚠ ' + w.join('; ') : '✔ Đã lưu luật “' + r.from + '”'; 
+      }
+      else if (a === 'import'){
+        const { rules, bad } = archParseBulk(val('arBulk')); let add = 0, upd = 0;
+        rules.forEach(x => { const r = archNorm(x); if (!r) return; const j = L.findIndex(y => y.from.toLowerCase() === r.from.toLowerCase());
+          if (j >= 0){ L[j] = { ...L[j], to: r.to }; upd++; } else { L.push(r); add++; } });
+        archSave(L); msg = `✔ Thêm ${add} · cập nhật ${upd}` + (bad.length ? ` · bỏ qua dòng lỗi: ${bad.join(', ')}` : '');
+      }
+      else if (a === 'export'){ draw(); sheet.querySelector('#arBulk').value = archGet().map(r => `${r.from} => ${r.to}`).join('\n'); return; }
+      return draw();
+    }
+    const it = row ? items[+row.dataset.i] : null;
+    if (stale()){ rescan(); draw(); return toast('Văn bản vừa thay đổi — đã quét lại, bấm lại thao tác'); }
+    if (a === 'fix'){ put(it, 'y'); touch(); }
+    else if (a === 'undo'){ put(it, 'r'); touch(); }
+    else if (a === 'skip'){ it.state = 'g'; }
+    else if (a === 'unskip'){ it.state = 'r'; }
+    else if (a === 'all' || a === 'allflag'){
+      let n = 0; items.forEach(x => { if (x.state === 'r' && (a === 'allflag' || !x.flag)){ put(x, 'y'); n++; } });
+      touch(); toast(`Đã sửa ${n} chỗ — các vị trí đó chuyển sang màu vàng`);
+    }
+    else if (a === 'undoall'){ let n = 0; items.forEach(x => { if (x.state === 'y'){ put(x, 'r'); n++; } }); touch(); toast(`Đã hoàn tác ${n} chỗ`); }
+    draw();
+  });
+}
+$('#edArch').onclick = archOpen;
 /* --- Tên sách: báo sách có sẵn / sẽ tạo mới (bắt lỗi gõ nhầm), đổi tên, xóa sách --- */
 function edBookHint(){
   const h = $('#edBookHint'); if (!h) return;
