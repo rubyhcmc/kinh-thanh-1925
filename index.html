@@ -1430,7 +1430,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v5';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4710,7 +4710,7 @@ $('#edClean').onclick = () => {
    Bỏ qua tên riêng phiên âm (Giê-hô-va, Ép-ra-im…): chữ hoa giữa câu, tên sách, từ đã được đánh dấu "Là tên riêng". */
 const HY_KEY = 'kt.hyIgnore';
 const HY_SPLIT = /[-‐‑]/g;
-const HY_PRE = ['a-men','ha-lê-lu-gia','hô-sa-na','sê-la','sê-lah','ma-na'];
+const HY_PRE = ['a-men','ha-lê-lu-gia','hô-sa-na','sê-la','sê-lah','ma-na','thánh-linh'];
 const hyKey = w => w.normalize('NFC').toLowerCase().replace(HY_SPLIT, '-');
 const hyIsCap = w => /^\p{Lu}/u.test(w);
 const hyIgn = () => { try { return new Set(JSON.parse(localStorage.getItem(HY_KEY) || '[]')); } catch(e){ return new Set(); } };
