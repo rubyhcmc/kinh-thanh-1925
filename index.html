@@ -508,9 +508,10 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 .overlay.rpop .rpx{flex:none;width:38px;height:38px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s}
 .overlay.rpop .rpx svg{width:20px;height:20px}
 .overlay.rpop .rpx:hover,.overlay.rpop .rpx:active{background:var(--line);color:var(--fg)}
-.rptabs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+/* Thẻ câu trích dẫn tự xuống dòng (không còn vuốt ngang); nhiều thẻ quá thì cuộn dọc trong khung tối đa ~3 dòng */
+.rptabs{flex:none;display:flex;flex-wrap:wrap;gap:6px;overflow-x:hidden;overflow-y:auto;max-height:118px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card);scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .rptabs::-webkit-scrollbar{display:none}
-.rptab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 13px;font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.rptab{flex:0 1 auto;max-width:100%;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:5px 11px;font:600 12.5px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;white-space:normal;text-align:left;transition:background .15s,color .15s,border-color .15s}
 .rptab[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 [data-theme=dark] .rptab[aria-selected=true]{color:#1a1409}
 html[data-paper][data-theme=dark] .rptab[aria-selected=true]{color:#0e0e0d}
@@ -1499,7 +1500,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v13';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v14';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
