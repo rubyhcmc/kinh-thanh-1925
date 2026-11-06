@@ -1166,8 +1166,11 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
         <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
         <button class="btn" id="exWord">📄 Xuất Word</button>
         <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
+        <button class="btn" id="exCheck">🔍 Đối chiếu với tệp</button>
       </div>
       <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
+      <input type="file" id="exCheckFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
+      <p class="hint" style="margin:8px 0 0">Mỗi sách khi xuất đều có <b>mã kiểm chứng SHA-256</b> (chỉ cần sai một dấu phẩy là mã đổi hoàn toàn). Khôi phục xong, app tự đọc lại từng sách trong máy và so mã với tệp. Nút “Đối chiếu với tệp” cho phép so dữ liệu đang có với một tệp bất kỳ mà không ghi gì, nếu khác sẽ chỉ rõ chương và câu nào khác.</p>
       <div class="log" id="exLog"></div>
     </div>
 
@@ -1283,6 +1286,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edH">＃ Tiêu đề</button>
           <button class="btn" id="edVNum" title="Thêm số câu tại con trỏ: tự lấy số kế tiếp (câu trước + 1) và xuống dòng, dùng khi app không tự nhận dạng được số câu">🔢 Số câu</button>
           <button class="btn" id="edNote" title="Gắn chú thích tại vị trí con trỏ (trong câu, tiêu đề, tiểu mục… bất kỳ đâu)">📝 Chú thích</button>
+          <button class="btn" id="edItal" title="Biến dòng đang đứng (hoặc các dòng đang bôi chọn) thành ghi chú in nghiêng không có số, ví dụ “(Phó cho quản phường nhạc…)”. Bấm lần nữa để bỏ. Dòng ghi chú bắt đầu bằng dấu *">🖋 Ghi chú nghiêng</button>
           <button class="btn" id="edQ1">＞ Thơ</button>
           <button class="btn" id="edQ2">＞＞ Thơ lùi</button>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
@@ -1290,7 +1294,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edClean">🧹 Dọn lỗi</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
         </div>
-        <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương"></textarea>
+        <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương · * = ghi chú in nghiêng không số, ví dụ “* (Phó cho quản phường nhạc…)”"></textarea>
         <div class="log" id="edStatus"></div>
         <div class="log ok" id="edAuto"></div>
       </div>
@@ -4047,7 +4051,17 @@ function detectVerses(raw, o){
   return vs;
 }
 
-// Câu → văn bản soạn thảo (# tiêu đề · dòng trống = đoạn mới · > thơ)
+/* Chú thích KHÔNG có số [n] (ví dụ "(Phó cho quản phường nhạc, khảy đờn mà hát bài nầy)." cuối Ha-ba-cúc 3): hiện trong ô soạn thành dòng "* nội dung".
+   Dấu * giúp app nhận ra đây là ghi chú in nghiêng nên sửa được, lưu lại vẫn là ghi chú (không bị nhập vào câu Kinh Thánh). */
+function serializeFn(f){
+  const s = String(f);
+  if (/^\[\d{1,3}\]/.test(s.trim())) return [s];                       // chú thích có số: giữ nguyên như cũ
+  const parts = s.split('\n').map(x => x.trim()).filter(Boolean);
+  if (!parts.length) return [];
+  const safe = parts.slice(1).every(x => !/^(?:[#>*\[]|\(?\d{1,3}(?:[\s.:)_\-–—]|$))/.test(x));   // ghi chú nhiều dòng: dòng tiếp theo giữ nguyên nếu không bị nhầm với câu / tiêu đề
+  return safe ? ['* ' + parts[0], ...parts.slice(1)] : parts.map(x => '* ' + x);
+}
+// Câu → văn bản soạn thảo (# tiêu đề · dòng trống = đoạn mới · > thơ · * ghi chú in nghiêng)
 function serializeVerses(vs){
   const out = [];
   vs.forEach((v, i) => {
@@ -4059,7 +4073,7 @@ function serializeVerses(vs){
         out.push(k === 0 ? `${pre} ${v.n}${v.e > v.n ? '-' + v.e : ''} ${ln}` : `${pre} ${ln}`);
       });
     } else out.push(`${v.n}${v.e > v.n ? '-' + v.e : ''} ${v.t}`);
-    (v.fn || []).forEach(f => out.push(f));
+    (v.fn || []).forEach(f => serializeFn(f).forEach(l => out.push(l)));
   });
   return out.join('\n');
 }
@@ -4073,6 +4087,13 @@ function parseMarkup(text, startAt){
     if (!line){ pendP = true; continue; }                              // dòng trống không làm đứt chú thích dài
     let m = line.match(/^#\s+(.+)$/);
     if (m){ lastFn = null; pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
+    m = line.match(/^\*\s*(.*)$/);                                      // ghi chú in nghiêng không số: "* nội dung" (dòng "* " còn trống thì bỏ qua)
+    if (m){
+      const nt = m[1].trim(); lastFn = null; if (!nt) continue;
+      if (vs.length && pendH === null){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(nt); lastFn = { v:lv, i:lv.fn.length - 1 }; }
+      else { pendFn.push(nt); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; }
+      continue;
+    }
     m = line.match(/^(>{1,2})\s*(.*)$/);
     const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
     const fm = !lvl && body.match(/^\[(\d{1,3})\][\s:.)\-–]*(\S.*)$/);      // chấp nhận cả "[1]Nội dung", "[1]: Nội dung"          // "[1] chú thích" → gắn vào câu liền trước
@@ -4395,7 +4416,7 @@ const edSel = { s:0, e:0 };
   document.addEventListener('selectionchange', keep);
   t.addEventListener('blur', () => { edSel.s = t.selectionStart; edSel.e = t.selectionEnd; });
   // giữ tiêu điểm khi bấm nút công cụ (không bàn phím nhảy, không mất vùng chọn)
-  ['#edPasteBtn', '#edDelBtn', '#edNote', '#edVNum'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
+  ['#edPasteBtn', '#edDelBtn', '#edNote', '#edItal', '#edVNum'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
 }
 const edRange = () => { const n = ed.Text.value.length; let s = Math.min(edSel.s, n), e = Math.min(edSel.e, n); if (s > e) [s, e] = [e, s]; return [s, e]; };
 // Thay đoạn [s,e) bằng txt. Ưu tiên execCommand (giữ Hoàn tác); nếu trình duyệt không làm thật thì ghi trực tiếp vào ô.
@@ -4484,7 +4505,7 @@ function edLines(fn){
   t.value = v.slice(0, a) + out + v.slice(b);
   t.setSelectionRange(a, a + out.length); t.focus(); edQueue();
 }
-const stripPre = l => l.replace(/^(#\s?|>{1,2}\s?)/, '');
+const stripPre = l => l.replace(/^(#\s?|>{1,2}\s?|\*\s?)/, '');
 $('#edH').onclick  = () => edLines(l => /^#\s/.test(l) ? stripPre(l) : '# ' + stripPre(l));
 /* Nút 📝 Chú thích: chèn dấu [n] (n = số kế tiếp chưa dùng) tại con trỏ – trong câu, tiêu đề hay tiểu mục đều được – rồi tự thêm dòng "[n] …" ngay sau
    đoạn đang viết và bôi sẵn phần nội dung để gõ thay vào. */
@@ -4507,6 +4528,20 @@ $('#edNote').onclick = () => {
   try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); }
   t.setSelectionRange(c - ph.length, c); edSel.s = c - ph.length; edSel.e = c;
   toast('Đã gắn chú thích [' + n + '] – gõ nội dung thay cho dòng được bôi chọn');
+};
+/* Nút 🖋 Ghi chú nghiêng: dòng đang đứng (hoặc các dòng bôi chọn) ↔ ghi chú in nghiêng "* …" gắn vào câu liền trước. Ô trống / dòng trống → thêm sẵn "* " để gõ.
+   Không đổi dòng đang bắt đầu bằng số câu (đó là câu Kinh Thánh) để tránh vô tình làm mất câu. */
+$('#edItal').onclick = () => {
+  const t = ed.Text;
+  if (!t.value.trim()){ t.value = '* '; try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); } t.setSelectionRange(2, 2); edQueue(); return toast('Gõ nội dung ghi chú sau dấu *'); }
+  const isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?\)|\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?)(?:[.:]|\s|$)/.test(l);
+  let blocked = 0;
+  edLines(l => {
+    if (/^\*(\s|$)/.test(l)) return l.replace(/^\*\s?/, '');                // đang là ghi chú → trả về dòng thường
+    if (isVerse(l)){ blocked++; return l; }
+    return '* ' + stripPre(l);
+  });
+  if (blocked) toast('Dòng bắt đầu bằng số câu là câu Kinh Thánh nên giữ nguyên. Hãy đặt con trỏ vào dòng ghi chú.', 3500);
 };
 /* Nút 🔢 Số câu có 2 cách dùng:
    (1) BÔI ĐEN số câu đã gõ (vd "8", "8-9", "8_9", "(8–9)") → bấm nút: số được chuẩn hóa thành "8-9", dính liền câu, thừa khoảng trắng bị gọn, nếu đang nằm giữa dòng thì tự xuống dòng
@@ -5202,7 +5237,8 @@ async function exportBook(name){
     const lay = layoutBook(book);
     const r = await renderPages(lay.pages, book.name, (i, n) => say(`Đang vẽ trang ${i}/${n}…`));
     say('Đang đóng gói dữ liệu khôi phục…');
-    const payload = { app:'kinhthanh', version:1, kind:'book', updatedAt:new Date().toISOString(), bible:{ books:[book] } };
+    const ck = { algo:'SHA-256', books:{ [book.name]: await exHashBook(book) } }; ck.all = await exCodeOf(ck.books);
+    const payload = { app:'kinhthanh', version:1, kind:'book', updatedAt:new Date().toISOString(), bible:{ books:[book] }, checksums:ck };
     const jsonStr = JSON.stringify(payload), raw = new TextEncoder().encode(jsonStr), packed = await pdfDeflate(raw);
     const parts = buildPdfParts({ images:r.images, w:r.w, h:r.h, W:PG.W, H:PG.H, marks:lay.marks, title:book.name + ' - Kinh Thánh',
       data:packed || raw, flate:!!packed, rawSize:raw.length });
@@ -5212,7 +5248,7 @@ async function exportBook(name){
     const json = new File([jsonStr], base + '.json', { type:'application/json' });
     say('Đang kiểm tra dữ liệu khôi phục…');
     const vr = await verifyExport(pdf, jsonStr, rec.chapters, rec.name);
-    const lines = [`Tên tệp: ${base}.pdf · ${base}.json`, bno.known ? `Số thứ tự sách: ${String(bno.no).padStart(2, '0')}/66` : `Số thứ tự: ${bno.no || '—'} (tên sách chưa trùng danh sách 66 sách chuẩn nên dùng vị trí trong app)`];
+    const lines = [`Tên tệp: ${base}.pdf · ${base}.json`, `Mã kiểm chứng SHA-256: ${exShort(ck.all)}`, bno.known ? `Số thứ tự sách: ${String(bno.no).padStart(2, '0')}/66` : `Số thứ tự: ${bno.no || '—'} (tên sách chưa trùng danh sách 66 sách chuẩn nên dùng vị trí trong app)`];
     const good = vr.jsonOk && vr.pdfOk !== false;
     lines.push(good ? `✔ Đã kiểm tra: dữ liệu khôi phục trong ${vr.pdfOk ? 'PDF và JSON' : 'JSON'} khớp 100% với sách trong máy (${vr.chaps} chương, ${vr.verses} câu).`
                     : `✖ KHÔNG KHỚP: ${!vr.jsonOk ? 'JSON' : 'dữ liệu trong PDF'} khác sách trong máy – đừng dùng bản này, hãy xuất lại.`);
@@ -5351,7 +5387,7 @@ function exProgUI(title){
   return ui;
 }
 function exSetBusy(on){
-  ['#exGo', '#exWord', '#exRestore', '#exBook'].forEach(s => { const e = $(s); if (e) e.disabled = on; });
+  ['#exGo', '#exWord', '#exRestore', '#exCheck', '#exBook'].forEach(s => { const e = $(s); if (e) e.disabled = on; });
   const c = $('#exGo') && $('#exGo').closest('.card'); if (c) c.setAttribute('aria-busy', on ? 'true' : 'false');
 }
 function exSyncUI(){                                              // đổi nhãn nút + dòng chú thích theo lựa chọn
@@ -5415,9 +5451,54 @@ async function docxPackAsync(chunks, fname, ui){                  // chunks: cá
   return new File(parts, fname, { type:DOCX_MIME });
 }
 
+/* ---- MÃ KIỂM CHỨNG (SHA-256) ----
+   Dạng chuẩn của một sách = tên sách + JSON của các chương đã chuẩn hóa (thứ tự khóa cố định n,t,h,p,e,q,fn). Băm theo từng mã ký tự Unicode,
+   nên khác một dấu, một khoảng trắng, hay khác kiểu gõ dấu tiếng Việt (NFC/NFD) cũng bị phát hiện. Tên/viết tắt/tiêu đề phụ không nằm trong mã. */
+async function exSha(str){
+  try {
+    if (window.crypto && crypto.subtle){
+      const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+  } catch(e){}
+  await exYield(); return sha256js(str);                          // trình duyệt không có crypto.subtle (trang không bảo mật) → dùng bản tự cài
+}
+const exCanon = chapters => JSON.stringify(normChapters(chapters));
+async function exHashBook(b){                                     // b: { name, chapters }
+  if (b._sha) return b._sha;
+  const h = await exSha(String(b.name).trim() + '\n' + exCanon(b.chapters));
+  try { Object.defineProperty(b, '_sha', { value:h, enumerable:false, configurable:true }); } catch(e){}   // nhớ mã (không đi vào JSON/IndexedDB vì không liệt kê được)
+  return h;
+}
+async function exCodeOf(map){                                     // mã chung của cả bộ: băm danh sách "tên<TAB>mã" theo thứ tự tên
+  return exSha(Object.keys(map).sort().map(n => n + '\t' + map[n]).join('\n'));
+}
+const exShort = h => String(h || '').slice(0, 16).toUpperCase().replace(/(.{4})(?=.)/g, '$1-');
+function exDiffBook(b, dbCh){                                     // chỉ ra chương/câu khác nhau (tối đa 5 chỗ)
+  const A = normChapters(b.chapters), B = normChapters(dbCh), out = [], n = Math.max(A.length, B.length);
+  const snip = (a, c) => { let i = 0; while (i < a.length && i < c.length && a[i] === c[i]) i++; const cut = x => JSON.stringify(x.slice(Math.max(0, i - 12), i + 18)); return `tệp ${cut(a)} ≠ máy ${cut(c)}`; };
+  for (let ci = 0; ci < n && out.length < 5; ci++){
+    const x = A[ci] || [], y = B[ci] || [], m = Math.max(x.length, y.length);
+    for (let vi = 0; vi < m && out.length < 5; vi++){
+      const p = x[vi], q = y[vi];
+      if (JSON.stringify(p) === JSON.stringify(q)) continue;
+      if (!p) out.push(`Chương ${ci + 1}: máy có thêm câu ${q.n}`);
+      else if (!q) out.push(`Chương ${ci + 1}: máy thiếu câu ${p.n}`);
+      else out.push(`Chương ${ci + 1} câu ${p.n}: ` + (p.t !== q.t ? snip(String(p.t), String(q.t)) : 'khác tiêu đề/thơ/chú thích'));
+    }
+  }
+  return out.length ? out : ['(khác ở cấu trúc chương)'];
+}
+function exInfoSheet(title, lines, ok){
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
+  o.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3><div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 8px;white-space:pre-wrap">${esc(lines.join('\n'))}</div><div class="btns"><button class="btn primary" data-k="x">Xong</button></div></div>`;
+  o.addEventListener('click', e => { if (e.target.closest('[data-k]') || e.target === o) o.remove(); });
+  document.body.appendChild(o);
+}
+
 /* ---- Dựng JSON gộp ---- */
 async function exBuildSetJson(key, list, ui){
-  const sp = EX_SETS[key], parts = [], st = { books:0, chapters:0, verses:0, skipped:[] };
+  const sp = EX_SETS[key], parts = [], st = { books:0, chapters:0, verses:0, skipped:[], hashes:{}, code:'', verified:0 };
   parts.push('{"app":"kinhthanh","version":1,"kind":"set","scope":' + JSON.stringify(key) + ',"scopeLabel":' + JSON.stringify(sp.label) + ',"updatedAt":' + JSON.stringify(new Date().toISOString()) + ',"bible":{"books":[');
   for (let i = 0; i < list.length; i++){
     const { m, no } = list[i];
@@ -5426,17 +5507,26 @@ async function exBuildSetJson(key, list, ui){
     const rec = await dbGet('books', m.name);
     if (!rec || !rec.chapters || !rec.chapters.some(c => c && c.length)){ st.skipped.push(m.name); continue; }
     rec.chapters.forEach(vs => { if (vs && vs.length){ st.chapters++; st.verses += vs.length; } });
+    st.hashes[rec.name] = await exHashBook({ name:rec.name, chapters:rec.chapters });
     parts.push((st.books ? ',' : '') + JSON.stringify({ name:rec.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:rec.chapters, no }));
     st.books++;
   }
   if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
-  parts.push(']},"stats":' + JSON.stringify({ books:st.books, chapters:st.chapters, verses:st.verses }) + '}');
+  st.code = await exCodeOf(st.hashes);
+  parts.push(']},"stats":' + JSON.stringify({ books:st.books, chapters:st.chapters, verses:st.verses }) + ',"checksums":' + JSON.stringify({ algo:'SHA-256', books:st.hashes, all:st.code }) + '}');
   const file = new File(parts, sp.file + '.json', { type:'application/json' });
-  ui.say('Đang kiểm tra tệp JSON vừa tạo…', 92); await ui.step();
+  ui.say('Đọc lại tệp JSON và tính lại mã kiểm chứng…', 90); await ui.step();
   let ok = false;
-  try {
-    const j = JSON.parse(await file.text()), bs = j.bible.books;
-    ok = bs.length === st.books && bs.reduce((a, b) => a + normChapters(b.chapters).reduce((x, vs) => x + vs.length, 0), 0) === st.verses;
+  try {                                                           // đọc lại CHÍNH tệp vừa tạo, tính lại SHA-256 từng sách, so với mã tính từ dữ liệu trong máy
+    const j = JSON.parse(await file.text()), bs = j.bible.books; let good = 0, verses = 0;
+    for (let i = 0; i < bs.length; i++){
+      const nb = normBible([bs[i]])[0]; if (!nb) continue;
+      verses += exVerseCount(nb);
+      if (await exHashBook(nb) === st.hashes[nb.name]) good++;
+      if (i % 4 === 0) await ui.step();
+    }
+    st.verified = good;
+    ok = bs.length === st.books && good === st.books && verses === st.verses && j.checksums && j.checksums.all === st.code;
   } catch(e){ ok = false; }
   return { file, st, ok };
 }
@@ -5508,7 +5598,10 @@ async function exportSet(key, kind){                              // kind: 'json
     const r = isWord ? await exBuildSetDocx(key, plan.list, ui) : await exBuildSetJson(key, plan.list, ui);
     ui.say('Hoàn tất', 100); ui.close();
     const lines = [`${isWord ? 'Word' : 'JSON'} trọn bộ “${sp.label}”: ${r.st.books} sách · ${r.st.chapters} chương · ${r.st.verses} câu.`];
-    if (!isWord) lines.push(r.ok ? '✔ Đã kiểm tra: đọc lại tệp JSON khớp 100% (số sách, số câu).' : '✖ KHÔNG KHỚP khi đọc lại tệp JSON – đừng dùng bản này, hãy xuất lại.');
+    if (!isWord){
+      lines.push(r.ok ? `✔ Kiểm chứng SHA-256: đọc lại tệp JSON, ${r.st.verified}/${r.st.books} sách khớp TỪNG CHỮ với dữ liệu trong máy.` : `✖ KHÔNG KHỚP khi đọc lại tệp JSON (${r.st.verified}/${r.st.books} sách khớp) – đừng dùng bản này, hãy xuất lại.`);
+      lines.push('Mã kiểm chứng ' + sp.label + ': ' + exShort(r.st.code) + '  (ghi lại để đối chiếu sau này)');
+    }
     if (isWord) lines.push('Mở bằng Word: ngăn Điều hướng (Navigation) liệt kê từng sách và từng chương.');
     if (plan.missing.length) lines.push(`⚠ Thiếu ${plan.missing.length} sách so với bộ chuẩn: ${plan.missing.map(n => BIBLE66[n - 1]).join(', ')}.`);
     if (r.st.skipped.length) lines.push('⚠ Bỏ qua sách rỗng: ' + r.st.skipped.join(', '));
@@ -5532,19 +5625,24 @@ async function exNormBooks(src, ui){                              // chuẩn hó
   }
   return out;
 }
+const exVerseCount = b => b.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
 async function exParseFile(f, ui){                                // → { books, label }
   const { text, pdf } = await fileToText(f);
   const s = String(text).replace(/^\uFEFF/, '').trim();
   if (!s) throw new Error(`Tệp “${f.name}” trống.`);
-  let books, label;
+  let books, label, claimed = null;
   if (/^[\[{]/.test(s)){
     let j; try { j = JSON.parse(s); } catch(e){ throw new Error(`“${f.name}” không phải JSON hợp lệ (${e.message}).`); }
     label = j && j.kind === 'set' ? ('trọn bộ ' + (j.scopeLabel || '')).trim() : j && j.kind === 'book' ? 'một sách' : (j && (j.about || j.app)) ? 'bản sao lưu ứng dụng' : 'dữ liệu JSON';
+    if (j && j.checksums && j.checksums.books && typeof j.checksums.books === 'object') claimed = j.checksums;
     books = await exNormBooks(Array.isArray(j) ? j : (j.bible || j), ui);
   } else { label = 'văn bản'; books = await exNormBooks(parseBibleText(s), ui); }
   if (pdf) label = 'PDF kèm dữ liệu – ' + label;
-  if (!books.length) throw new Error(`“${f.name}” không có sách Kinh Thánh hợp lệ nào.`);
-  return { books, label };
+  const all = books.length;
+  books = books.filter(b => exVerseCount(b) > 0);               // sách không có câu nào thì không có gì để khôi phục (và không được phép ghi đè sách đang có)
+  if (!books.length) throw new Error(`“${f.name}” không có câu Kinh Thánh nào để khôi phục (không phải tệp xuất từ ứng dụng này?).`);
+  if (books.length < all) label += `, bỏ qua ${all - books.length} sách rỗng`;
+  return { books, label, claimed };
 }
 async function exImportSafe(books, ui){                           // ghi theo lô nhỏ, đọc lại kiểm tra từng sách
   const existing = await dbAll('bookMeta');
@@ -5560,7 +5658,7 @@ async function exImportSafe(books, ui){                           // ghi theo l�
     return m;
   };
   const cnt = b => b.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
-  const res = { done:[], bad:[], first:books[0].name, chapters:0, verses:0, stopped:false };
+  const res = { done:[], bad:[], first:books[0].name, chapters:0, verses:0, stopped:false, hashes:{}, verified:0 };
   const BATCH_V = 2500, BATCH_B = 8;
   let i = 0;
   while (i < books.length){
@@ -5569,6 +5667,7 @@ async function exImportSafe(books, ui){                           // ghi theo l�
     while (i < books.length && batch.length < BATCH_B && (!batch.length || v < BATCH_V)){ const b = books[i++]; batch.push(b); v += cnt(b); }
     ui.say('Đang nạp vào máy: ' + batch[0].name + (batch.length > 1 ? ' … ' + batch[batch.length - 1].name : ''), 30 + 66 * res.done.length / books.length, res.done.length + '/' + books.length + ' sách');
     await exYield(true);
+    const inc = {}; for (const b of batch) inc[b.name] = await exHashBook(b);   // mã của nội dung SẮP ghi
     try {
       await dbPut('books', batch.map(b => ({ name:b.name, chapters:b.chapters })));
       await dbPut('bookMeta', batch.map(metaOf));                 // meta ghi SAU nội dung: sách chỉ hiện ra khi đã có đủ chữ
@@ -5580,12 +5679,46 @@ async function exImportSafe(books, ui){                           // ghi theo l�
     for (const b of batch){
       const rec = await dbGet('books', b.name);
       const got = rec && rec.chapters ? rec.chapters.reduce((a, c) => a + (c ? c.length : 0), 0) : -1;
-      if (got !== cnt(b)) res.bad.push(b.name);
+      const hh = rec && rec.chapters ? await exHashBook({ name:b.name, chapters:rec.chapters }) : '';   // băm lại nội dung ĐỌC TỪ MÁY
+      if (got !== cnt(b) || hh !== inc[b.name]) res.bad.push(b.name); else res.verified++;
+      res.hashes[b.name] = inc[b.name];
       res.done.push(b.name); res.chapters += b.chapters.filter(c => c && c.length).length; res.verses += cnt(b);
     }
     await exYield(true);
   }
   return res;
+}
+async function exCompareFiles(files){                            // so dữ liệu TRONG MÁY với tệp, không ghi gì
+  if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
+  exBusy = true; exSetBusy(true);
+  const log = $('#exLog'); log.className = 'log ok'; log.textContent = 'Đang đối chiếu…';
+  const ui = exProgUI('Đang đối chiếu với tệp…');
+  try {
+    const lines = []; let total = 0, same = 0, diff = 0, missing = 0, selfBad = 0;
+    for (let fi = 0; fi < files.length; fi++){
+      ui.say(`Đang đọc “${files[fi].name}”…`, 3 + 15 * fi / files.length); await ui.step();
+      const r = await exParseFile(files[fi], ui);
+      for (let i = 0; i < r.books.length; i++){
+        const b = r.books[i]; total++;
+        ui.say('Đang so sánh: ' + b.name, 20 + 78 * i / r.books.length, (i + 1) + '/' + r.books.length + ' sách'); await ui.step();
+        const hf = await exHashBook(b);
+        if (r.claimed && r.claimed.books[b.name] && r.claimed.books[b.name] !== hf){ selfBad++; lines.push(`⚠ ${b.name}: nội dung trong TỆP không khớp mã khai báo của chính nó (tệp có thể đã bị sửa/hỏng)`); }
+        const rec = await dbGet('books', b.name);
+        if (!rec || !rec.chapters || !rec.chapters.some(c => c && c.length)){ missing++; lines.push(`✖ ${b.name}: CHƯA có trong máy`); continue; }
+        if (hf === await exHashBook({ name:b.name, chapters:rec.chapters })) same++;
+        else { diff++; lines.push(`✖ ${b.name}: KHÁC nhau`); exDiffBook(b, rec.chapters).forEach(x => lines.push('    ' + x)); }
+      }
+    }
+    ui.close();
+    const ok = total > 0 && same === total && !selfBad;
+    const head = ok ? `✔ ${total}/${total} sách trong tệp GIỐNG HỆT dữ liệu trong máy, từng chữ, từng dấu (SHA-256).` : `✖ Có sai khác: ${same} sách giống · ${diff} sách khác · ${missing} sách chưa có trong máy (tổng ${total} sách trong tệp).`;
+    log.className = 'log ' + (ok ? 'ok' : 'err'); log.textContent = head; log.style.whiteSpace = 'pre-wrap';
+    exInfoSheet('Kết quả đối chiếu', [head, ...lines.slice(0, 60), ...(lines.length > 60 ? [`… và ${lines.length - 60} dòng nữa`] : [])], ok);
+  } catch(err){
+    ui.close();
+    if (err && err.exCancel){ log.textContent = 'Đã hủy đối chiếu.'; toast('Đã hủy'); }
+    else { console.error(err); log.className = 'log err'; log.textContent = '✖ ' + (err.message || err); }
+  } finally { exBusy = false; exSetBusy(false); }
 }
 async function exRestoreFiles(files){
   if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
@@ -5596,29 +5729,53 @@ async function exRestoreFiles(files){
   window.addEventListener('beforeunload', guard);
   let partial = null;
   try {
-    const byName = new Map(), srcs = [];
+    const byName = new Map(), srcs = [], claims = [];
     for (let i = 0; i < files.length; i++){                       // 1) đọc + phân tích TẤT CẢ tệp trước, chưa ghi gì
       ui.say(`Đang đọc “${files[i].name}”…`, 3 + 24 * i / files.length, `Tệp ${i + 1}/${files.length}`);
       await ui.step();
       const r = await exParseFile(files[i], ui);
       r.books.forEach(b => byName.set(b.name, b));                // trùng tên: bản sau thay bản trước
+      claims.push({ file:files[i].name, claimed:r.claimed, books:r.books });
       srcs.push(`${files[i].name}: ${r.books.length} sách (${r.label})`);
     }
     let books = [...byName.values()].filter(b => !isDemoBook(b));
     if (!books.length) throw new Error('Không tìm thấy sách Kinh Thánh hợp lệ trong tệp đã chọn.');
+    ui.say('Đang kiểm tra tệp còn nguyên vẹn (SHA-256)…', 27); await ui.step();
+    const corrupt = []; let selfOk = 0, selfTot = 0;                // tệp có mã khai báo → từng sách phải băm ra đúng mã đó
+    for (const c of claims){
+      if (!c.claimed) continue;
+      const have = new Set(c.books.map(b => b.name));
+      Object.keys(c.claimed.books).forEach(n => { if (!have.has(n)) corrupt.push(`${n} (thiếu trong ${c.file})`); });
+      for (const b of c.books){
+        const want = c.claimed.books[b.name]; if (!want) continue;
+        selfTot++; if (await exHashBook(b) === want) selfOk++; else corrupt.push(`${b.name} (${c.file})`);
+        await exYield();
+      }
+    }
+    if (corrupt.length){
+      const pick = await choose('Tệp không khớp mã kiểm chứng', `${corrupt.length} sách có nội dung KHÁC với lúc xuất (tệp bị hỏng, tải chưa đủ hoặc đã bị sửa tay):\n` + corrupt.slice(0, 8).map(x => '• ' + x).join('\n') + (corrupt.length > 8 ? '\n…' : '') + '\n\nKhông nên nạp tệp này.',
+        [{ t:'Dừng lại, không nạp gì (khuyên dùng)', cls:'primary' }, { t:'Vẫn nạp (tôi đã chủ ý sửa tệp)' }]);
+      if (pick === 0){ const e = new Error('Đã dừng vì tệp không khớp mã kiểm chứng'); e.exCancel = true; throw e; }
+    }
     ui.say('Đang đối chiếu với dữ liệu trong máy…', 28); await ui.step();
     const cur = new Map((await dbAll('bookMeta')).map(m => [m.name, m]));
     const replaced = books.filter(b => cur.has(b.name)).length;
-    const shrink = books.filter(b => cur.has(b.name) && (cur.get(b.name).chapterCount || 0) > b.chapters.length);
+    const shrink = [];                                            // sách trong tệp có ÍT câu hoặc ÍT chương hơn bản đang có
+    for (let i = 0; i < books.length; i++){
+      const b = books[i]; if (!cur.has(b.name)) continue;
+      ui.say('Đang đối chiếu: ' + b.name, 28 + 2 * i / books.length); await ui.step();
+      const rec = await dbGet('books', b.name), ev = rec && rec.chapters ? exVerseCount(rec) : 0, ec = rec && rec.chapters ? rec.chapters.length : 0;
+      if (exVerseCount(b) < ev || b.chapters.length < ec) shrink.push({ b, ev, ec });
+    }
     let skipped = [];
     if (shrink.length){                                           // 2) chặn việc vô tình thay sách đầy đủ bằng bản thiếu chương
-      const pick = await choose('Có sách sẽ bị thay bằng bản ít chương hơn',
-        `${shrink.length} sách trong tệp có ÍT chương hơn bản đang có trong máy:\n` + shrink.slice(0, 8).map(b => `• ${b.name}: ${b.chapters.length} < ${cur.get(b.name).chapterCount} chương`).join('\n') + (shrink.length > 8 ? '\n…' : '') + '\n\nBạn muốn làm gì?',
+      const pick = await choose('Có sách sẽ bị thay bằng bản ít nội dung hơn',
+        `${shrink.length} sách trong tệp có ÍT câu/chương hơn bản đang có trong máy:\n` + shrink.slice(0, 8).map(x => `• ${x.b.name}: tệp ${exVerseCount(x.b)} câu/${x.b.chapters.length} chương, máy ${x.ev} câu/${x.ec} chương`).join('\n') + (shrink.length > 8 ? '\n…' : '') + '\n\nBạn muốn làm gì?',
         [{ t:'Chỉ nạp phần an toàn (bỏ qua các sách này)', cls:'primary' }, { t:'Vẫn khôi phục tất cả (ghi đè)' }, { t:'Hủy, không thay đổi gì' }]);
       if (pick === 2){ const e = new Error('Đã hủy'); e.exCancel = true; throw e; }
-      if (pick === 0){ const sk = new Set(shrink.map(b => b.name)); skipped = [...sk]; books = books.filter(b => !sk.has(b.name)); }
+      if (pick === 0){ const sk = new Set(shrink.map(x => x.b.name)); skipped = [...sk]; books = books.filter(b => !sk.has(b.name)); }
     }
-    if (!books.length){ ui.close(); log.className = 'log ok'; log.textContent = 'Không có gì để nạp (mọi sách trong tệp đều ngắn hơn bản đang có).'; return toast('Không thay đổi gì'); }
+    if (!books.length){ ui.close(); log.className = 'log ok'; log.textContent = 'Không có gì để nạp (mọi sách trong tệp đều ít nội dung hơn bản đang có).'; return toast('Không thay đổi gì'); }
     const res = await exImportSafe(books, ui);                    // 3) ghi từng lô + kiểm tra
     partial = res;
     if (res.done.length === 1 || !bibleMeta.some(m => m.name === S.book)){ S.book = res.first; S.chapter = 1; saveS(); }
@@ -5629,8 +5786,14 @@ async function exRestoreFiles(files){
     lines.push(...srcs.map(x => '• ' + x));
     if (replaced) lines.push(`Đã thay thế nội dung của ${replaced} sách có sẵn trùng tên.`);
     if (skipped.length) lines.push('Đã bỏ qua (giữ bản đang có): ' + skipped.join(', '));
-    if (res.bad.length) lines.push('⚠ Kiểm tra lại thấy sai khác ở: ' + res.bad.join(', ') + ' – hãy khôi phục lại từ tệp.');
-    const ok = !res.bad.length && !res.stopped;
+    if (res.bad.length) lines.push('⚠ Đọc lại từ máy thấy SAI KHÁC ở: ' + res.bad.join(', ') + ' – hãy khôi phục lại từ tệp.');
+    else lines.push(`✔ Kiểm chứng SHA-256: đọc lại từ máy, ${res.verified}/${res.done.length} sách khớp TỪNG CHỮ với nội dung trong tệp.`);
+    if (selfTot) lines.push(corrupt.length ? `⚠ Tệp có ${corrupt.length} sách không khớp mã khai báo (bạn đã chọn vẫn nạp).` : `✔ Tệp còn nguyên vẹn: ${selfOk}/${selfTot} sách khớp mã khai báo lúc xuất.`);
+    const code = await exCodeOf(res.hashes);
+    const one = claims.length === 1 && claims[0].claimed && claims[0].claimed.all;
+    const sameSet = one && !skipped.length && Object.keys(res.hashes).length === Object.keys(claims[0].claimed.books).length && Object.keys(claims[0].claimed.books).every(n => res.hashes[n]);
+    lines.push(sameSet ? (code === claims[0].claimed.all ? `✔ Mã kiểm chứng trọn bộ TRÙNG với lúc xuất: ${exShort(code)}` : `✖ Mã kiểm chứng trọn bộ KHÁC lúc xuất (${exShort(code)} ≠ ${exShort(claims[0].claimed.all)})`) : 'Mã kiểm chứng của phần vừa nạp: ' + exShort(code));
+    const ok = !res.bad.length && !res.stopped && !(sameSet && code !== claims[0].claimed.all);
     log.className = 'log ' + (ok ? 'ok' : 'err'); log.textContent = lines.join('\n'); log.style.whiteSpace = 'pre-wrap';
     toast(ok ? 'Đã khôi phục dữ liệu' : 'Khôi phục xong nhưng có cảnh báo, xem chi tiết bên dưới', 4000);
   } catch(err){
@@ -5643,6 +5806,8 @@ async function exRestoreFiles(files){
 $('#exWord').onclick = () => { const k = exSetKey($('#exBook').value); return k ? exportSet(k, 'word') : exportBookWord($('#exBook').value, true); };   // Xuất file Word cả sách đang chọn (mục 4 của Quản lý dữ liệu)
 $('#exRestore').onclick = () => $('#exFile').click();
 $('#exFile').onchange = e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) exRestoreFiles(files); };
+$('#exCheck').onclick = () => $('#exCheckFile').click();
+$('#exCheckFile').onchange = e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) exCompareFiles(files); };
 
 /* ============ CÀI ĐẶT HIỂN THỊ ============ */
 /* Toàn màn hình khi đọc Trang giấy: Android/trình duyệt hỗ trợ Fullscreen API sẽ ẩn hẳn thanh trạng thái (sóng, giờ, pin);
