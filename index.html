@@ -420,6 +420,23 @@ details a{color:var(--accent)}
 .edbook .btn{padding:7px 10px;font-size:13px}
 .edhint{flex:1;min-width:170px;font-size:12.5px;color:var(--muted);line-height:1.4}
 .edhint.warn{color:var(--accent);font-weight:600}
+/* ===== Quét gạch nối trong văn bản cổ (đỏ = chưa sửa · vàng = đã sửa) ===== */
+.hybar{position:sticky;top:-18px;z-index:3;margin:-18px -18px 10px;padding:16px 18px 10px;background:var(--card);border-bottom:1px solid var(--line)}
+.hysum{margin:0 0 8px;font-size:14px;line-height:1.7}
+.hynote{margin:0 0 8px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.hyrow{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 8px;background:var(--bg)}
+.hyctx{font-family:var(--serif);font-size:16px;line-height:1.6;overflow-wrap:anywhere}
+.hyw{display:inline;padding:1px 5px;border-radius:6px;font-weight:700;font-family:var(--sans);font-size:.92em}
+.hyw.r{background:rgba(220,38,38,.16);color:#c62828;box-shadow:inset 0 -2px 0 #c62828}
+.hyw.y{background:#fde68a;color:#6b4a00;box-shadow:inset 0 -2px 0 #e0a800}
+.hyw.g{background:var(--accent-soft);color:var(--muted)}
+[data-theme=dark] .hyw.r{background:rgba(255,138,128,.18);color:#ff8a80;box-shadow:inset 0 -2px 0 #ff8a80}
+[data-theme=dark] .hyw.y{background:rgba(250,204,21,.26);color:#fde047;box-shadow:inset 0 -2px 0 #facc15}
+html[data-paper] .hyw.r{background:none;color:var(--fg);text-decoration:underline wavy;box-shadow:none}
+html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
+.hybtn{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.hybtn .sbtn{padding:8px 13px}
+.hytag{font:11.5px var(--sans);color:var(--muted)}
 /* §§ ▼▼▼ MỤC 6 · QUẢN TRỊ & SAO LƯU — CSS đăng nhập quản trị ▼▼▼ */
 /* ===== Đăng nhập ===== */
 #login .sheet{max-width:380px;padding:26px 22px calc(18px + env(safe-area-inset-bottom));text-align:center;background:var(--card)}
@@ -1326,6 +1343,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
           <button class="btn" id="edNorm">Chuẩn hóa</button>
           <button class="btn" id="edClean">🧹 Dọn lỗi</button>
+          <button class="btn" id="edHy" title="Quét các từ còn dấu gạch ngang giữa chữ (tội-lỗi, phước-hạnh…) để sửa">🔎 Gạch nối</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
         </div>
         <textarea id="edText" spellcheck="false" placeholder="Dán nguyên văn chương vào đây (từ web, PDF hay Word).&#10;&#10;Ví dụ sau khi nhận dạng:&#10;# Sự sáng tạo (St 1,1–2,4a)&#10;1 Ban đầu, Thiên Chúa dựng nên trời đất.&#10;2 Đất lúc đó trống rỗng...&#10;&#10;Dòng trống = đoạn mới · # = tiêu đề (nhiều dòng # liên tiếp = tiêu đề nhiều dòng) · &gt; = dòng thơ · [1] Chú thích = chú thích cuối chương · * = ghi chú in nghiêng không số, ví dụ “* (Phó cho quản phường nhạc…)”"></textarea>
@@ -1411,7 +1429,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4406,6 +4424,7 @@ function edRefresh(){
   ed.Preview.querySelectorAll('.fnx').forEach(x => { x.hidden = false; });
   ed.Preview.querySelectorAll('.fnk').forEach(k => k.setAttribute('aria-expanded', 'true'));
   edBookHint();
+  try { hyBadge(); } catch(e){}
   const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
   ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
   ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
@@ -4677,6 +4696,120 @@ $('#edClean').onclick = () => {
   ed.Text.value = serializeVerses(vs); edRefresh(); edQueue();
   toast(n ? `Đã dọn lỗi khoảng trắng / dấu câu ở ${n} câu` : 'Không có lỗi khoảng trắng hay dấu câu lặp để sửa');
 };
+/* --- Quét dấu gạch nối giữa chữ (tội-lỗi, phước-hạnh…) trong văn bản cổ ---
+   Đỏ = còn gạch nối · vàng = đã sửa (đổi "-" thành dấu cách, độ dài văn bản không đổi nên vị trí các mục khác không bị lệch).
+   Bỏ qua tên riêng phiên âm (Giê-hô-va, Ép-ra-im…): chữ hoa giữa câu, tên sách, từ đã được đánh dấu "Là tên riêng". */
+const HY_KEY = 'kt.hyIgnore';
+const HY_SPLIT = /[-‐‑]/g;
+const HY_PRE = ['a-men','ha-lê-lu-gia','hô-sa-na','sê-la','sê-lah','ma-na'];
+const hyKey = w => w.normalize('NFC').toLowerCase().replace(HY_SPLIT, '-');
+const hyIsCap = w => /^\p{Lu}/u.test(w);
+const hyIgn = () => { try { return new Set(JSON.parse(localStorage.getItem(HY_KEY) || '[]')); } catch(e){ return new Set(); } };
+const hyIgnSave = set => { try { localStorage.setItem(HY_KEY, JSON.stringify([...set])); } catch(e){} };
+let hyNameCache = null, hyNameN = -1;
+function hyNames(){
+  let n = 0; try { n = bibleMeta.length; } catch(e){}
+  if (hyNameCache && hyNameN === n) return hyNameCache;
+  const s = new Set(HY_PRE);
+  const add = x => { if (!x) return; const k = hyKey(String(x)); s.add(k); String(x).split(/\s+/).forEach(p => { if (/[-‐‑]/.test(p)) s.add(hyKey(p)); }); };
+  try { BIBLE66.forEach(add); } catch(e){}
+  try { bibleMeta.forEach(b => { add(b.name); add(b.abbr); }); } catch(e){}
+  hyNameCache = s; hyNameN = n; return s;
+}
+// Từ đứng đầu câu? (trước nó chỉ còn số câu, ngoặc, nháy, ">" hoặc dấu kết câu)
+function hySentStart(text, idx){
+  let i = idx - 1;
+  while (i >= 0 && /[\s\d>"'“”‘’()\[\]_\-–—]/.test(text[i])){ if (text[i] === '\n') return true; i--; }
+  return i < 0 || /[.!?:;…]/.test(text[i]);
+}
+function hyScan(text){
+  const ign = hyIgn(), names = hyNames();
+  const re = /[\p{L}\p{M}]+(?:[-‐‑][\p{L}\p{M}]+)+/gu, raw = [];
+  let m; while ((m = re.exec(text))) raw.push({ s: m.index, w: m[0] });
+  const midCap = new Set();                       // chữ hoa giữa câu ở bất kỳ đâu → chắc chắn là tên riêng
+  raw.forEach(r => { if (hyIsCap(r.w) && !hySentStart(text, r.s)) midCap.add(hyKey(r.w)); });
+  const out = [];
+  raw.forEach(r => {
+    const key = hyKey(r.w);
+    if (ign.has(key) || names.has(key) || midCap.has(key)) return;
+    let flag = false;
+    if (hyIsCap(r.w)){ if (!hySentStart(text, r.s)) return; flag = true; }   // chữ hoa đầu câu: có thể là tên riêng → hỏi lại
+    out.push({ s: r.s, e: r.s + r.w.length, key, orig: r.w, cur: r.w, fix: r.w.replace(HY_SPLIT, ' '), flag, state: 'r' });
+  });
+  return out;
+}
+function hyBadge(){
+  const b = $('#edHy'); if (!b) return;
+  const n = hyScan(ed.Text.value).length;
+  b.textContent = n ? `🔎 Gạch nối (${n})` : '🔎 Gạch nối';
+}
+function hyOpen(){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới sửa được nội dung');
+  const t = ed.Text;
+  let items = hyScan(t.value);
+  if (!items.length) return toast('Không thấy từ nào còn dấu gạch ngang giữa chữ ✔');
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = '<div class="sheet"></div>';
+  document.body.appendChild(o);
+  const sheet = o.firstChild;
+  const touch = () => t.dispatchEvent(new Event('input', { bubbles: true }));
+  const stale = () => items.some(it => t.value.slice(it.s, it.e) !== it.cur);
+  const rescan = msg => { items = hyScan(t.value); draw(); if (msg) toast(msg); };
+  const put = (it, to) => {                        // đổi tại chỗ, không dời vị trí
+    const top = t.scrollTop;
+    t.setRangeText(to === 'y' ? it.fix : it.orig, it.s, it.e, 'preserve');
+    it.cur = to === 'y' ? it.fix : it.orig; it.state = to; t.scrollTop = top;
+  };
+  const draw = () => {
+    const keep = sheet.scrollTop, v = t.value;
+    const c = k => items.filter(i => i.state === k).length;
+    const nr = c('r'), ny = c('y'), ng = c('g'), nrSure = items.filter(i => i.state === 'r' && !i.flag).length;
+    const rows = items.slice(0, 400).map((it, i) => {
+      const ls = v.lastIndexOf('\n', it.s - 1) + 1, le0 = v.indexOf('\n', it.e), le = le0 < 0 ? v.length : le0;
+      const a = Math.max(ls, it.s - 30), b = Math.min(le, it.e + 30);
+      const ctx = (a > ls ? '…' : '') + esc(v.slice(a, it.s)) + `<span class="hyw ${it.state === 'g' ? 'g' : it.state}">${esc(v.slice(it.s, it.e))}</span>` + esc(v.slice(it.e, b)) + (b < le ? '…' : '');
+      const btns = it.state === 'r'
+        ? `<button class="sbtn" data-a="fix">Sửa → “${esc(it.fix)}”</button><button class="sbtn" data-a="name">Là tên riêng</button>${it.flag ? '<span class="hytag">chữ hoa đầu câu – có thể là tên riêng</span>' : ''}`
+        : it.state === 'y'
+          ? '<span class="hytag">✔ Đã sửa</span><button class="sbtn" data-a="undo">↩ Hoàn tác</button>'
+          : '<span class="hytag">Đã đánh dấu là tên riêng (sẽ bỏ qua)</span><button class="sbtn" data-a="unname">↩ Bỏ đánh dấu</button>';
+      return `<div class="hyrow" data-i="${i}"><div class="hyctx">${ctx}</div><div class="hybtn">${btns}</div></div>`;
+    }).join('');
+    sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">Quét dấu gạch nối</h3>
+      <p class="hysum"><span class="hyw r">${nr} cần sửa</span> <span class="hyw y">${ny} đã sửa</span>${ng ? ` <span class="hyw g">${ng} tên riêng</span>` : ''}</p>
+      <p class="hynote">Sửa = đổi “-” thành dấu cách (tội-lỗi → tội lỗi). “Sửa tất cả” bỏ qua từ chữ hoa đầu câu vì có thể là tên riêng.</p>
+      <div class="hybtn" style="margin-top:0">
+        <button class="sbtn" data-a="all"${nrSure ? '' : ' disabled'}>Sửa tất cả (${nrSure})</button>
+        ${nr > nrSure ? `<button class="sbtn" data-a="allflag">Sửa cả đầu câu (${nr})</button>` : ''}
+        ${ny ? '<button class="sbtn" data-a="undoall">↩ Hoàn tác tất cả</button>' : ''}
+        <button class="sbtn" data-a="rescan">Quét lại</button>
+        <button class="sbtn" data-a="close">Đóng</button>
+      </div></div>${rows}${items.length > 400 ? '<p class="hynote">Chỉ hiện 400 mục đầu — sửa xong bấm “Quét lại” để xem tiếp.</p>' : ''}`;
+    sheet.scrollTop = keep;
+  };
+  draw();
+  o.addEventListener('click', e => {
+    if (e.target === o) return o.remove();
+    const btn = e.target.closest('button[data-a]'); if (!btn) return;
+    const a = btn.dataset.a, row = btn.closest('.hyrow'), it = row ? items[+row.dataset.i] : null;
+    if (a === 'close') return o.remove();
+    if (a === 'rescan') return rescan('Đã quét lại');
+    if (stale()) return rescan('Văn bản vừa thay đổi — đã quét lại, bấm lại thao tác');
+    if (a === 'fix'){ put(it, 'y'); touch(); draw(); }
+    else if (a === 'undo'){ put(it, 'r'); touch(); draw(); }
+    else if (a === 'name'){ const s = hyIgn(); s.add(it.key); hyIgnSave(s); items.forEach(x => { if (x.key === it.key && x.state === 'r') x.state = 'g'; }); hyBadge(); draw(); }
+    else if (a === 'unname'){ const s = hyIgn(); s.delete(it.key); hyIgnSave(s); items.forEach(x => { if (x.key === it.key && x.state === 'g') x.state = 'r'; }); hyBadge(); draw(); }
+    else if (a === 'all' || a === 'allflag'){
+      let n = 0; items.forEach(x => { if (x.state === 'r' && (a === 'allflag' || !x.flag)){ put(x, 'y'); n++; } });
+      touch(); draw(); toast(`Đã sửa ${n} chỗ — các vị trí đó chuyển sang màu vàng`);
+    }
+    else if (a === 'undoall'){
+      let n = 0; items.forEach(x => { if (x.state === 'y'){ put(x, 'r'); n++; } });
+      touch(); draw(); toast(`Đã hoàn tác ${n} chỗ`);
+    }
+  });
+}
+$('#edHy').onclick = hyOpen;
 /* --- Tên sách: báo sách có sẵn / sẽ tạo mới (bắt lỗi gõ nhầm), đổi tên, xóa sách --- */
 function edBookHint(){
   const h = $('#edBookHint'); if (!h) return;
