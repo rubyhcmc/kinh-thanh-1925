@@ -1411,7 +1411,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.05v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1706,12 +1706,41 @@ $('#selBook').onchange = async e => {
   if (document.activeElement === nc) nc.dispatchEvent(new Event('focus'));   // cập nhật lại dải số chương theo sách mới
 };
 $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChapter(); };
-$('#selVerse').onchange = e => {
-  const el = $('#v' + e.target.value); if (!el) return;
-  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start', behavior:'auto' });      // nhảy ngay tới câu, không cuộn chậm
-  flashVerse(el);
-  e.target.value = '';
-};
+/* Nhảy tới câu n và GIỮ câu ở đầu màn hình: sau khi render lại chương (gõ "7:14"), bố cục/phông chữ chưa ổn định
+   nên 1 lần scrollIntoView sẽ lệch. Ở đây định vị lại nhiều lần cho tới khi ổn định hoặc người dùng chạm/cuộn. */
+let kjTok = 0;
+function ktJumpVerse(n){
+  const el0 = $('#v' + n); if (!el0) return false;
+  const my = ++kjTok;
+  if (pgScrollTo(el0)){ flashVerse(el0); return true; }
+  const key0 = curBook ? curBook.name + '|' + S.chapter : '';
+  const cn = $('#chapNav'); let user = false; const timers = [];
+  const vv = window.visualViewport, evs = ['touchstart','wheel','mousedown'];
+  const place = () => {
+    if (my !== kjTok || user) return;
+    if ((curBook ? curBook.name + '|' + S.chapter : '') !== key0) return;
+    const el = $('#v' + n); if (!el) return;
+    const want = () => SCR.getBoundingClientRect().top + 14;
+    const topOf = () => (el.getClientRects()[0] || el.getBoundingClientRect()).top;
+    let d = topOf() - want();
+    if (Math.abs(d) <= 1) return;
+    SCR.scrollTop += d;
+    d = topOf() - want();
+    if (d > 1 && cn){ cn.style.height = (cn.offsetHeight + d + 2) + 'px'; SCR.scrollTop += d; }
+  };
+  const cleanup = () => { evs.forEach(k => SCR.removeEventListener(k, stop)); timers.forEach(clearTimeout);
+    if (vv) vv.removeEventListener('resize', place);
+    if (document.fonts && document.fonts.removeEventListener) document.fonts.removeEventListener('loadingdone', place); };
+  const stop = () => { user = true; cleanup(); };
+  evs.forEach(k => SCR.addEventListener(k, stop, { passive:true }));
+  if (vv) vv.addEventListener('resize', place);
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', place);
+  place(); flashVerse(el0);
+  [50,120,250,450,650].forEach(t => timers.push(setTimeout(place, t)));
+  timers.push(setTimeout(cleanup, 1300));
+  return true;
+}
+$('#selVerse').onchange = e => { const n = +e.target.value; if (n) ktJumpVerse(n); e.target.value = ''; };
 /* Ô Chương / Câu: nhập số trực tiếp (bàn phím số), đủ số hợp lệ là nhảy ngay */
 function syncNav(){
   const c = $('#niChap'), v = $('#niVerse'), on = !!curBook;
@@ -2189,9 +2218,7 @@ function removeBookmark(n){
   toastAct(`Đã bỏ đánh dấu ${bk} ${ch0}:${n}`, 'Hoàn tác', () => { BM.unshift(old); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){} });
 }
 function scrollToVerse(n){
-  const el = $('#v' + n); if (!el) return;
-  if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' });
-  flashVerse(el);
+  ktJumpVerse(n);
 }
 async function goBookmark(b){
   if (!bibleMeta.some(m => m.name === b.book)){ toast('Sách "' + b.book + '" không còn trong máy'); return; }
@@ -2996,7 +3023,7 @@ function bsRender(){
 async function bsOpen(book, ch, n){
   setSearch(false);
   await openBook(book, ch);
-  if (n){ const el = $('#v' + n); if (el){ if (!pgScrollTo(el)) el.scrollIntoView({ block:'start' }); flashVerse(el); } }
+  if (n) ktJumpVerse(n);
 }
 async function bsCopy(r){
   const txt = r.t + '\n— ' + r.b + ' ' + r.c + ':' + r.n; let ok = false;
@@ -4588,7 +4615,13 @@ $('#edItal').onclick = () => {
   if (!t.value.trim()){ t.value = '* '; try { t.focus({ preventScroll:true }); } catch(err){ t.focus(); } t.setSelectionRange(2, 2); edQueue(); return toast('Gõ nội dung ghi chú sau dấu *'); }
   const isVerse = l => /^\s*(?:>{1,2}\s*)?(?:\(\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?\)|\d{1,3}(?:\s*[_\-–—]\s*\d{1,3})?)(?:[.:]|\s|$)/.test(l);
   let blocked = 0;
-  edLines(l => {
+  /* Bôi nhiều dòng (không có dòng nào là ghi chú hay câu Kinh Thánh) → gom thành MỘT ghi chú in nghiêng, mỗi dòng bôi là một lần xuống dòng (Enter) trong ghi chú đó */
+  const selL = (() => { const v = t.value, s = t.selectionStart, e = t.selectionEnd, a = s === 0 ? 0 : v.lastIndexOf('\n', s - 1) + 1; let b = v.indexOf('\n', e); if (b < 0) b = v.length; return v.slice(a, b).split('\n'); })();
+  const oneNote = selL.length > 1 && selL.every(l => l.trim() && !/^\s*[*#]/.test(l) && !isVerse(l) && !/^\s*\[\d{1,3}\]/.test(l));
+  const undoBlock = selL.length > 1 && /^\*(\s|$)/.test(selL[0]) && selL.slice(1).every(l => !/^\*(\s|$)/.test(l));   // ghi chú nhiều dòng đang được bôi → bỏ dấu * ở dòng đầu, các dòng sau giữ nguyên
+  edLines((l, i) => {
+    if (oneNote) return i === 0 ? '* ' + stripPre(l) : stripPre(l);
+    if (undoBlock) return i === 0 ? l.replace(/^\*\s?/, '') : l;
     if (/^\*(\s|$)/.test(l)) return l.replace(/^\*\s?/, '');                // đang là ghi chú → trả về dòng thường
     if (isVerse(l)){ blocked++; return l; }
     return '* ' + stripPre(l);
@@ -5041,7 +5074,7 @@ function layoutBook(book){
     const fns = vs.flatMap(v => v.fn || []);
     if (fns.length){
       L.gap(8); L.ensure(34); L.rule(); L.gap(5);
-      fns.forEach(f => L.flow([{ s:f, k:'n' }], { size:8.2, lh:11.5, st:'i', color:'#6b6150' }));
+      fns.forEach(f => String(f).split('\n').forEach(ln => { if (ln.trim()) L.flow([{ s:ln, k:'n' }], { size:8.2, lh:11.5, st:'i', color:'#6b6150' }); }));   // Enter trong ghi chú = xuống dòng thật (in nghiêng)
     }
   });
   return L;
@@ -6001,7 +6034,7 @@ function updateOnline(){ $('#offlineBadge').hidden = navigator.onLine; }
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline);
 
 /* Về đầu chương khi đổi sách/chương: chỉ đặt lại vị trí của khung đọc; thanh đầu trang cố định nên không có gì nhảy */
-function ktTop(){ if (SCR.scrollTop !== 0) SCR.scrollTop = 0; }
+function ktTop(){ if (SCR.scrollTop !== 0) SCR.scrollTop = 0; const cn = document.getElementById('chapNav'); if (cn) cn.style.height = ''; }
 
 /* Báo cáo tình trạng bộ nhớ của máy: mỗi nơi lưu (IndexedDB, Cache Storage, localStorage) đang giữ gì – để biết chính xác nơi nào hỏng */
 async function ktDiag(){
