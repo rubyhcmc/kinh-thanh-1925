@@ -1429,7 +1429,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v3';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v4';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4194,6 +4194,10 @@ function parseMarkup(text, startAt){
       if (vs.length && pendH === null){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(nt); lastFn = { v:lv, i:lv.fn.length - 1 }; }
       else { pendFn.push(nt); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; }
       continue;
+    }
+    /* Dòng CUỐI chương nằm trọn trong ngoặc tròn, không phải số câu (vd "(Phó cho quản phường nhạc, khảy đờn mà hát bài nầy.)") → tự nhận là ghi chú in nghiêng, xuống dòng riêng, khỏi cần gõ "* " */
+    if (vs.length && pendH === null && /^\(\s*[^\d\s()][^()]*\)\.?$/.test(line) && lines.slice(li + 1).every(x => !x.trim())){
+      const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(line); lastFn = null; continue;
     }
     m = line.match(/^(>{1,2})\s*(.*)$/);
     const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
