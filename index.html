@@ -1500,7 +1500,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v16';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v17';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5499,7 +5499,10 @@ async function rpGet(r){   // → [{ch, verses:[…]}] ; tối đa 60 câu mỗi
   }
   return { res, more, miss:false };
 }
-const rpTxt = t => esc(String(t == null ? '' : t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim());
+/* Làm gọn chữ trích dẫn: bỏ gạch ngang / dấu phẩy chấm phẩy treo ở đầu và cuối câu (vd "…nầy chết đi, —") và dấu lặp thừa; giữ . ? ! và dấu ngoặc */
+const rpClean = t => String(t == null ? '' : t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ')
+  .replace(/^[\s,;:\-–—―]+/, '').replace(/[\s,;:\-–—―]+$/, '').replace(/([,;:])(?:\s*[,;:])+/g, '$1').replace(/\s+([,;.!?])/g, '$1').trim();
+const rpTxt = t => esc(rpClean(t));
 /* Phần chữ còn lại của chú thích sau khi bỏ các địa chỉ và từ dẫn ("Xem", "Cũng xem"…): có thì đó là lời chú giải thật → hiện thêm khung chú thích;
    chú thích chỉ gồm địa chỉ thì không lặp lại (tiêu đề đã nói rồi). */
 const RP_LEAD = new Set(['xem', 'cũng', 'so', 'sánh', 'đối', 'chiếu', 'cf', 'và', 'hay', 'x', 'với', 'xa']);
@@ -5533,7 +5536,7 @@ async function rpShow(i){
 async function openRefPop(o){
   const refs = (o && o.refs || []).slice(0, 12); if (!refs.length) return;
   const ov = $('#refPop'); rpRefs = refs; rpData = []; clearTimeout(rpHideT);
-  rpNote = o.note && rpHasComment(o.note) ? String(o.note).trim() : '';
+  rpNote = o.note && rpHasComment(o.note) ? rpClean(o.note) : '';
   $('#rpKind').textContent = rpNote ? 'Chú thích · Đối chiếu Kinh Thánh' : 'Đối chiếu Kinh Thánh';
   const tabs = $('#rpTabs');
   tabs.hidden = refs.length < 2;
