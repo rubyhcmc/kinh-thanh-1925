@@ -1411,7 +1411,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v2';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1712,7 +1712,7 @@ let kjTok = 0;
 function ktJumpVerse(n){
   const el0 = $('#v' + n); if (!el0) return false;
   const my = ++kjTok;
-  if (pgScrollTo(el0)){ flashVerse(el0); return true; }
+  if (pgScrollTo(el0)){ pg.vWant = { n:String(n), page:pg.page, key:S.book + '|' + S.chapter }; flashVerse(el0); syncVerse(); return true; }
   const key0 = curBook ? curBook.name + '|' + S.chapter : '';
   const cn = $('#chapNav'); let user = false; const timers = [];
   const vv = window.visualViewport, evs = ['touchstart','wheel','mousedown'];
@@ -1761,7 +1761,12 @@ function curVerseNo(){
   const vs = $$('#bibleText .v'); if (!vs.length) return '';
   if (document.body.classList.contains('pg') && !document.body.classList.contains('searching')){
     const b = $('#pgView').getBoundingClientRect();
-    const v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
+    /* Vừa nhảy tới một câu (gõ 7:14): hiện đúng số câu đó khi vẫn đang ở trang đó, không hiện câu có đuôi nằm ở dòng đầu trang */
+    const w = pg.vWant;
+    if (w && w.page === pg.page && w.key === S.book + '|' + S.chapter && $('#v' + w.n)) return w.n;
+    /* Câu của trang = câu đầu tiên BẮT ĐẦU trong trang này (đuôi câu trước vắt sang không tính) */
+    let v = vs.find(x => { const r = x.getClientRects()[0]; return r && r.left >= b.left - 2 && r.left < b.right - 2; });
+    if (!v) v = vs.find(x => x.getBoundingClientRect().right > b.left + 12 && x.getBoundingClientRect().left < b.right) || vs[0];
     return v.dataset.n;
   }
   const hb = SCR.getBoundingClientRect().top;
