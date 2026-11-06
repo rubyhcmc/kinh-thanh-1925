@@ -1500,7 +1500,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v15';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v16';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5742,7 +5742,12 @@ function docxBookBody(bookName, sub, chapters, title, subBelow, opt){        // 
     body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true, lvl:opt.outline ? 1 : null });
     let para = null, lastPoem = false;
     const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
-    c.vs.forEach(v => {
+    const isNumFn = f => /^\[\d{1,3}\]/.test(String(f).trim());
+    const stat = opt.stat;
+    if (stat) stat.chapters++;
+    c.vs.filter(v => v && typeof v === 'object').forEach(v => {
+      if (stat) stat.verses++;
+      const vno = String(v.n) + (+v.e > +v.n ? '–' + v.e : '');        // câu gộp (vd 8–9) in đủ cả dải số
       if (v.h){
         flush();
         String(v.h).split('\n').map(x => x.trim()).filter(Boolean).forEach((l, k) => {
@@ -5755,24 +5760,38 @@ function docxBookBody(bookName, sub, chapters, title, subBelow, opt){        // 
       if (poem){
         flush();
         String(v.t).split('\n').forEach((ln, k) => {
-          const r = (k === 0 ? wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ', { sz:SZ }) : '') + wRun(ln, { sz:SZ });
+          const r = (k === 0 ? wRun(vno, { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ', { sz:SZ }) : '') + wRun(ln, { sz:SZ });
           body += wParaX(r, { align:'left', left:360 * (v.q[k] || 1), after:20, line:320 });
         });
         lastPoem = true;
       } else {
         if (lastPoem){ body += wParaX('', { after:60 }); lastPoem = false; }
         if (!para || v.p){ flush(); para = ''; }
-        para += wRun(String(v.n), { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ' + String(v.t) + ' ', { sz:SZ });
+        para += wRun(vno, { b:true, sz:18, color:'8A5A1F', sup:true }) + wRun(' ' + String(v.t) + ' ', { sz:SZ });
+      }
+      /* Ghi chú KHÔNG số: in nghiêng ngay sau câu đó (giống màn hình đọc), không đẩy xuống cuối chương */
+      const un = (v.fn || []).filter(f => !isNumFn(f));
+      if (un.length){
+        flush();
+        un.forEach(f => { body += wParaX(wRun(String(f), { i:true, sz:22, color:'6B6150' }), { align:'left', after:80, line:320 }); if (stat) stat.fns++; });
+        lastPoem = false;
       }
     });
     flush();
-    const fns = c.vs.flatMap(v => v.fn || []);
-    fns.forEach((f, k) => { body += wParaX(wRun(f, { i:true, sz:20, color:'6B6150' }), { align:'left', before:k ? 0 : 200, after:60, line:300 }); });
+    const fns = c.vs.filter(v => v && typeof v === 'object').flatMap(v => (v.fn || []).filter(isNumFn));
+    fns.forEach((f, k) => { body += wParaX(wRun(String(f), { i:true, sz:20, color:'6B6150' }), { align:'left', before:k ? 0 : 200, after:60, line:300 }); if (stat) stat.fns++; });
   });
   return body;
 }
+function docxSrcStat(chapters){                                    // đếm từ dữ liệu gốc để đối chiếu với số đã ghi vào Word
+  const st = { chapters:0, verses:0, fns:0 };
+  chapters.forEach(c => { st.chapters++; (c.vs || []).forEach(v => { if (v && typeof v === 'object'){ st.verses++; st.fns += (v.fn || []).length; } }); });
+  return st;
+}
 function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        // chapters: [{ch, vs}]
-  const body = docxBookBody(bookName, sub, chapters, title, subBelow);
+  const stat = { chapters:0, verses:0, fns:0 }, src = docxSrcStat(chapters);
+  const body = docxBookBody(bookName, sub, chapters, title, subBelow, { stat });
+  if (stat.chapters !== src.chapters || stat.verses !== src.verses || stat.fns !== src.fns) throw new Error(`Word thiếu dữ liệu (${stat.verses}/${src.verses} câu, ${stat.fns}/${src.fns} chú thích) – đã dừng, không tạo tệp thiếu.`);
   const enc = new TextEncoder();
   const zip = zipStore([
     { name:'[Content_Types].xml', data:enc.encode(DOCX_CT) },
@@ -5806,14 +5825,14 @@ function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) &
 const exNoOf = name => BIBLE_KEYS.get(bkKey(name)) || 0;
 function exSetCount(metas, key, filled){                          // số sách đang có trong máy / tổng của bộ (filled: tập tên sách THỰC SỰ có câu; không truyền = chỉ dựa vào số chương)
   const sp = EX_SETS[key], have = new Set(); let extra = 0;
-  metas.forEach(m => { if (!(m.chapterCount > 0) || (filled && !filled.has(m.name))) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && key === 'all') extra++; });
+  metas.forEach(m => { if (!(m.chapterCount > 0) || (filled && !filled.has(m.name))) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && (key === 'all' || key === 'w5')) extra++; });
   return { have:have.size, total:sp.to - sp.from + 1, extra };
 }
 async function exSetPlan(key){                                    // danh sách sách sẽ xuất theo đúng thứ tự Kinh Thánh — CHỈ những sách thật sự có câu
   const sp = EX_SETS[key], cand = [], list = [], have = new Set(), empty = [];
-  (await dbAll('bookMeta')).filter(m => (m.chapterCount || 0) > 0).forEach(m => {
+  (await dbAll('bookMeta')).forEach(m => {                         // không lọc theo chapterCount (có thể lỗi thời): kiểm tra thật bằng dữ liệu sách bên dưới
     const no = exNoOf(m.name);
-    if (no ? (no >= sp.from && no <= sp.to) : key === 'all') cand.push({ m, no });
+    if (no ? (no >= sp.from && no <= sp.to) : (key === 'all' || key === 'w5')) cand.push({ m, no });   // sách tên lạ (không thuộc 66 sách chuẩn) vào "Toàn bộ" và tệp cuối 5/5 → không sót
   });
   cand.sort((x, y) => (x.no || 999) - (y.no || 999) || x.m.order - y.m.order);
   for (const it of cand){                                         // sách mới tạo khung chương nhưng chưa có câu nào ≠ sách có nội dung
@@ -6032,7 +6051,7 @@ async function exBuildSetJson(key, list, ui){
 }
 /* ---- Dựng Word trọn bộ ---- */
 async function exBuildSetDocx(key, list, ui){
-  const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, skipped:[], badXml:[] };
+  const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, fns:0, skipped:[], badXml:[], lost:[] }, src = { chapters:0, verses:0, fns:0 };
   const put = s => chunks.push(enc.encode(s));
   put(wParaX('', { before:3200, after:0 }) + wParaX(wRun('KINH THÁNH', { b:true, sz:24, color:'8A5A1F' }), { align:'center', after:160 })
     + (sp.part ? wParaX(wRun('BẢN DỊCH TRUYỀN THỐNG 1925-1926 · ' + sp.part, { sz:22, color:'7A6E60' }), { align:'center', after:160 }) : '')
@@ -6049,8 +6068,11 @@ async function exBuildSetDocx(key, list, ui){
     const rec = await dbGet('books', m.name);
     const chapters = rec && rec.chapters ? rec.chapters.map((vs, k) => ({ ch:k + 1, vs })).filter(c => c.vs && c.vs.length) : [];
     if (!chapters.length){ st.skipped.push(m.name); continue; }
-    chapters.forEach(c => { st.chapters++; st.verses += c.vs.length; });
-    const bx = docxBookBody(m.name, m.sub || '', chapters, (m.title || '').trim(), m.subPos === 'below', { breakFirst:true, outline:true });
+    const ss = docxSrcStat(chapters), bs = { chapters:0, verses:0, fns:0 };
+    src.chapters += ss.chapters; src.verses += ss.verses; src.fns += ss.fns;
+    const bx = docxBookBody(m.name, m.sub || '', chapters, (m.title || '').trim(), m.subPos === 'below', { breakFirst:true, outline:true, stat:bs });
+    st.chapters += bs.chapters; st.verses += bs.verses; st.fns += bs.fns;
+    if (bs.chapters !== ss.chapters || bs.verses !== ss.verses || bs.fns !== ss.fns) st.lost.push(`${m.name} (${bs.verses}/${ss.verses} câu)`);
     const dom = new DOMParser().parseFromString('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + bx + '</w:body></w:document>', 'application/xml');
     if (dom.getElementsByTagName('parsererror').length) st.badXml.push(m.name);         // XML hỏng thì Word sẽ cắt cụt từ chỗ đó → phát hiện ngay lúc xuất
     if ((bx.match(/<w:outlineLvl w:val="0"\/>/g) || []).length !== 1) st.badXml.push(m.name + ' (thiếu đề mục sách)');
@@ -6060,9 +6082,9 @@ async function exBuildSetDocx(key, list, ui){
   if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
   ui.say('Đang nén và đóng gói file Word…', 86); await ui.step();
   const file = await docxPackAsync(chunks, sp.file + '.docx', ui);
-  const warn = [], ok = !st.badXml.length && st.books === list.length;
-  warn.push(ok ? `✔ Đã kiểm tra: tệp Word chứa đủ ${st.books}/${list.length} sách (${st.chapters} chương, ${st.verses} câu); cấu trúc XML từng sách hợp lệ; gói nén đã giải nén thử khớp từng byte.`
-               : `✖ Tệp Word CHƯA đạt kiểm tra${st.badXml.length ? ': lỗi cấu trúc ở ' + st.badXml.join(', ') : ''}${st.books !== list.length ? ` (chỉ ${st.books}/${list.length} sách được ghi)` : ''} – đừng dùng bản này.`);
+  const warn = [], ok = !st.badXml.length && !st.lost.length && st.books === list.length && st.verses === src.verses && st.chapters === src.chapters && st.fns === src.fns;
+  warn.push(ok ? `✔ Đã kiểm tra: tệp Word chứa đủ ${st.books}/${list.length} sách (${st.chapters} chương, ${st.verses} câu, ${st.fns} chú thích) – khớp 100% số chương/câu/chú thích với dữ liệu trong máy; cấu trúc XML từng sách hợp lệ; gói nén đã giải nén thử khớp từng byte.`
+               : `✖ Tệp Word CHƯA đạt kiểm tra${st.badXml.length ? ': lỗi cấu trúc ở ' + st.badXml.join(', ') : ''}${st.lost.length ? ': thiếu dữ liệu ở ' + st.lost.join(', ') : ''}${st.books !== list.length ? ` (chỉ ${st.books}/${list.length} sách được ghi)` : ''} – đừng dùng bản này.`);
   return { file, st, ok, warn };
 }
 /* Bảng kết quả: nút Lưu là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
