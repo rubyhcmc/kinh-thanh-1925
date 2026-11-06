@@ -503,8 +503,8 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 .rpmeta{flex:1;min-width:0}
 .rpeye{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
 .rpeye svg{width:14px;height:14px;flex:none}
-.rpt{margin-top:7px;font-family:var(--serif);font-weight:700;font-size:21px;line-height:1.25;overflow-wrap:anywhere}
-.rpsub{margin-top:3px;font:12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
+.rpt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px;font-family:var(--serif);font-weight:700;font-size:21px;line-height:1.25;overflow-wrap:anywhere}
+.rpsub{min-height:1.4em;margin-top:3px;font:12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
 .overlay.rpop .rpx{flex:none;width:38px;height:38px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s}
 .overlay.rpop .rpx svg{width:20px;height:20px}
 .overlay.rpop .rpx:hover,.overlay.rpop .rpx:active{background:var(--line);color:var(--fg)}
@@ -515,7 +515,7 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 .rptab[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 [data-theme=dark] .rptab[aria-selected=true]{color:#1a1409}
 html[data-paper][data-theme=dark] .rptab[aria-selected=true]{color:#0e0e0d}
-.rpbody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:18px 20px 12px}
+.rpbody{flex:none;height:clamp(150px,34vh,300px);height:clamp(150px,34dvh,300px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:18px 20px 12px}
 .rpnote{margin:0 0 16px;padding:.6em .85em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;font-style:italic;font-size:.82em;line-height:1.55;color:var(--muted);white-space:pre-line}
 .rpnote b{display:block;margin-bottom:2px;font:700 10.5px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 .rpq{position:relative;margin:0;padding:2px 4px 2px 18px;font-family:var(--serif);font-size:calc(var(--fs) * 1.04);line-height:1.75}
@@ -1500,7 +1500,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v14';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v15';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
