@@ -495,11 +495,11 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
 .rfk:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 .overlay.rpop{z-index:88;opacity:0;transition:opacity .2s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .overlay.rpop.in{opacity:1}
-.overlay.rpop .rpsheet{padding:0;max-width:600px;display:flex;flex-direction:column;overflow:hidden;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.overlay.rpop .rpsheet{padding:0;max-width:600px;display:flex;flex-direction:column;overflow:visible;border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(28px);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
 .overlay.rpop.in .rpsheet{transform:translateY(0)}
 .overlay.rpop .rpsheet:focus{outline:none}
 @media (min-width:640px){.overlay.rpop{align-items:center}.overlay.rpop .rpsheet{border-radius:20px;max-height:82vh;max-height:82dvh}}
-.rphead{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 12px 14px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
+.rphead{border-radius:20px 20px 0 0;flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 12px 14px 20px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
 .rpmeta{flex:1;min-width:0}
 .rpeye{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
 .rpeye svg{width:14px;height:14px;flex:none}
@@ -524,7 +524,9 @@ html[data-paper][data-theme=dark] .rptab[aria-selected=true]{color:#0e0e0d}
 .rpch{margin:.9em 0 .3em;font:700 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .rpmore,.rpmiss{margin-top:8px;font:italic 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--muted)}
 .rpmiss{padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center;font-style:normal}
-.rpfoot{flex:none;display:flex;gap:10px;justify-content:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+.rpfoot{position:relative;flex:none;display:flex;gap:10px;justify-content:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+/* Sửa lỗi iPhone SE 3 / 8 Plus (Màn hình chính & Trang giấy): lớp phủ không chạm tới mép dưới màn hình nên hở một dải nền sáng dưới nút → kéo dài nền thẻ xuống dưới đáy để cửa sổ luôn liền khối tới mép màn hình */
+@media (max-width:639px){.rpfoot::after{content:"";position:absolute;left:0;right:0;top:100%;height:160px;background:var(--card);pointer-events:none}}
 .rpbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 20px;border-radius:12px;font:600 15px/1 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg)}
 .rpbtn svg{width:16px;height:16px}
 .rpbtn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -1276,6 +1278,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     <div class="card">
       <h4>4. Xuất trọn bộ 1 sách / Cựu Ước / Tân Ước / cả Kinh Thánh &amp; khôi phục</h4>
       <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục. Có thể chọn <b>Cựu Ước (39 sách)</b>, <b>Tân Ước (27 sách)</b> hoặc <b>Toàn bộ Kinh Thánh (66 sách)</b> để xuất 1 tệp JSON gộp hoặc 1 tệp Word trọn bộ. Nút Khôi phục tự nhận diện tệp (1 sách, trọn bộ, PDF, sao lưu).</p>
+      <p class="hint"><b>Xuất Word 5 tệp (Bản dịch Truyền Thống 1925-1926):</b> chọn nhóm “Xuất Word 5 tệp” rồi bấm “📄 Xuất Word” lần lượt — Tệp 1 Ngũ Kinh (5 sách) · Tệp 2 Lịch Sử (12) · Tệp 3 Thơ Văn (5) · Tệp 4 Tiên Tri (17) · Tệp 5 Tân Ước (27). Văn bản lấy thẳng từ dữ liệu trong máy, giữ nguyên từng chương, từng câu, không tóm tắt; sau mỗi tệp app tự kiểm tra số sách/chương/câu và cấu trúc tệp.</p>
       <select id="exBook" aria-label="Chọn sách hoặc trọn bộ cần xuất"></select>
       <p class="hint" id="exSetHint" hidden style="margin:8px 0 0"></p>
       <div class="btns">
@@ -1496,7 +1499,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v11';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v13';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3945,11 +3948,15 @@ async function refreshStats(){
   const exOpts = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('');
   let exSets = '';
   try {                                                  // Cựu Ước · Tân Ước · Toàn bộ Kinh Thánh
-    if (metas.some(m => m.chapterCount > 0)) exSets = '<optgroup label="Trọn bộ">' + ['ot', 'nt', 'all'].map(k => {
-      const c = exSetCount(metas, k), sp = EX_SETS[k];
-      const txt = (c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách') + (c.extra ? ' + ' + c.extra + ' sách khác' : '');
-      return `<option value="${EX_SET_PREFIX}${k}"${(c.have + c.extra) ? '' : ' disabled'}>${esc(sp.label)} (${txt})</option>`;
-    }).join('') + '</optgroup>';
+    if (metas.some(m => m.chapterCount > 0)){
+      const mk = k => {
+        const c = exSetCount(metas, k), sp = EX_SETS[k];
+        const txt = (c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách') + (c.extra ? ' + ' + c.extra + ' sách khác' : '');
+        return `<option value="${EX_SET_PREFIX}${k}"${(c.have + c.extra) ? '' : ' disabled'}>${esc(sp.label)} (${txt})</option>`;
+      };
+      exSets = '<optgroup label="Xuất Word 5 tệp (theo thứ tự 1 → 5)">' + EX_WSETS.map(mk).join('') + '</optgroup>'
+             + '<optgroup label="Trọn bộ">' + ['ot', 'nt', 'all'].map(mk).join('') + '</optgroup>';
+    }
   } catch(e){ exSets = ''; }
   exSel.innerHTML = exSets ? exSets + '<optgroup label="Từng sách">' + exOpts + '</optgroup>' : (exOpts || '<option value="">(chưa có sách)</option>');
   const exWant = [...exSel.options].find(o => o.value === exCur && !o.disabled), exFirst = [...exSel.options].find(o => o.value && !exSetKey(o.value));
@@ -5784,8 +5791,15 @@ function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        /
 const EX_SETS = {
   ot:  { label:'Cựu Ước',            from:1, to:39, file:'Cuu-Uoc_01-39' },
   nt:  { label:'Tân Ước',            from:40, to:66, file:'Tan-Uoc_40-66' },
-  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' }
+  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' },
+  /* 5 tệp Word xuất lần lượt (toàn bộ 66 sách, không sót sách nào): 1→2→3→4→5; xuất xong tệp nào, app tự chọn sẵn tệp kế tiếp */
+  w1:  { label:'Tệp 1/5 · Cựu Ước – Ngũ Kinh (5 sách)',      title:'Cựu Ước · Ngũ Kinh',     part:'TỆP 1/5', from:1,  to:5,  file:'Kinh-Thanh_Tep1-CuuUoc-NguKinh_01-05',  next:'w2' },
+  w2:  { label:'Tệp 2/5 · Cựu Ước – Lịch Sử (12 sách)',      title:'Cựu Ước · Lịch Sử',      part:'TỆP 2/5', from:6,  to:17, file:'Kinh-Thanh_Tep2-CuuUoc-LichSu_06-17',   next:'w3' },
+  w3:  { label:'Tệp 3/5 · Cựu Ước – Thơ Văn (5 sách)',       title:'Cựu Ước · Thơ Văn',      part:'TỆP 3/5', from:18, to:22, file:'Kinh-Thanh_Tep3-CuuUoc-ThoVan_18-22',   next:'w4' },
+  w4:  { label:'Tệp 4/5 · Cựu Ước – Tiên Tri (17 sách)',     title:'Cựu Ước · Tiên Tri',     part:'TỆP 4/5', from:23, to:39, file:'Kinh-Thanh_Tep4-CuuUoc-TienTri_23-39',  next:'w5' },
+  w5:  { label:'Tệp 5/5 · Tân Ước (27 sách)',                title:'Tân Ước',                part:'TỆP 5/5', from:40, to:66, file:'Kinh-Thanh_Tep5-TanUoc_40-66' }
 };
+const EX_WSETS = ['w1','w2','w3','w4','w5'];
 const EX_SET_PREFIX = '@set:';
 function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) && EX_SETS[v.slice(EX_SET_PREFIX.length)]) ? v.slice(EX_SET_PREFIX.length) : null; }
 const exNoOf = name => BIBLE_KEYS.get(bkKey(name)) || 0;
@@ -5873,7 +5887,7 @@ function exSyncUI(){                                              // đổi nhã
   const sel = $('#exBook'), go = $('#exGo'), h = $('#exSetHint'); if (!sel || !go) return;
   const k = exSetKey(sel.value);
   go.textContent = k ? '🧾 Xuất JSON trọn bộ' : '📕 Xuất PDF + JSON';
-  if (h){ h.hidden = !k; h.textContent = k ? `Đang chọn trọn bộ “${EX_SETS[k].label}”: JSON gộp chứa toàn bộ các sách (khôi phục 1 lần bằng nút “Khôi phục”), hoặc xuất 1 tệp Word. PDF chỉ xuất theo từng sách để tệp không quá nặng.` : ''; }
+  if (h){ h.hidden = !k; h.textContent = k ? (EX_WSETS.includes(k) ? `Đang chọn “${EX_SETS[k].label}”: bấm “📄 Xuất Word” rồi “📁 Lưu tệp”. Xong tệp này app tự chọn sẵn tệp kế tiếp; làm lần lượt tệp 1 → 5 là có đủ 66 sách, nguyên văn từng chương từng câu.` : `Đang chọn trọn bộ “${EX_SETS[k].label}”: JSON gộp chứa toàn bộ các sách (khôi phục 1 lần bằng nút “Khôi phục”), hoặc xuất 1 tệp Word. PDF chỉ xuất theo từng sách để tệp không quá nặng.`) : ''; }
 }
 $('#exBook').addEventListener('change', exSyncUI);
 
@@ -6020,7 +6034,8 @@ async function exBuildSetDocx(key, list, ui){
   const sp = EX_SETS[key], enc = new TextEncoder(), chunks = [], st = { books:0, chapters:0, verses:0, skipped:[], badXml:[] };
   const put = s => chunks.push(enc.encode(s));
   put(wParaX('', { before:3200, after:0 }) + wParaX(wRun('KINH THÁNH', { b:true, sz:24, color:'8A5A1F' }), { align:'center', after:160 })
-    + wParaX(wRun(sp.label.toUpperCase(), { b:true, sz:60 }), { align:'center', after:200 }) + wParaX(wRun(list.length + ' sách', { sz:24, color:'7A6E60' }), { align:'center' }));
+    + (sp.part ? wParaX(wRun('BẢN DỊCH TRUYỀN THỐNG 1925-1926 · ' + sp.part, { sz:22, color:'7A6E60' }), { align:'center', after:160 }) : '')
+    + wParaX(wRun((sp.title || sp.label).toUpperCase(), { b:true, sz:60 }), { align:'center', after:200 }) + wParaX(wRun(list.length + ' sách', { sz:24, color:'7A6E60' }), { align:'center' }));
   let sect = null;
   for (let i = 0; i < list.length; i++){
     const { m, no } = list[i];
@@ -6100,6 +6115,10 @@ async function exportSet(key, kind){                              // kind: 'json
     if (r.st.skipped.length) lines.push('⚠ Bỏ qua sách rỗng: ' + r.st.skipped.join(', '));
     if (plan.empty && plan.empty.length) lines.push(`ℹ ${plan.empty.length} sách đã tạo khung chương nhưng chưa có câu nào nên không nằm trong tệp: ${plan.empty.join(', ')}.`);
     if (r.warn && r.warn.length) lines.push(...r.warn);
+    if (isWord && sp.next && r.ok && EX_SETS[sp.next]){                    // đã xong tệp này → chọn sẵn tệp kế tiếp trong danh sách 5 tệp
+      const nx = [...$('#exBook').options].find(o => o.value === EX_SET_PREFIX + sp.next && !o.disabled);
+      if (nx){ $('#exBook').value = nx.value; exSyncUI(); lines.push('➡ Đã chọn sẵn “' + EX_SETS[sp.next].label + '” – bấm “📄 Xuất Word” để xuất tệp tiếp theo.'); }
+    } else if (isWord && EX_WSETS.includes(key) && r.ok) lines.push('🏁 Đây là tệp cuối (5/5). Nhớ lưu đủ 5 tệp: Ngũ Kinh · Lịch Sử · Thơ Văn · Tiên Tri · Tân Ước.');
     log.className = 'log ' + (r.ok ? 'ok' : 'err'); log.textContent = (r.ok ? '✔ ' : '✖ ') + lines[0];
     exSetResult('Đã xuất xong: ' + sp.label, [r.file], lines, r.ok);
   } catch(e){
