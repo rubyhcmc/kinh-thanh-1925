@@ -489,6 +489,32 @@ html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
   /* Khung chú thích là một “vùng độc lập” (BFC): không bao giờ chạy lùi vào dưới số chương chữ lớn đang nổi bên trái.
      Nó tự thu hẹp để nằm cạnh số chương; nếu không đủ chỗ thì xuống ngay dưới số chương. */
   display:flow-root;overflow:hidden;box-sizing:border-box;max-width:100%}
+/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — CSS cửa sổ xem câu trích dẫn ▼▼▼ */
+/* Dòng tham chiếu / dòng chú thích có thể chạm → mở cửa sổ hiện trọn câu Kinh Thánh được trích dẫn */
+.rfk{cursor:pointer;text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:3px;-webkit-tap-highlight-color:transparent}
+.rfk:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.overlay.rpop{z-index:88;opacity:0;transition:opacity .2s ease}
+.overlay.rpop.in{opacity:1}
+.overlay.rpop .rpsheet{padding:0;max-width:580px;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+.overlay.rpop.in .rpsheet{transform:translateY(0)}
+.rphead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:12px 12px 10px 16px;background:var(--accent-soft);border-bottom:1px solid var(--line);border-radius:18px 18px 0 0}
+.rpk{font-size:12px;font-weight:700;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 9px;flex:none}
+.rpt{flex:1;min-width:0;font-weight:700;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.rpx{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--fg);font-size:20px;line-height:1;display:grid;place-items:center;cursor:pointer}
+.rpx:active{background:var(--line)}
+.rpbody{padding:14px 16px 6px;font-family:var(--serif);font-size:var(--fs);line-height:1.65}
+.rpnote{font-size:.82em;font-style:italic;color:var(--muted);border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:.4em .7em;margin:0 0 14px}
+.rpref{margin:0 0 16px}
+.rprh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.rprh b{font-size:14px;color:var(--accent)}
+.rpgo{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;font-size:12px;padding:4px 11px;cursor:pointer}
+.rpvl{margin:0}
+.rpvl p{margin:0 0 .45em}
+.rpvl sup{font-size:.62em;font-weight:700;color:var(--accent);margin-right:.25em;vertical-align:super}
+.rpch{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:12px;font-weight:700;color:var(--muted);margin:.7em 0 .3em}
+.rpmore,.rpmiss{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;color:var(--muted);font-style:italic}
+.rpfoot{position:sticky;bottom:0;display:flex;justify-content:flex-end;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){.overlay.rpop,.overlay.rpop .rpsheet{transition:none}}
 /* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS trang Cài đặt ▼▼▼ */
 /* ===== Trang cài đặt ===== */
 #settings .sheet{max-width:520px;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:var(--bg)}
@@ -946,6 +972,15 @@ html[data-paper] .reader.print{text-align:justify}
 <div class="copybar" id="copyBar" hidden>
   <button class="btn" id="copyClear">Bỏ chọn</button>
   <button class="btn primary" id="copyGo">Sao chép</button>
+</div>
+
+<!-- §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — HTML cửa sổ xem câu trích dẫn ▼▼▼ -->
+<div class="overlay rpop" id="refPop" role="dialog" aria-modal="true" aria-labelledby="rpTitle" hidden>
+  <div class="sheet rpsheet">
+    <div class="rphead"><span class="rpk" id="rpKind">Câu trích dẫn</span><div class="rpt" id="rpTitle"></div><button type="button" class="rpx" data-a="close" aria-label="Đóng">✕</button></div>
+    <div class="rpbody" id="rpBody"></div>
+    <div class="rpfoot"><button type="button" class="btn primary" data-a="close">Đóng</button></div>
+  </div>
 </div>
 
 <!-- §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — HTML bảng Cài đặt ▼▼▼ -->
@@ -1430,7 +1465,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.06v6';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.06v8';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2771,11 +2806,17 @@ function fnPopClose(){
 document.addEventListener('click', e => { if (fnPop && !(e.target.closest && e.target.closest('.fnk'))) fnPopClose(); }, true);   // chạm chỗ khác → đóng khung chú thích
 function toggleFn(e){
   const k = e.target.closest('.fnk'), x = e.target.closest('.fnx');
-  if (!k && !x) return;
+  if (!k && !x){                                  // dòng tham chiếu / dòng chú thích có câu trích dẫn → cửa sổ xem câu
+    const rt = e.target.closest && e.target.closest('.rfk');
+    if (rt && openRefFrom(rt.textContent, rt.matches('.fn') ? rt.textContent : '')){ e.stopPropagation(); e.preventDefault(); }
+    return;
+  }
   e.stopPropagation(); e.preventDefault();
   const mk = k || (x.previousElementSibling && x.previousElementSibling.classList.contains('fnk') ? x.previousElementSibling : null);
   const box = x || (k.nextElementSibling && k.nextElementSibling.classList.contains('fnx') ? k.nextElementSibling : null);
   if (!box) return;
+  const rl = refsIn(box.textContent);             // chú thích có câu Kinh Thánh → hiện trong cửa sổ, đối chiếu ngay
+  if (rl.length){ fnPopClose(); openRefPop({ refs:rl, note:box.textContent }); return; }
   if (document.body.classList.contains('pg') && e.currentTarget && e.currentTarget.id === 'bibleText'){   // Trang giấy: khung nổi, không làm dàn trang lại
     const same = fnPop && fnPop.mk === mk; fnPopClose(); if (same || !mk) return;
     const el = document.createElement('div'); el.className = 'fnpop'; el.setAttribute('role', 'note'); el.textContent = box.textContent;
@@ -2801,7 +2842,7 @@ function toggleFn(e){
 ['#bibleText', '#edPreview'].forEach(id => {
   const r = $(id);
   r.addEventListener('click', toggleFn, true);
-  r.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('fnk')) toggleFn(e); }, true);
+  r.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && (e.target.classList.contains('fnk') || e.target.classList.contains('rfk'))){ if (e.key === ' ') e.preventDefault(); toggleFn(e); } }, true);
 });
 
 $('#bibleText').addEventListener('click', e => { if (e.target.id === 'emptyRetry') syncNow({}); });
@@ -2821,7 +2862,7 @@ $('#copyGo').onclick = async () => {
   const nums = verses.flatMap(v => v.e > v.n ? Array.from({ length:v.e - v.n + 1 }, (_, k) => v.n + k) : [v.n]);     // câu ghép 8-9 → ghi đủ 8-9 trong địa chỉ
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, x, y) => x + y.toUpperCase());   // Sáng Thế Ký
   const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange(nums)}`;
-  const body = verses.map(v => v.t.replace(/\[[^\[\]]*\]/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');   // không kèm số câu, bỏ dấu chú thích
+  const body = verses.map(v => v.t.replace(/\[[^\[\]]*\]/g, m => isVerseBracket(m.slice(1, -1)) ? m : ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');   // không kèm số câu, bỏ dấu chú thích (giữ lời trong ngoặc là chữ của câu)
   const text = `\u201C${body}\u201D (${ref})`;
   try { await navigator.clipboard.writeText(text); toast('Đã sao chép ' + ref); }
   catch(e){ prompt('Sao chép đoạn văn:', text); }
@@ -3975,6 +4016,11 @@ const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
 //  · [chữ …]    → thu gọn thành dấu [*], bấm để bung nội dung bên trong
 //  · [3-4], [1,2] (chỉ số/dấu) → giữ nguyên là chữ thường
 const BRACKET_RE = /\[([^\[\]]+)\]/g;
+/* [ … ] là LỜI CỦA CHÍNH CÂU (bản chép khác, vd "[Vì nước, quyền, vinh hiển đều thuộc về Cha đời đời. A-men.]") chứ KHÔNG phải chú thích:
+   cả một câu trọn vẹn (mở đầu chữ hoa, kết thúc bằng dấu chấm/than/hỏi) và không mở đầu bằng nhãn chú thích ("Hay:", "Nt:", "Nguyên văn…", "Xem…", "Có bản…")
+   hay một địa chỉ Kinh Thánh → giữ nguyên là chữ trong câu, kèm cả dấu ngoặc. Còn lại vẫn là chú thích [*] như cũ. */
+const FN_LABEL = /^(?:\p{Lu}[\p{L}.]{0,5}\s*:|Hay\b|Nt\b|Xem\b|Cũng\s+xem\b|Đối\s+chiếu\b|So\s+sánh\b|Có\s+(?:bản|sách|nơi|chỗ)\b|Nguyên\s+văn\b|Nghĩa\b|Chép\b)/iu;
+const isVerseBracket = c => { const t = String(c).trim(); return t.length >= 12 && /^\p{Lu}/u.test(t) && /[.!?…”"’']$/.test(t) && !FN_LABEL.test(t) && !FN_REF.test(t); };
 function fnMapOf(list){
   const m = {};
   (list || []).forEach(f => { const x = String(f).match(/^\[(\d{1,3})\]\s*([\s\S]*)$/); if (x && x[2].trim()) m[x[1]] = esc(x[2].trim()); });
@@ -3991,6 +4037,7 @@ function richText(s, fm){
       return fm[t] ? `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích ${t}">[${t}]</sup><span class="fnx" hidden>${fm[t]}</span>`
                    : `<sup class="fnm">[${t}]</sup>`;
     if (/^[\d\s,.\-–]+$/.test(t)) return m;
+    if (isVerseBracket(c)) return m;                                   // lời của chính câu → giữ nguyên chữ trong ngoặc, không thành chú thích
     return `<sup class="fnm fnk" role="button" tabindex="0" aria-expanded="false" aria-label="Xem chú thích">[*]</sup><span class="fnx" hidden>${t}</span>`;
   });
 }
@@ -5097,7 +5144,7 @@ function pdfRuns(t){
   t = String(t);
   while ((m = re.exec(t))){
     if (m.index > last) out.push({ s:t.slice(last, m.index), k:'n' });
-    out.push(m[1] ? { s:m[1], k:'note' } : { s:m[2], k:'fn' });
+    out.push(m[1] ? { s:m[1], k:isVerseBracket(m[1].slice(1, -1)) ? 'n' : 'note' } : { s:m[2], k:'fn' });
     last = re.lastIndex;
   }
   if (last < t.length) out.push({ s:t.slice(last), k:'n' });
@@ -5357,6 +5404,114 @@ const BIBLE_ALIAS = [['Sáng Thế',1],['Sáng Thế Ký',1],['Xuất Hành',2],
   ['I Tê-sa-lô-ni-ca',52],['II Tê-sa-lô-ni-ca',53],['I Ti-mô-thê',54],['II Ti-mô-thê',55],['Tít',56],['Phi-lê-môn',57],['Hê-bơ-rơ',58],['Gia-cơ',59],['I Phi-e-rơ',60],['II Phi-e-rơ',61],['I Giăng',62],['II Giăng',63],['III Giăng',64],['Giu-đe',65],['Khải Huyền',66],['Khải Thị',66]];
 const bkKey = s => fold(s).replace(/[^a-z0-9]+/g, '').replace(/^1(?=[a-z])/, 'i').replace(/^2(?=[a-z])/, 'ii').replace(/^3(?=[a-z])/, 'iii');   // "1 Sa-mu-ên" ≡ "I Sa-mu-ên"
 const BIBLE_KEYS = (() => { const m = new Map(); BIBLE_ALIAS.forEach(([n, i]) => m.set(bkKey(n), i)); BIBLE66.forEach((n, i) => m.set(bkKey(n), i + 1)); return m; })();
+/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Cửa sổ xem trọn câu Kinh Thánh được trích dẫn (chạm [n] hoặc dòng tham chiếu) ▼▼▼ */
+/* Nhận ra tham chiếu như "Xuất Ê-díp-tô 20:13", "(Giăng 3:16-17)", "1 Sa-mu-ên 3:4, 6; 4:1", "Thi Thiên 23:1–24:2";
+   chạm vào thì bật cửa sổ hiện đúng nội dung câu (đọc từ sách đang có trong máy), có nút ✕ / Đóng / chạm nền / phím Esc để tắt. */
+let _rpCache = null;
+function rpBooks(){
+  if (_rpCache && _rpCache.src === bibleMeta && _rpCache.n === bibleMeta.length) return _rpCache;
+  const byKey = new Map(), byNo = new Map();
+  bibleMeta.forEach(m => {
+    const k = bkKey(m.name); if (k) byKey.set(k, m.name);
+    if (m.abbr){ const a = bkKey(m.abbr); if (a && !byKey.has(a)) byKey.set(a, m.name); }
+    const no = BIBLE_KEYS.get(k); if (no && !byNo.has(no)) byNo.set(no, m.name);
+  });
+  return (_rpCache = { src:bibleMeta, n:bibleMeta.length, byKey, byNo });
+}
+function rpFindBook(words){   // thử từ dài đến ngắn, bỏ bớt từ dẫn đầu ("Xem", "Cũng xem"…) cho tới khi nhận ra tên sách
+  const B = rpBooks();
+  for (let i = 0; i < words.length; i++){
+    const key = bkKey(words.slice(i).join(' ')); if (!key) continue;
+    if (B.byKey.has(key)) return B.byKey.get(key);
+    const no = BIBLE_KEYS.get(key); if (no && B.byNo.has(no)) return B.byNo.get(no);
+    if (key.length >= 4){                                   // viết tắt / gõ thiếu: nhận khi chỉ khớp đúng MỘT sách
+      const hit = [...new Set([...B.byKey].filter(([k]) => k.startsWith(key)).map(([, n]) => n))];
+      if (hit.length === 1) return hit[0];
+    }
+  }
+  return null;
+}
+const RP_RE = /((?:[1-3]\s*)?\p{L}[\p{L}\-.]*(?:\s+\p{L}[\p{L}\-.]*){0,5})?\s*(\d{1,3})\s*:\s*(\d{1,3})(?:\s*[-–—]\s*(?:(\d{1,3})\s*:\s*)?(\d{1,3}))?((?:\s*,\s*\d{1,3}(?!\d|\s*:)(?:\s*[-–—]\s*\d{1,3}(?!\d|\s*:))?)*)/gu;
+function refsIn(text){
+  const out = []; let prev = null;
+  String(text || '').replace(RP_RE, (m, bk, c, v, c2, v2, extra) => {
+    let name = bk ? rpFindBook(bk.trim().split(/\s+/)) : null;
+    if (!name) name = prev; if (!name) return m;
+    prev = name; c = +c; v = +v;
+    out.push({ name, c1:c, v1:v, c2:c2 ? +c2 : c, v2:v2 ? +v2 : v });
+    String(extra || '').replace(/,\s*(\d{1,3})(?:\s*[-–—]\s*(\d{1,3}))?/g, (_, a, b) => { out.push({ name, c1:c, v1:+a, c2:c, v2:b ? +b : +a }); return _; });
+    return m;
+  });
+  return out;
+}
+const rpLabel = r => { let d = r.name; try { d = bookDisplay(r.name) || r.name; } catch(_){}
+  return d + ' ' + r.c1 + ':' + r.v1 + (r.c2 !== r.c1 ? '–' + r.c2 + ':' + r.v2 : (r.v2 > r.v1 ? '–' + r.v2 : '')); };
+async function rpGet(r){   // → [{ch, verses:[…]}] ; tối đa 60 câu mỗi tham chiếu
+  const rec = curBook && curBook.name === r.name ? curBook : await dbGet('books', r.name);
+  const res = []; let left = 60, more = false;
+  if (!rec || !rec.chapters) return { res, more, miss:true };
+  for (let ch = r.c1; ch <= r.c2 && ch <= r.c1 + 4; ch++){
+    const lo = ch === r.c1 ? r.v1 : 1, hi = ch === r.c2 ? r.v2 : Infinity;
+    const all = (rec.chapters[ch - 1] || []).filter(v => v.n <= hi && (v.e || v.n) >= lo);
+    if (all.length > left){ all.length = left; more = true; }
+    left -= all.length; if (all.length) res.push({ ch, verses:all });
+    if (left <= 0) break;
+  }
+  return { res, more, miss:false };
+}
+const rpTxt = t => esc(String(t == null ? '' : t).replace(/\[\d{1,3}\]/g, '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim());
+let rpToken = 0, rpPrevFocus = null, rpRefs = [], rpHideT = 0;
+async function openRefPop(o){
+  const refs = (o && o.refs || []).slice(0, 12); if (!refs.length) return;
+  const ov = $('#refPop'), body = $('#rpBody'), tk = ++rpToken; rpRefs = refs;
+  clearTimeout(rpHideT);
+  $('#rpTitle').textContent = rpLabel(refs[0]) + (refs.length > 1 ? ' …' : '');
+  $('#rpKind').textContent = o.note ? 'Chú thích' : 'Đối chiếu';
+  body.innerHTML = '<div class="rpmore">Đang tải câu Kinh Thánh…</div>';
+  if (ov.hidden){ rpPrevFocus = document.activeElement; ov.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('in'))); }
+  const sh = ov.querySelector('.rpsheet'); sh.scrollTop = 0;
+  let html = o.note ? `<div class="rpnote">${esc(String(o.note).trim())}</div>` : '';
+  for (let i = 0; i < refs.length; i++){
+    let g; try { g = await rpGet(refs[i]); } catch(_){ g = { res:[], more:false, miss:true }; }
+    if (tk !== rpToken) return;                              // đã mở/đóng cửa sổ khác trong lúc chờ
+    html += `<section class="rpref"><div class="rprh"><b>${esc(rpLabel(refs[i]))}</b>` + (g.res.length ? `<button type="button" class="rpgo" data-go="${i}">Mở trong sách ›</button>` : '') + '</div>';
+    if (!g.res.length) html += `<div class="rpmiss">${g.miss ? 'Sách này chưa có trong máy.' : 'Không tìm thấy câu này trong sách.'}</div>`;
+    else {
+      const multi = g.res.length > 1 || refs[i].c1 !== refs[i].c2;
+      html += '<div class="rpvl">' + g.res.map(blk => (multi ? `<div class="rpch">Chương ${blk.ch}</div>` : '') + blk.verses.map(v => `<p><sup>${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>${rpTxt(v.t)}</p>`).join('')).join('') + '</div>';
+      if (g.more) html += '<div class="rpmore">… còn nhiều câu nữa — bấm “Mở trong sách” để đọc tiếp.</div>';
+    }
+    html += '</section>';
+  }
+  body.innerHTML = html;
+  const cb = ov.querySelector('.rpx'); if (cb && document.activeElement !== cb) try { cb.focus({ preventScroll:true }); } catch(_){}
+}
+function closeRefPop(){
+  const ov = $('#refPop'); if (!ov || ov.hidden) return;
+  rpToken++; ov.classList.remove('in');
+  rpHideT = setTimeout(() => { ov.hidden = true; }, 200);
+  const f = rpPrevFocus; rpPrevFocus = null; try { if (f && f.focus && document.contains(f)) f.focus({ preventScroll:true }); } catch(_){}
+}
+function openRefFrom(text, note){ const list = refsIn(text); if (!list.length) return false; openRefPop({ refs:list, note:note || '' }); return true; }
+(function(){
+  const ov = $('#refPop'); if (!ov) return;
+  ov.addEventListener('click', e => {
+    if (e.target === ov || e.target.closest('[data-a="close"]')){ closeRefPop(); return; }
+    const g = e.target.closest('[data-go]');
+    if (g){ const r = rpRefs[+g.dataset.go]; if (!r) return; closeRefPop(); goBookmark({ book:r.name, ch:r.c1, n:r.v1 }); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden){ e.stopPropagation(); e.preventDefault(); closeRefPop(); } }, true);
+})();
+/* Đánh dấu những dòng tham chiếu / chú thích có chứa câu trích dẫn là "chạm được" ngay lúc dựng HTML (cả bản dùng cho hiệu ứng lật trang cũng giống hệt) */
+const rpUnesc = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+function refMarkHTML(html){
+  const A = ' role="button" tabindex="0" title="Chạm để xem câu trích dẫn"';
+  return String(html)
+    .replace(/<div class="(ref1|fn|fn fnv)">([^<]*)<\/div>/g, (m, c, t) => refsIn(rpUnesc(t)).length ? `<div class="${c} rfk"${A}>${t}</div>` : m)
+    .replace(/<span class="ref">([^<]*)<\/span>/g, (m, t) => refsIn(rpUnesc(t)).length ? `<span class="ref rfk"${A}>${t}</span>` : m);
+}
+const _paperHTML0 = paperHTML;
+paperHTML = function(){ return refMarkHTML(_paperHTML0.apply(this, arguments)); };
 // Số thứ tự của sách: theo danh sách chuẩn 66 sách; không nhận ra tên thì dùng vị trí của sách trong app
 function bookNoOf(name){
   const k = BIBLE_KEYS.get(bkKey(name)); if (k) return { no:k, known:true };
@@ -6541,7 +6696,7 @@ async function pgFlip(dir){                                        // chạm mé
   view.addEventListener('click', e => {                            // chạm dải trên cùng = hiện/ẩn thanh công cụ
     if (!pgOn()) return;
     if (pg.busy || Date.now() < (pg.swallow || 0)){ e.stopPropagation(); e.preventDefault(); return; }
-    if (e.target.closest('.fnk,.fnx')) return;                      // chú thích hiện bằng khung nổi: không dàn trang lại → chữ không nhảy
+    if (e.target.closest('.fnk,.fnx,.rfk')) return;                 // chú thích hiện bằng khung nổi: không dàn trang lại → chữ không nhảy
     if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
     const cl = document.body.classList, eat = () => { e.stopPropagation(); e.preventDefault(); };
     if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
@@ -6875,7 +7030,7 @@ async function verseImage(nums){
   nums = [...nums].sort((a, b) => a - b);
   const vs = (curBook.chapters[S.chapter - 1] || []).filter(v => nums.includes(v.n));
   if (!vs.length) return;
-  const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, ' ')).join(' ').replace(/\s+/g, ' ').trim();
+  const text = vs.map(v => String(v.t).replace(/\[[^\[\]]*\]/g, m => isVerseBracket(m.slice(1, -1)) ? m : ' ')).join(' ').replace(/\s+/g, ' ').trim();
   const titleCase = t => String(t).toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase());   // Sáng Thế Ký, Xuất Ê-díp-tô Ký
   const ref = `${titleCase(curBook.name)} ${S.chapter}:${compressRange([...new Set(vs.flatMap(v => v.e > v.n ? Array.from({ length:v.e - v.n + 1 }, (_, k) => v.n + k) : [v.n]))])}`;
   const SIZES = { p:{ w:1080, h:1350, t:'▯ Dọc 4:5' }, s:{ w:1080, h:1920, t:'📱 Story 9:16' }, q:{ w:1080, h:1080, t:'▢ Vuông' }, l:{ w:1600, h:900, t:'▭ Ngang 16:9' } };
