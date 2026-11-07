@@ -1531,7 +1531,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4149,10 +4149,10 @@ const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
 //  · [3-4], [1,2] (chỉ số/dấu) → giữ nguyên là chữ thường
 const BRACKET_RE = /\[([^\[\]]+)\]/g;
 /* [ … ] là LỜI CỦA CHÍNH CÂU (bản chép khác, vd "[Vì nước, quyền, vinh hiển đều thuộc về Cha đời đời. A-men.]") chứ KHÔNG phải chú thích:
-   cả một câu trọn vẹn (mở đầu chữ hoa, kết thúc bằng dấu chấm/than/hỏi) và không mở đầu bằng nhãn chú thích ("Hay:", "Nt:", "Nguyên văn…", "Xem…", "Có bản…")
+   [số] luôn là dấu chú thích; [chữ] (dài ngắn, hoa thường, có hay không dấu chấm đều được) là chữ trong câu nếu không mở đầu bằng nhãn chú thích ("Hay:", "Nt:", "Nguyên văn…", "Xem…", "Có bản…")
    hay một địa chỉ Kinh Thánh → giữ nguyên là chữ trong câu, kèm cả dấu ngoặc. Còn lại vẫn là chú thích [*] như cũ. */
 const FN_LABEL = /^(?:\p{Lu}[\p{L}.]{0,5}\s*:|Hay\b|Nt\b|Xem\b|Cũng\s+xem\b|Đối\s+chiếu\b|So\s+sánh\b|Có\s+(?:bản|sách|nơi|chỗ)\b|Nguyên\s+văn\b|Nghĩa\b|Chép\b)/iu;
-const isVerseBracket = c => { const t = String(c).trim(); return t.length >= 12 && /^\p{Lu}/u.test(t) && /[.!?…”"’']$/.test(t) && !FN_LABEL.test(t) && !FN_REF.test(t); };
+const isVerseBracket = c => { const t = String(c).trim(); return t.length >= 1 && !/^[\d\s,.\-–]+$/.test(t) && !FN_LABEL.test(t) && !FN_REF.test(t); };   // [số] = dấu chú thích · [chữ] = lời của câu (giữ nguyên) · chỉ [Hay: …] [Nt: …] [Xem …] [Có bản …] [địa chỉ Kinh Thánh] mới là chú thích
 function fnMapOf(list){
   const m = {};
   (list || []).forEach(f => { const x = String(f).match(/^\[(\d{1,3})\]\s*([\s\S]*)$/); if (x && x[2].trim()) m[x[1]] = esc(x[2].trim()); });
