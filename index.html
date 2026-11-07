@@ -1569,7 +1569,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5137,10 +5137,38 @@ function archParseBulk(txt){
   });
   return { rules, bad };
 }
+/* ---- Sửa HÀNG LOẠT cho TOÀN BỘ Kinh Thánh theo từ điển từ cổ: lời văn + chú thích + tiêu đề của mọi sách, mọi chương ----
+   Mỗi chuỗi (một câu / một chú thích / một tiêu đề) được xử lý riêng bằng đúng luật của chức năng quét từng chương (trọn từ, giữ kiểu hoa nhơn→nhân · Nhơn→Nhân · NHƠN→NHÂN, ngoại lệ, cụm dài nhất).
+   Chữ hoa giữa câu (có thể là tên riêng) mặc định KHÔNG sửa, chỉ sửa khi người dùng chọn "sửa cả chữ hoa". Sửa xong đọc lại từ máy để đối chiếu; giữ bản gốc để hoàn tác ngay. */
+let archBulkUndo = null;     // { time, books:[{ name, chapters }] } — bản gốc các sách vừa sửa (chỉ trong phiên này)
+function archMapStr(str, inclFlag){
+  const s0 = String(str == null ? '' : str);
+  if (!s0) return { out:s0, n:0, skip:0, by:{} };
+  const items = archFind(s0), by = {}; let out = s0, n = 0, skip = 0;
+  for (let i = items.length - 1; i >= 0; i--){
+    const it = items[i];
+    if (it.flag && !inclFlag){ skip++; continue; }
+    out = out.slice(0, it.s) + it.rep + out.slice(it.e); n++;
+    const k = it.rule.from + ' → ' + it.rule.to; by[k] = (by[k] || 0) + 1;
+  }
+  return { out, n, skip, by };
+}
+function archMapChapters(chs, inclFlag){            // không sửa dữ liệu gốc: trả về bản sao đã thay
+  const R = { chapters:null, n:0, skip:0, kinds:{ t:0, fn:0, h:0 }, by:{} };
+  const add = (r, kind) => { R.n += r.n; R.skip += r.skip; R.kinds[kind] += r.n; Object.keys(r.by).forEach(k => R.by[k] = (R.by[k] || 0) + r.by[k]); };
+  R.chapters = (chs || []).map(vs => (vs || []).map(v => {
+    const nv = Object.assign({}, v);
+    if (typeof v.t === 'string'){ const r = archMapStr(v.t, inclFlag); nv.t = r.out; add(r, 't'); }
+    if (typeof v.h === 'string'){ const r = archMapStr(v.h, inclFlag); nv.h = r.out; add(r, 'h'); }
+    if (Array.isArray(v.fn)) nv.fn = v.fn.map(f => { if (typeof f !== 'string') return f; const r = archMapStr(f, inclFlag); add(r, 'fn'); return r.out; });
+    return nv;
+  }));
+  return R;
+}
 function archOpen(){
   if (!isAdmin()) return toast('Chỉ quản trị viên mới sửa được nội dung');
   const t = ed.Text;
-  let view = archGet().length ? 'scan' : 'dict', items = [], editIdx = -1, all = null, msg = '';
+  let view = archGet().length ? 'scan' : 'dict', items = [], editIdx = -1, all = null, msg = '', bulk = null;
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
   o.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(o);
   const sheet = o.firstChild;
@@ -5194,6 +5222,7 @@ function archOpen(){
         ${ny ? '<button class="sbtn" data-a="undoall">↩ Hoàn tác tất cả</button>' : ''}
         <button class="sbtn" data-a="rescan">Quét lại</button>
         <button class="sbtn" data-a="scanall">Quét toàn bộ Kinh Thánh</button>
+        <button class="sbtn" data-a="bulk" style="background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700">⚡ Sửa cho toàn bộ Kinh Thánh</button>
         <button class="sbtn" data-a="dict">📖 Từ điển</button>
         <button class="sbtn" data-a="close">Đóng</button>
       </div></div>${allBox}${!archGet().length ? '<p class="hynote">Từ điển đang trống — bấm “📖 Từ điển” để nhập từ cổ và từ thay thế.</p>' : ''}${rows}${items.length > 400 ? '<p class="hynote">Chỉ hiện 400 mục đầu — sửa xong bấm “Quét lại” để xem tiếp.</p>' : ''}`;
@@ -5215,7 +5244,25 @@ function archOpen(){
         <textarea class="arin" id="arBulk" rows="5" style="width:100%" placeholder="vd:&#10;từ_cổ => từ_mới"></textarea>
         <div class="hybtn"><button class="sbtn" data-a="import">Nhập vào từ điển</button><button class="sbtn" data-a="export">Xuất từ điển ra ô này</button></div></div>${rows}`;
   };
-  const draw = () => { const k = sheet.scrollTop; view === 'scan' ? drawScan() : drawDict(); sheet.scrollTop = k; };
+  const drawBulk = () => {
+    const B = bulk, top = (rows, fmt) => rows.map(fmt).join('');
+    const bookRows = x => `<div class="hyrow"><div class="hyctx"><b>${esc(x.name)}</b>${x.chapters ? ` <span class="hytag">${x.chapters} chương</span>` : ''}</div><div class="hybtn" style="margin:4px 0 0"><span class="hyw ${B.phase === 'done' ? 'y' : 'r'}">${B.phase === 'done' ? 'đã sửa ' + x.n : x.n + ' chỗ' + (x.skip ? ' · ' + x.skip + ' chữ hoa giữa câu' : '')}</span><span class="hytag">lời văn ${x.kinds.t} · chú thích ${x.kinds.fn} · tiêu đề ${x.kinds.h}</span>${B.phase === 'done' && x.skip ? `<span class="hytag">bỏ qua ${x.skip} chữ hoa giữa câu</span>` : ''}</div></div>`;
+    const sumBy = Object.keys(B.by).sort((a, b) => B.by[b] - B.by[a]).map(k => `${esc(k)}: <b>${B.by[k]}</b>`).join(' · ');
+    const tot = B.books.reduce((a, x) => a + x.n, 0), totSkip = B.books.reduce((a, x) => a + x.skip, 0);
+    let head, btns;
+    if (B.phase === 'plan'){
+      head = tot || totSkip
+        ? `<p class="hysum"><span class="hyw r">${tot} chỗ chắc chắn</span>${totSkip ? ` <span class="hyw g">${totSkip} chữ hoa giữa câu</span>` : ''} <span class="hytag">${B.books.length} sách · quét ${B.scanned} sách / ${B.chScanned} chương</span></p><p class="hynote">Đã quét <b>lời văn, chú thích và tiêu đề</b> của toàn bộ Kinh Thánh theo ${archGet().filter(r => r.on).length} luật đang bật. Chưa có gì bị sửa — xem thống kê rồi bấm nút thực hiện.</p>${totSkip ? '<p class="hynote">“Chữ hoa giữa câu” (vd: Nhơn đứng giữa câu) có thể là tên riêng nên mặc định không sửa; bấm “Sửa cả chữ hoa” nếu bạn chắc chắn muốn sửa luôn.</p>' : ''}`
+        : '<p class="hynote">✔ Toàn bộ Kinh Thánh không còn từ nào trong từ điển cần sửa.</p>';
+      btns = `<button class="sbtn" data-a="bulkrun"${tot ? '' : ' disabled'} style="background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700">✅ Sửa ${tot} chỗ cho toàn bộ Kinh Thánh</button>${totSkip ? `<button class="sbtn" data-a="bulkrunflag">Sửa cả chữ hoa (${tot + totSkip})</button>` : ''}<button class="sbtn" data-a="back">← Quay lại</button><button class="sbtn" data-a="close">Đóng</button>`;
+    } else {
+      head = `<p class="hysum"><span class="hyw y">${tot} chỗ đã sửa</span> <span class="hytag">${B.books.length} sách · lời văn ${B.books.reduce((a, x) => a + x.kinds.t, 0)} · chú thích ${B.books.reduce((a, x) => a + x.kinds.fn, 0)} · tiêu đề ${B.books.reduce((a, x) => a + x.kinds.h, 0)}</span></p>
+        <p class="hynote" style="color:var(--fg)">${B.verify}</p>`;
+      btns = `${archBulkUndo ? '<button class="sbtn" data-a="bulkundo">↩ Hoàn tác toàn bộ lần sửa này</button>' : ''}<button class="sbtn" data-a="back">← Quay lại</button><button class="sbtn" data-a="close">Đóng</button>`;
+    }
+    sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">Sửa cho toàn bộ Kinh Thánh</h3>${head}${sumBy ? `<p class="hynote"><b>Theo từng luật:</b> ${sumBy}</p>` : ''}<div class="hybtn" style="margin-top:0">${btns}</div></div>${B.books.length ? `<div class="hynote" style="margin:8px 0 4px"><b>Thống kê theo từng sách (${B.books.length}):</b></div>` : ''}${top(B.books, bookRows)}`;
+  };
+  const draw = () => { const k = sheet.scrollTop; view === 'scan' ? drawScan() : view === 'bulk' ? drawBulk() : drawDict(); sheet.scrollTop = k; };
   const val = id => (sheet.querySelector('#' + id) || {}).value || '';
   const chk = id => !!(sheet.querySelector('#' + id) || {}).checked;
   const warn = (L, r, skip) => {                              // cảnh báo luật trùng / thay chồng
@@ -5237,6 +5284,72 @@ function archOpen(){
     if (a === 'back'){ view = 'scan'; rescan(); return draw(); }
     if (a === 'rescan'){ rescan(); all = null; draw(); return toast('Đã quét lại'); }
     if (a === 'scanall'){ toast('Đang quét toàn bộ Kinh Thánh…'); all = await scanAll(); rescan(); return draw(); }
+    if (a === 'bulk'){
+      if (!archGet().some(r => r.on)) return toast('Từ điển chưa có luật nào đang bật');
+      await edAuto();
+      const ui = exProgUI('Đang quét toàn bộ Kinh Thánh…');
+      try {
+        const books = []; let scanned = 0, chScanned = 0; const by = {};
+        for (let i = 0; i < bibleMeta.length; i++){
+          const m = bibleMeta[i]; ui.say('Đang quét: ' + m.name, 100 * i / bibleMeta.length, (i + 1) + '/' + bibleMeta.length + ' sách'); await ui.step();
+          const rec = await dbGet('books', m.name); if (!rec) continue;
+          scanned++; chScanned += (rec.chapters || []).length;
+          const R = archMapChapters(rec.chapters, true), Rs = archMapChapters(rec.chapters, false);
+          if (R.n) books.push({ name:m.name, n:Rs.n, skip:R.n - Rs.n, kinds:Rs.kinds, chapters:rec.chapters.length, by:Rs.by });
+          Object.keys(Rs.by).forEach(k => by[k] = (by[k] || 0) + Rs.by[k]);
+        }
+        ui.close(); bulk = { phase:'plan', books:books.filter(b => b.n || b.skip), by, scanned, chScanned }; view = 'bulk'; draw();
+      } catch(err){ ui.close(); if (!(err && err.exCancel)) toast('Lỗi khi quét: ' + (err.message || err)); }
+      return;
+    }
+    if (a === 'bulkrun' || a === 'bulkrunflag'){
+      const incl = a === 'bulkrunflag', ui = exProgUI('Đang sửa toàn bộ Kinh Thánh…');
+      try {
+        await edAuto();
+        const todo = bulk.books.map(b => b.name), undo = [], out = [], by = {}; let leftover = 0, mismatch = [];
+        for (let i = 0; i < todo.length; i++){
+          const name = todo[i]; ui.say('Đang sửa: ' + name, 100 * i / todo.length, (i + 1) + '/' + todo.length + ' sách'); await ui.step();
+          const rec = await dbGet('books', name); if (!rec) continue;
+          const R = archMapChapters(rec.chapters, incl);
+          if (!R.n) continue;
+          undo.push({ name, chapters:rec.chapters });
+          const nrec = Object.assign({}, rec, { chapters:R.chapters });
+          await dbPut('books', [nrec]);
+          const back = await dbGet('books', name);                                      // đọc lại từ máy để đối chiếu
+          const chk = archMapChapters(back.chapters, incl);
+          if (chk.n) leftover += chk.n;
+          if ((back.chapters || []).length !== (rec.chapters || []).length || back.chapters.some((vs, c) => (vs || []).length !== (rec.chapters[c] || []).length)) mismatch.push(name);
+          out.push({ name, n:R.n, skip:R.skip, kinds:R.kinds, chapters:rec.chapters.length });
+          Object.keys(R.by).forEach(k => by[k] = (by[k] || 0) + R.by[k]);
+        }
+        ui.say('Đang cập nhật giao diện…', 99); await ui.step();
+        if (undo.length){ archBulkUndo = { time:Date.now(), books:undo }; try { markDirty(); } catch(e){} }
+        await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+        ui.close();
+        const tot = out.reduce((a, x) => a + x.n, 0);
+        bulk = { phase:'done', books:out, by, verify: mismatch.length ? `⚠ Số câu/chương của ${esc(mismatch.join(', '))} lệch so với bản gốc — hãy bấm “Hoàn tác toàn bộ lần sửa này”.`
+          : leftover ? `⚠ Sau khi sửa vẫn còn ${leftover} chỗ khớp từ điển (do luật thay chuyền tiếp). Bấm “Sửa cho toàn bộ Kinh Thánh” lần nữa để xem.`
+          : `✔ Đã đọc lại từ máy và đối chiếu: số chương, số câu giữ nguyên 100%, không còn từ nào trong từ điển cần sửa${incl ? '' : ' (trừ chữ hoa giữa câu đã bỏ qua)'}.` };
+        view = 'bulk'; draw(); toast(`Đã sửa ${tot} chỗ ở ${out.length} sách`);
+      } catch(err){ ui.close(); if (err && err.exCancel){ toast('Đã hủy — những sách xử lý xong trước đó vẫn được giữ, có thể hoàn tác'); } else toast('Lỗi khi sửa: ' + (err.message || err)); try { await initBible(); await refreshStats(); } catch(e){} }
+      return;
+    }
+    if (a === 'bulkundo'){
+      if (!archBulkUndo) return toast('Không còn bản gốc để hoàn tác');
+      if (!confirm(`Hoàn tác: trả ${archBulkUndo.books.length} sách về đúng như trước khi sửa hàng loạt?`)) return;
+      const ui = exProgUI('Đang hoàn tác…');
+      try {
+        for (let i = 0; i < archBulkUndo.books.length; i++){
+          const b = archBulkUndo.books[i]; ui.say('Đang trả về: ' + b.name, 100 * i / archBulkUndo.books.length); await ui.step();
+          const rec = await dbGet('books', b.name); if (!rec) continue;
+          await dbPut('books', [Object.assign({}, rec, { chapters:b.chapters })]);
+        }
+        const n = archBulkUndo.books.length; archBulkUndo = null; try { markDirty(); } catch(e){}
+        await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+        ui.close(); bulk = null; view = 'scan'; rescan(); draw(); toast(`Đã hoàn tác ${n} sách`);
+      } catch(err){ ui.close(); toast('Lỗi khi hoàn tác: ' + (err.message || err)); }
+      return;
+    }
     if (a === 'go'){
       const x = all[+btn.dataset.k]; await edAuto();
       ed.Book.value = x.name; ed.Chap.value = x.ch; await edLoad(); all = null; rescan(); return draw();
