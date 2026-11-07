@@ -415,6 +415,12 @@ details a{color:var(--accent)}
 .chhead.tp .tprule{width:42%;height:0;border:0;border-top:1px solid var(--fg);margin:.65em auto .55em;opacity:.85}
 .chhead.tp .bk{font-size:min(1.55em,6.6vw);font-weight:800;letter-spacing:.01em;line-height:1.1;margin-top:.2em;overflow-wrap:anywhere;text-wrap:balance}
 .chhead.tp .ch{margin-top:.8em}
+/* Trang tựa như Kinh Thánh in: SÁCH (thưa chữ) / TÊN SÁCH (rất lớn, đậm) / CỦA … (thưa chữ) */
+.chhead.tp2{margin:.6em 0 1.7em}
+.chhead.tp2 .pt{font-size:min(1em,4.6vw);font-weight:800;letter-spacing:.14em;margin-top:.15em}
+.chhead.tp2 .bk{font-size:min(2.35em,9.4vw);font-weight:800;letter-spacing:.005em;line-height:1.04;margin:.18em 0 .16em}
+.chhead.tp2 .tb{font-size:min(1em,4.6vw);font-weight:800;letter-spacing:.12em;margin-top:.05em}
+.chhead.tp2 .ch{margin-top:1em}
 .chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
 .chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}   /* tiêu đề phụ dưới tên sách: lớn hơn, thưa chữ, cách xa dòng CHƯƠNG */
 .edbook{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
@@ -1448,8 +1454,8 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
         <button class="btn" id="edNext" aria-label="Chương sau">›</button>
       </div>
     </div>
-    <textarea id="edSub" class="edsub" rows="1" placeholder="Tiêu đề trên tên sách (Enter = xuống dòng)" autocomplete="off"></textarea>
-    <select id="edSubPos" class="edsub" aria-label="Vị trí tiêu đề phụ"><option value="">Tiêu đề phụ hiện PHÍA TRÊN tên sách (vd: SÁCH THỨ NHẤT CỦA)</option><option value="below">Tiêu đề phụ hiện PHÍA DƯỚI tên sách (vd: SỬ-KÝ → THỨ NHẤT)</option></select>
+    <textarea id="edSub" class="edsub" rows="1" placeholder="Tiêu đề quanh tên sách, Enter = xuống dòng. Kiểu sách giấy: dòng 1 “SÁCH”, dòng 2 “CỦA GIĂNG” (dòng bắt đầu bằng CỦA… tự nằm DƯỚI tên sách)" autocomplete="off"></textarea>
+    <select id="edSubPos" class="edsub" aria-label="Vị trí tiêu đề phụ"><option value="">Kiểu Kinh Thánh in: tiêu đề phụ PHÍA TRÊN tên sách; dòng “CỦA …” tự xuống DƯỚI (SÁCH / KHẢI-HUYỀN / CỦA GIĂNG)</option><option value="below">Tiêu đề phụ nhỏ PHÍA DƯỚI tên sách (kiểu cũ, vd: SỬ-KÝ → THỨ NHẤT)</option></select>
     <select id="edDcOff" class="edsub" aria-label="Số chương lớn ở đầu chương"><option value="">Hiện số chương chữ lớn ở đầu chương (mặc định)</option><option value="off">ẨN số chương chữ lớn (thư tín không có số chương: Phi-lê-môn, Giu-đe…) – áp dụng cho cả sách</option></select>
     <input type="text" id="edTitle" class="edsub" placeholder="Tên hiển thị ở chương 1 (vd: Các Vua). Từ chương 2 trở đi vẫn hiện đủ tên sách (vd: II Các Vua)" autocomplete="off">
     <datalist id="bookList"></datalist>
@@ -1569,7 +1575,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07l';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07m';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4555,16 +4561,22 @@ function paperHTML(book, ch, verses, view, idp){
   /* Trang tựa chương 1 như Kinh Thánh in: mỗi dòng của "Tiêu đề trên tên sách" (Enter = xuống dòng) là một hàng chữ in đậm;
      dòng đầu (khi có từ 2 dòng trở lên, chưa kể chữ "CỦA" cuối) là tên nhóm sách, to, kèm vạch kẻ mảnh ở dưới; các dòng giữa là "SÁCH…" cỡ lớn; chữ "CỦA" ở cuối nhỏ hơn; rồi tên sách thật lớn.
      Tự tách "SÁCH CỦA" / "SÁCH THỨ NHẤT - CỦA" thành hai hàng; tiêu đề phụ đặt DƯỚI tên sách vẫn giữ kiểu cũ. */
-  let tpHTML = '';
-  if (sub.length && +ch === 1 && !subIsBelow){
+  let tpHTML = '', tpBottom = '';
+  const ofIdx = sub.findIndex(x => /^CỦA\s+\S/i.test(x));      // dòng "CỦA GIĂNG" → nằm DƯỚI tên sách như Kinh Thánh in, dòng trước nó nằm trên
+  if (sub.length && +ch === 1 && ofIdx >= 0){
+    const top = sub.slice(0, ofIdx), bot = sub.slice(ofIdx);
+    tpHTML = top.map((x, i) => `<div class="tpl ${top.length > 1 && i === 0 ? 't1' : 'pt'}">${esc(x)}</div>` + (top.length > 1 && i === 0 ? '<hr class="tprule">' : '')).join('');
+    tpBottom = bot.map(x => `<div class="tpl tb">${esc(x)}</div>`).join('');
+  }
+  else if (sub.length && +ch === 1 && !subIsBelow){
     const L = sub.slice(), cm = L[L.length - 1].match(/^(.*\S)[\s\-–—]+(CỦA)$/i);
     if (cm){ L[L.length - 1] = cm[1]; L.push(cm[2]); }
     const hasOf = L.length > 1 && /^CỦA$/i.test(L[L.length - 1]), core = hasOf ? L.slice(0, -1) : L;
     tpHTML = core.map((x, i) => `<div class="tpl ${core.length > 1 && i === 0 ? 't1' : 't2'}">${esc(x)}</div>` + (core.length > 1 && i === 0 ? '<hr class="tprule">' : '')).join('') + (hasOf ? `<div class="tpl t3">${esc(L[L.length - 1])}</div>` : '');
   }
-  const subHTML = !tpHTML && sub.length && +ch === 1 ? `<div class="bksub${subIsBelow ? ' below' : ''}">${sub.map(esc).join('<br>')}</div>` : '';
+  const subHTML = !tpHTML && !tpBottom && sub.length && +ch === 1 ? `<div class="bksub${subIsBelow ? ' below' : ''}">${sub.map(esc).join('<br>')}</div>` : '';
   const below = !!subHTML && subIsBelow;
-  let out = `<div class="chhead${tpHTML ? ' tp' : ''}">${tpHTML}${below ? '' : subHTML}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div>${below ? subHTML : ''}<div class="ch">Chương ${esc(ch)}</div></div>`;
+  let out = `<div class="chhead${tpHTML || tpBottom ? ' tp' : ''}${tpBottom ? ' tp2' : ''}">${tpHTML}${below ? '' : subHTML}<div class="bk">${esc(+ch === 1 ? titleOf(book) : book)}</div>${tpBottom}${below ? subHTML : ''}<div class="ch">Chương ${esc(ch)}</div></div>`;
   if (!verses.length) return out + '<p class="sub">Chương này chưa có nội dung.</p>';
   let cur = null;
   const close = () => { if (cur){ out += cur === 'p' ? '</p>' : '</div>'; cur = null; } };
@@ -6414,12 +6426,21 @@ function docxBookBody(bookName, sub, chapters, title, subBelow, opt){        // 
   chapters.forEach((c, ci) => {
     const first = ci === 0 && !opt.breakFirst;
     const hasSub = subL.length && c.ch === 1;
+    const ofI = subL.findIndex(x => /^CỦA\s+\S/i.test(x));       // kiểu Kinh Thánh in: SÁCH / TÊN SÁCH / CỦA …
+    if (hasSub && ofI >= 0){
+      const ttl2 = (title || bookName).toUpperCase();
+      subL.slice(0, ofI).forEach((x, k) => { body += wParaX(wRun(x, { b:true, sz:28 }), { align:'center', after:60, brk:!first && k === 0 }); });
+      body += wParaX(wRun(ttl2, { b:true, sz:64 }), { align:'center', before:60, after:60, brk:!first && ofI === 0, keep:true, lvl:(opt.outline && ci === 0) ? 0 : null });
+      subL.slice(ofI).forEach(x => { body += wParaX(wRun(x, { b:true, sz:28 }), { align:'center', after:80, keep:true }); });
+      body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true, lvl:opt.outline ? 1 : null });
+    }
     const subP = () => wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, keep:true });
     const ttl = (c.ch === 1 ? (title || bookName) : bookName).toUpperCase();
-    if (hasSub && !subBelow) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
-    body += wParaX(wRun(ttl, { b:true, sz:36 }), { align:'center', after:40, brk:!first && !(hasSub && !subBelow), keep:true, lvl:(opt.outline && ci === 0) ? 0 : null });
-    if (hasSub && subBelow) body += subP();
-    body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true, lvl:opt.outline ? 1 : null });
+    const paperHd = hasSub && ofI >= 0;
+    if (!paperHd && hasSub && !subBelow) body += wParaX(wRun(subL.join('\n'), { b:true, sz:22, color:'7A6E60' }), { align:'center', after:120, brk:!first });
+    if (!paperHd) body += wParaX(wRun(ttl, { b:true, sz:36 }), { align:'center', after:40, brk:!first && !(hasSub && !subBelow), keep:true, lvl:(opt.outline && ci === 0) ? 0 : null });
+    if (!paperHd && hasSub && subBelow) body += subP();
+    if (!paperHd) body += wParaX(wRun('Chương ' + c.ch, { sz:22, color:'7A6E60' }), { align:'center', after:240, keep:true, lvl:opt.outline ? 1 : null });
     let para = null, lastPoem = false;
     const flush = () => { if (para){ body += wParaX(para, { after:140 }); para = null; } };
     const isNumFn = f => /^\[\d{1,3}\]/.test(String(f).trim());
