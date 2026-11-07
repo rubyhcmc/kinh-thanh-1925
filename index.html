@@ -1445,6 +1445,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
     <textarea id="edSub" class="edsub" rows="1" placeholder="Tiêu đề trên tên sách (Enter = xuống dòng)" autocomplete="off"></textarea>
     <select id="edSubPos" class="edsub" aria-label="Vị trí tiêu đề phụ"><option value="">Tiêu đề phụ hiện PHÍA TRÊN tên sách (vd: SÁCH THỨ NHẤT CỦA)</option><option value="below">Tiêu đề phụ hiện PHÍA DƯỚI tên sách (vd: SỬ-KÝ → THỨ NHẤT)</option></select>
+    <select id="edDcOff" class="edsub" aria-label="Số chương lớn ở đầu chương"><option value="">Hiện số chương chữ lớn ở đầu chương (mặc định)</option><option value="off">ẨN số chương chữ lớn (thư tín không có số chương: Phi-lê-môn, Giu-đe…) – áp dụng cho cả sách</option></select>
     <input type="text" id="edTitle" class="edsub" placeholder="Tên hiển thị ở chương 1 (vd: Các Vua). Từ chương 2 trở đi vẫn hiện đủ tên sách (vd: II Các Vua)" autocomplete="off">
     <datalist id="bookList"></datalist>
     <div class="edbook">
@@ -1563,7 +1564,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -3349,7 +3350,7 @@ function normChapters(cs){
 }
 function normBible(j){
   const books = Array.isArray(j) ? j : Array.isArray(j.books) ? j.books : Object.keys(j).map(k => ({ name:k, chapters:j[k] }));
-  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), sub:String(b.sub || '').trim(), title:String(b.title || '').trim(), subPos:b.subPos === 'below' ? 'below' : '', chapters:normChapters(b.chapters), no:(+b.no > 0 && +b.no <= 999) ? Math.floor(+b.no) : 0 }))
+  return books.map(b => ({ name:String(b.name || b.book || '').trim(), abbr:String(b.abbr || b.short || '').trim(), sub:String(b.sub || '').trim(), title:String(b.title || '').trim(), subPos:b.subPos === 'below' ? 'below' : '', dc:b.dc === 'off' ? 'off' : '', chapters:normChapters(b.chapters), no:(+b.no > 0 && +b.no <= 999) ? Math.floor(+b.no) : 0 }))
               .filter(b => b.name && b.chapters.length);
 }
 function parseBibleText(t){
@@ -3381,7 +3382,7 @@ async function importBible(books, mode){
   const metas = books.map(b => {
     const taken = new Set([...map.values()].map(x => x.order));
     const m = map.get(b.name) || { name:b.name, order:(b.no && !taken.has(b.no)) ? (max = Math.max(max, b.no), b.no) : ++max };   // sách mới có số thứ tự (từ tệp xuất) → về đúng vị trí 1–66
-    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; m.chapterCount = b.chapters.length; return m;
+    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; if (b.dc) m.dc = b.dc; m.chapterCount = b.chapters.length; return m;
   });
   await dbPut('books', books.map(b => ({ name:b.name, chapters:b.chapters })));
   await dbPut('bookMeta', metas);
@@ -3488,7 +3489,7 @@ function toB64(str){
 async function buildBooks(){
   const metas = (await dbAll('bookMeta')).sort((a, b) => a.order - b.order), recs = await dbAll('books');
   const map = new Map(recs.map(b => [b.name, b]));
-  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
+  return metas.map(m => ({ name:m.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', dc:m.dc || '', chapters:(map.get(m.name) || {}).chapters || [] })).filter(b => b.chapters.length);
 }
 const makePayload = books => ({ app:'kinhthanh', version:1, updatedAt:new Date().toISOString(), bible:{ books }, about:ABOUT, archDict:archGet() });
 
@@ -4528,6 +4529,10 @@ function subBelowOf(book){   // tiêu đề phụ nằm dưới tên sách?
   try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.SubPos.value === 'below'; } catch(_){}
   return (bibleMeta.find(m => m.name === book) || {}).subPos === 'below';
 }
+function dcOffOf(book){   // sách tắt số chương lớn ở đầu chương (thư tín 1 chương: Phi-lê-môn, Giu-đe…)?
+  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book && ed.DcOff) return ed.DcOff.value === 'off'; } catch(_){}
+  return (bibleMeta.find(m => m.name === book) || {}).dc === 'off';
+}
 function titleOf(book){   // tên hiển thị ở đầu chương (để trống thì dùng tên sách – tên sách vẫn dùng cho mục lục)
   try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Title.value.trim() || book; } catch(_){}
   return ((bibleMeta.find(m => m.name === book) || {}).title || '').trim() || book;
@@ -4561,7 +4566,7 @@ function paperHTML(book, ch, verses, view, idp){
     const isPoem = Array.isArray(v.q) && v.q.length;
     const vm = Object.assign({}, fm, fnMapOf(v.fn));
     if (v.h){ close(); out += secHTML(v.h, vm); }
-    const lead = print && i === 0 && v.n === 1;                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
+    const lead = print && i === 0 && v.n === 1 && !dcOffOf(book);                 // câu 1: số chương chữ lớn, vẫn hiện số câu 1 đứng sau
     const dc  = lead ? `<span class="dc">${esc(ch)}</span>` : '';
     const num = `<sup class="vn">${v.n}${v.e > v.n ? '–' + v.e : ''}</sup>`;
     const attrs = `class="v" id="${idp}${v.n}" data-n="${v.n}"`;
@@ -4630,7 +4635,7 @@ function htmlToMarked(html){
  *  ở trang chủ và tự đẩy lên GitHub (nếu đã kết nối).
  * ========================================================= */
 const ed = {};
-['Book','Abbr','Sub','SubPos','Title','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
+['Book','Abbr','Sub','SubPos','DcOff','Title','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
 let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
 const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
 
@@ -4654,7 +4659,7 @@ function edRefresh(){
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
-async function persistChapter(name, ch, vs, abbr, sub, title, subPos){
+async function persistChapter(name, ch, vs, abbr, sub, title, subPos, dc){
   if (!isAdmin()) throw new Error('Chỉ quản trị viên mới được sửa nội dung.');   // chế độ chỉ đọc cho cộng đồng
   const rec = (await dbGet('books', name)) || { name, chapters:[] };
   while (rec.chapters.length < ch) rec.chapters.push([]);
@@ -4662,7 +4667,7 @@ async function persistChapter(name, ch, vs, abbr, sub, title, subPos){
   const metas = await dbAll('bookMeta');
   let meta = metas.find(m => m.name === name);
   if (!meta) meta = { name, order: metas.reduce((a, m) => Math.max(a, m.order), 0) + 1 };
-  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); if (typeof title === 'string') meta.title = title.trim(); if (typeof subPos === 'string') meta.subPos = subPos; meta.chapterCount = rec.chapters.length;
+  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); if (typeof title === 'string') meta.title = title.trim(); if (typeof subPos === 'string') meta.subPos = subPos; if (typeof dc === 'string') meta.dc = dc; meta.chapterCount = rec.chapters.length;
   await dbPut('books', [rec]); await dbPut('bookMeta', [meta]);
   S.book = name; S.chapter = ch; saveS();
   await initBible(); await refreshStats(); markDirty();
@@ -4675,7 +4680,7 @@ async function edAuto(){
   const vs = parseMarkup(text, +ed.Start.value || 1); if (!vs.length) return;
   try {
     const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
-    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined, ed.Book.value.trim() === name ? ed.Title.value : undefined, ed.Book.value.trim() === name ? ed.SubPos.value : undefined);
+    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined, ed.Book.value.trim() === name ? ed.Title.value : undefined, ed.Book.value.trim() === name ? ed.SubPos.value : undefined, ed.Book.value.trim() === name ? ed.DcOff.value : undefined);
     edLoaded = text;
     try { localStorage.removeItem(draftKey()); } catch(e){}
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -4692,6 +4697,7 @@ async function edLoad(){
   if (meta && !ed.Sub.value) ed.Sub.value = meta.sub || '';
   if (meta && !ed.Title.value) ed.Title.value = meta.title || '';
   if (meta) ed.SubPos.value = meta.subPos === 'below' ? 'below' : '';
+  if (meta) ed.DcOff.value = meta.dc === 'off' ? 'off' : '';
   edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
   let txt = edLoaded;
   try {
@@ -5310,7 +5316,7 @@ async function edDeleteBook(){
     if (S.book === name){ S.book = null; S.chapter = 1; saveS(); }
     BM = BM.filter(b => b.book !== name); saveBM();
     try { Object.keys(localStorage).filter(k => k.startsWith(`kt.draft.${name}|`)).forEach(k => localStorage.removeItem(k)); } catch(e){}
-    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Title.value = ''; ed.SubPos.value = ''; ed.Chap.value = 1;
+    edCur = { name:'', ch:0 }; edLoaded = ''; ed.Text.value = ''; ed.Book.value = ''; ed.Abbr.value = ''; ed.Sub.value = ''; ed.Title.value = ''; ed.SubPos.value = ''; ed.DcOff.value = ''; ed.Chap.value = 1;
     await initBible(); await refreshStats(); markDirty(); edBookList(); edRefresh();
     toast(`Đã xóa sách "${name}"`);
   } catch(e){ toast('Lỗi xóa sách: ' + (e.message || e)); }
@@ -5324,7 +5330,7 @@ $('#edBookList').onclick = async () => {
   const i = await choose('Chọn sách để xem / sửa', `Trong máy có ${bibleMeta.length} sách.`, opts);
   if (i < 0 || i >= bibleMeta.length) return;
   const m = bibleMeta[i];
-  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; edSubFit();
+  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; ed.DcOff.value = m.dc === 'off' ? 'off' : ''; edSubFit();
   ed.Chap.value = m.name === S.book && S.chapter ? S.chapter : 1;
   await edLoad();
 };
@@ -5477,7 +5483,7 @@ async function sxOpenHit(r){
   await edAuto();
   const m = bibleMeta.find(x => x.name === r.b);
   if (!m) return toast('Không thấy sách ' + r.b);
-  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; edSubFit();
+  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; ed.DcOff.value = m.dc === 'off' ? 'off' : ''; edSubFit();
   ed.Chap.value = r.c;
   await edLoad();
   const eb = $('#edSeg [data-p="edit"]'); if (eb && !eb.classList.contains('on')) eb.click();
@@ -5597,6 +5603,16 @@ ed.SubPos.addEventListener('change', () => {   // đổi vị trí tiêu đề p
     ed.Auto.textContent = '✔ Đã lưu vị trí tiêu đề phụ';
   }, 300);
 });
+let edDcTimer;
+ed.DcOff.addEventListener('change', () => {   // bật/tắt số chương lớn: xem trước ngay, tự lưu cho sách đã có
+  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 100);
+  clearTimeout(edDcTimer); edDcTimer = setTimeout(async () => {
+    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
+    const v = ed.DcOff.value; if (v === (meta.dc || '')) return;
+    const m2 = Object.assign({}, meta, { dc:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
+    ed.Auto.textContent = v === 'off' ? '✔ Đã ẩn số chương lớn của sách này' : '✔ Đã hiện lại số chương lớn';
+  }, 300);
+});
 let edTitleTimer;
 ed.Title.addEventListener('input', () => {   // tên hiển thị đầu chương: xem trước ngay, tự lưu cho sách đã có
   clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200);
@@ -5645,7 +5661,7 @@ ed.Chap.addEventListener('keydown', async e => {       // gõ số chương rồ
   await edGoChap();
   ed.Chap.blur();
 });
-ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; ed.Title.value = bm.title || ''; ed.SubPos.value = bm.subPos === 'below' ? 'below' : ''; edSubFit(); edLoad(); };
+ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; ed.Title.value = bm.title || ''; ed.SubPos.value = bm.subPos === 'below' ? 'below' : ''; ed.DcOff.value = bm.dc === 'off' ? 'off' : ''; edSubFit(); edLoad(); };
 $('#edPrev').onclick = async () => { await edAuto(); ed.Chap.value = Math.max(1, (parseInt(ed.Chap.value, 10) || 1) - 1); edLoad(); };
 $('#edNext').onclick = async () => { await edAuto(); ed.Chap.value = (parseInt(ed.Chap.value, 10) || 0) + 1; edLoad(); };
 $$('#edSeg button').forEach(b => b.onclick = () => {
@@ -5666,7 +5682,7 @@ async function edSave(goNext){
   const w = checkVerses(vs);
   if (w.length && !confirm('Có cảnh báo:\n• ' + w.join('\n• ') + '\n\nVẫn lưu chương này?')) return;
   try {
-    await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value, ed.Title.value, ed.SubPos.value);
+    await persistChapter(name, ch, vs, ed.Abbr.value.trim(), ed.Sub.value, ed.Title.value, ed.SubPos.value, ed.DcOff.value);
     try { localStorage.removeItem(draftKey()); } catch(e){}
     edLoaded = serializeVerses(vs); ed.Text.value = edLoaded;
     toast(`✔ Đã lưu ${name} ${ch} (${vs.length} câu)`);
@@ -5825,7 +5841,7 @@ function layoutBook(book){
     L.marks.push({ title:`${book.name} ${ci + 1}`, page:L.pages.length - 1 });
     L.flow([{ s:book.name.toUpperCase(), k:'n' }], { size:12.5, lh:17, align:'center', st:'b' });
     L.gap(10);
-    let para = null, wasPoem = false, dcNext = vs[0] && vs[0].n === 1;       // số chương lớn đứng trước câu 1
+    let para = null, wasPoem = false, dcNext = vs[0] && vs[0].n === 1 && book.dc !== 'off';       // số chương lớn đứng trước câu 1
     const dcPara = () => { if (!dcNext) return null; dcNext = false; return { s:String(ci + 1), sz:SZ * 3.1, lines:2 }; };
     const flush = () => { if (para && para.length){ L.flow(para, { size:SZ, lh:LH, justify:true, dc:para.dc || null }); L.gap(5); } para = null; };
     vs.forEach(v => {
@@ -6237,7 +6253,7 @@ async function exportBook(name, baseName){
   const say = t => { const e = pr.querySelector('#exProg'); if (e) e.textContent = t; };
   try {
     await new Promise(r => setTimeout(r, 30));
-    const bno = bookNoOf(rec.name), book = { name:rec.name, abbr:meta.abbr || '', sub:meta.sub || '', title:meta.title || '', subPos:meta.subPos || '', chapters:rec.chapters, no:bno.no };
+    const bno = bookNoOf(rec.name), book = { name:rec.name, abbr:meta.abbr || '', sub:meta.sub || '', title:meta.title || '', subPos:meta.subPos || '', dc:meta.dc || '', chapters:rec.chapters, no:bno.no };
     const lay = layoutBook(book);
     const r = await renderPages(lay.pages, book.name, (i, n) => say(`Đang vẽ trang ${i}/${n}…`));
     say('Đang đóng gói dữ liệu khôi phục…');
@@ -6521,7 +6537,7 @@ async function exBuildSetJson(key, list, ui, baseName){
     if (!rec || !rec.chapters || !rec.chapters.some(c => c && c.length)){ st.skipped.push(m.name); continue; }
     rec.chapters.forEach(vs => { if (vs && vs.length){ st.chapters++; st.verses += vs.length; } });
     st.hashes[rec.name] = await exHashBook({ name:rec.name, chapters:rec.chapters });
-    parts.push((st.books ? ',' : '') + JSON.stringify({ name:rec.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', chapters:rec.chapters, no }));
+    parts.push((st.books ? ',' : '') + JSON.stringify({ name:rec.name, abbr:m.abbr || '', sub:m.sub || '', title:m.title || '', subPos:m.subPos || '', dc:m.dc || '', chapters:rec.chapters, no }));
     st.books++;
   }
   if (!st.books) throw new Error('Không có sách nào có nội dung để xuất.');
@@ -6642,7 +6658,7 @@ async function exImportSafe(books, ui){                           // ghi theo l�
       let order; if (b.no && !taken.has(b.no)){ order = b.no; max = Math.max(max, b.no); } else order = ++max;
       taken.add(order); m = { name:b.name, order }; map.set(b.name, m);
     }
-    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; m.chapterCount = b.chapters.length;
+    m.abbr = b.abbr || m.abbr || ''; if (b.sub) m.sub = b.sub; if (b.title) m.title = b.title; if (b.subPos) m.subPos = b.subPos; if (b.dc) m.dc = b.dc; m.chapterCount = b.chapters.length;
     return m;
   };
   const cnt = b => b.chapters.reduce((a, c) => a + (c ? c.length : 0), 0);
