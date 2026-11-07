@@ -1569,7 +1569,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07k';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6472,8 +6472,8 @@ function exSyncUI(){                                              // đổi nhã
   const sel = $('#exBook'), go = $('#exGo'), h = $('#exSetHint'), nm = $('#exName'), wd = $('#exWord'); if (!sel || !go) return;
   const k = exSetKey(sel.value);
   go.textContent = k ? '🧾 Xuất JSON trọn bộ' : '📕 Xuất PDF + JSON';
-  if (wd){ wd.hidden = false; wd.textContent = k ? (EX_SETS[k].group || k === 'nt' ? '📄 Xuất Word' : '📄 Xuất Word theo nhóm') : '📄 Xuất Word'; }   // 1 sách → 1 tệp Word · trọn bộ → nhiều tệp Word theo nhóm sách
-  if (h){ h.hidden = !k; h.textContent = k ? (EX_SETS[k].group || k === 'nt' ? `“${EX_SETS[k].label}”: “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256; “📄 Xuất Word” tạo tệp Word của nhóm này (nhóm quá lớn tự chia phần).` : `“${EX_SETS[k].label}”: “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256; “📄 Xuất Word theo nhóm” tạo mỗi nhóm trong mục lục một tệp Word (Ngũ Kinh, Lịch-sử, Văn-thơ, Tiên-tri, Tân-Ước; nhóm quá lớn tự chia phần).`) : ''; }
+  if (wd){ wd.hidden = false; wd.textContent = k ? '📄 Xuất Word (mỗi sách 1 tệp)' : '📄 Xuất Word'; }   // 1 sách → 1 tệp Word · trọn bộ → nhiều tệp Word theo nhóm sách
+  if (h){ h.hidden = !k; h.textContent = k ? `“${EX_SETS[k].label}”: “📄 Xuất Word” tạo MỖI SÁCH MỘT TỆP RỜI (01_Sang_The_Ky … 66_Khai_Huyen), xếp theo nhóm trong mục lục; “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256.` : ''; }
   if (nm){                                                        // ô tên tệp: gợi ý sẵn, chỉ ghi đè khi người dùng chưa tự sửa
     const auto = k ? EX_SETS[k].file : (sel.value ? bookFileBase(sel.value) : '');
     if (!nm.value.trim() || nm.value === nm.dataset.auto) nm.value = auto;
@@ -6562,11 +6562,11 @@ async function exBuildSetJson(key, list, ui, baseName){
   return { file, st, ok };
 }
 /* Bảng kết quả / lưu tệp: SỬA TÊN từng tệp + CHỌN THƯ MỤC lưu (máy tính), rồi mới bấm Lưu. Nút là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
-function exSetResult(title, files, lines, ok){
+function exSetResult(title, files, lines, ok, groups){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB', extOf = n => (String(n).match(/\.[A-Za-z0-9]+$/) || [''])[0];
   let dir = null;
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
-  const rows = files.map((f, i) => `<div style="margin:0 0 8px"><div style="display:flex;gap:6px;align-items:center"><input type="text" data-i="${i}" value="${esc(f.name.slice(0, f.name.length - extOf(f.name).length))}" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Tên tệp ${i + 1}" style="flex:1;min-width:0;box-sizing:border-box"><span style="flex:none;font-weight:700;color:var(--muted)">${esc(extOf(f.name))}</span></div><small style="color:var(--muted)">${mb(f)}</small></div>`).join('');
+  const rows = files.map((f, i) => (groups && groups[i] && groups[i] !== groups[i - 1] ? `<div style="margin:${i ? 14 : 0}px 0 6px;font-weight:700;font-size:13px;letter-spacing:.04em;color:var(--accent)">${esc(groups[i])}</div>` : '') + `<div style="margin:0 0 8px"><div style="display:flex;gap:6px;align-items:center"><input type="text" data-i="${i}" value="${esc(f.name.slice(0, f.name.length - extOf(f.name).length))}" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Tên tệp ${i + 1}" style="flex:1;min-width:0;box-sizing:border-box"><span style="flex:none;font-weight:700;color:var(--muted)">${esc(extOf(f.name))}</span></div><small style="color:var(--muted)">${mb(f)}</small></div>`).join('');
   o.innerHTML = `<div class="sheet"><h3 style="margin-top:0">${esc(title)}</h3>
     <div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 10px;white-space:pre-wrap;max-height:28vh;overflow:auto">${esc(lines.join('\n'))}</div>
     <label class="lbl" style="margin-top:0">Tên tệp ${files.length > 1 ? '(sửa được từng tệp)' : '(sửa được)'}</label>${rows}
@@ -6666,9 +6666,7 @@ async function exportSetWord(key, baseName){
     const names = plan.missing.slice(0, 8).map(n => BIBLE66[n - 1]).join(', ') + (plan.missing.length > 8 ? '…' : '');
     if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách CÓ NỘI DUNG trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.\nVẫn xuất ${plan.list.length} sách đang có?`)) return;
   }
-  const ci = await choose('Xuất Word: ' + sp.label, `${plan.list.length} sách sẽ được chia thành nhiều tệp .docx. Chọn cách chia:`, [...EX_WSIZES.map(o => ({ t:o.t, cls:o.cls || '' })), { t:'Hủy' }]);
-  if (ci < 0 || ci >= EX_WSIZES.length) return;
-  const limit = EX_WSIZES[ci].max, perBook = limit === 0;
+  const limit = 0, perBook = true;   // luôn xuất MỖI SÁCH MỘT TỆP RỜI (chia nhóm theo mục lục) để không bao giờ mất/thiếu dữ liệu giữa các sách
   exBusy = true; exSetBusy(true);
   const ui = exProgUI('Đang xuất Word: ' + sp.label);
   log.className = 'log ok'; log.textContent = 'Đang xuất Word ' + sp.label + '…';
@@ -6698,7 +6696,7 @@ async function exportSetWord(key, baseName){
     });
     parts.forEach(pt => { if (!pt.g) return; const same = parts.filter(x => x.g === pt.g); pt.k = same.indexOf(pt) + 1; pt.n = same.length; });
     /* 2) dựng từng tệp, kiểm đếm riêng */
-    const enc = new TextEncoder(), files = [], lines = [];
+    const enc = new TextEncoder(), files = [], lines = [], grp = [];
     let doneBooks = 0, tv = 0;
     for (let pi = 0; pi < parts.length; pi++){
       const pt = parts[pi], first = pt.books[0], last = pt.books[pt.books.length - 1];
@@ -6726,7 +6724,7 @@ async function exportSetWord(key, baseName){
         { name:'word/document.xml', data:enc.encode(DOCX_HEAD + body + DOCX_TAIL) }
       ]);
       body = '';
-      const f = new File([zip], fname, { type:DOCX_MIME }); files.push(f); tv += stat.verses;
+      const f = new File([zip], fname, { type:DOCX_MIME }); files.push(f); { const g = EX_WGROUPS.find(g => g.from ? first.no >= g.from && first.no <= g.to : !first.no); grp.push(g ? g.label : ''); } tv += stat.verses;
       lines.push(`• ${fname} — ${pt.books.map(b => b.m.name).join(', ').slice(0, 140)} (${pt.verses} câu)`);
       await ui.step();
     }
@@ -6735,7 +6733,7 @@ async function exportSetWord(key, baseName){
     const out = [head, ...lines];
     if (plan.missing.length) out.push(`⚠ Thiếu ${plan.missing.length} sách so với bộ chuẩn: ${plan.missing.map(n => BIBLE66[n - 1]).join(', ')}.`);
     log.className = 'log ok'; log.textContent = '✔ ' + head;
-    exSetResult('Đã xuất Word: ' + sp.label, files, out, true);
+    exSetResult('Đã xuất Word: ' + sp.label, files, out, true, grp);
   } catch(e){
     ui.close();
     if (e && e.exCancel){ log.className = 'log ok'; log.textContent = 'Đã hủy – chưa tạo tệp nào.'; toast('Đã hủy'); }
