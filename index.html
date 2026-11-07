@@ -713,6 +713,24 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .sxit .sxgo{margin-left:auto;font-size:13px;color:var(--muted)}
 .sxmore{display:block;margin:12px auto 0;padding:10px 18px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
 .sxem{padding:28px 18px;text-align:center;color:var(--muted)}
+.sxrow input.sxrepin{flex:1 1 150px;min-width:0;height:38px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;padding:0 10px}
+.sxrow input.sxrepin:focus{outline:none;border-color:var(--accent)}
+.sxchip.pri{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:700}
+.sxchip:disabled{opacity:.4;cursor:default}
+.srsum{margin-top:6px;font-size:14px;line-height:1.5;color:var(--fg)}
+.srwarn{margin-top:3px;font-size:13px;color:var(--danger)}
+.srfoot{flex:none;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
+.srfoot .btn{flex:1;padding:12px 10px}.srfoot .btn.primary{flex:2}.srfoot .btn:disabled{opacity:.4}
+.sxit.sxrv{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.sxrv .srchk{flex:none;padding:4px 2px 0}.sxrv .srchk input{width:22px;height:22px;accent-color:var(--accent)}
+.sxrv .srmain{flex:1;min-width:0}
+.sxrv .srn{font-size:12px;color:var(--muted)}
+.sxrv .srEd{margin-left:auto;border:0;background:transparent;box-shadow:none;padding:2px 4px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.sxrv .srb,.sxrv .sra{font-size:15px;line-height:1.5}
+.sxrv .srb::before,.sxrv .sra::before{content:"Trước ";font:700 11px var(--sans);color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:6px}
+.sxrv .sra::before{content:"Sau ";color:var(--accent)}
+.sxrv mark.srnew{background:#cdeccb;color:inherit;border-radius:3px}
+[data-theme=dark] .sxrv mark.srnew{background:#24472a}
 @media (prefers-reduced-motion:reduce){.overlay.sxp{transition:none}}
 /* §§ ▼▼▼ MỤC 3 · BỘ NHỚ LƯU TRỮ TRÊN MÁY — CSS đánh dấu vị trí đọc (Bookmark) ▼▼▼ */
 /* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
@@ -1578,7 +1596,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07n';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5472,9 +5490,10 @@ $('#edBookList').onclick = async () => {
 /* Nút "🔍 Tìm toàn bộ" trong trình soạn thảo: tìm trong MỌI sách trong máy, kể cả chú thích [n], ghi chú in nghiêng (*) và tiêu đề (#).
    Bấm một kết quả → lưu chương đang soạn, mở đúng chương đó vào ô soạn và bôi chọn chỗ tìm thấy để sửa ngay. */
 const SX_KEY = 'kt.sxopts';
-const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
-try { const o = JSON.parse(localStorage.getItem(SX_KEY) || '{}'); ['kind', 'scope'].forEach(k => { if (typeof o[k] === 'string') sx[k] = o[k]; }); ['acc', 'word', 'all'].forEach(k => { if (typeof o[k] === 'boolean') sx[k] = o[k]; }); } catch(e){}
-const sxSave = () => { try { localStorage.setItem(SX_KEY, JSON.stringify({ kind:sx.kind, scope:sx.scope, acc:sx.acc, word:sx.word, all:sx.all })); } catch(e){} };
+const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, keep:true, undo:null, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
+try { const o = JSON.parse(localStorage.getItem(SX_KEY) || '{}'); ['kind', 'scope'].forEach(k => { if (typeof o[k] === 'string') sx[k] = o[k]; }); ['acc', 'word', 'all', 'keep'].forEach(k => { if (typeof o[k] === 'boolean') sx[k] = o[k]; }); } catch(e){}
+try { const u = JSON.parse(localStorage.getItem('kt.sxundo') || 'null'); if (u && Array.isArray(u.items) && u.items.length) sx.undo = u; } catch(e){}
+const sxSave = () => { try { localStorage.setItem(SX_KEY, JSON.stringify({ kind:sx.kind, scope:sx.scope, acc:sx.acc, word:sx.word, all:sx.all, keep:sx.keep })); } catch(e){} };
 const SX_PAGE = 60, SX_KIND = { v:'Lời văn', f:'Chú thích', h:'Tiêu đề' };
 const _sxFc = new Map();
 const sxFoldCh = c => { let r = _sxFc.get(c); if (r === undefined){ r = fold(c); if (r.length !== 1) r = c.toLowerCase().length === 1 && !/[\u0300-\u036f]/.test(c) ? c.toLowerCase() : ' '; _sxFc.set(c, r); } return r; };
@@ -5491,10 +5510,10 @@ async function sxBuild(){
   const out = [], flat = x => String(x == null ? '' : x).normalize('NFC').replace(/\s*\n\s*/g, ' ').trim();
   for (const m of bibleMeta){
     const rec = recs.get(m.name); if (!rec) continue;
-    rec.chapters.forEach((vs, ci) => (vs || []).forEach(v => {
-      if (v.h) out.push({ b:m.name, c:ci + 1, n:v.n, k:'h', t:String(v.h).normalize('NFC').split('\n').map(x => x.trim()).filter(Boolean).join(' ⏎ ') });
-      out.push({ b:m.name, c:ci + 1, n:v.n, k:'v', t:flat(v.t) });
-      (v.fn || []).forEach((f, i) => out.push({ b:m.name, c:ci + 1, n:v.n, k:'f', i, t:flat(f) }));
+    rec.chapters.forEach((vs, ci) => (vs || []).forEach((v, vi) => {
+      if (v.h) out.push({ b:m.name, c:ci + 1, n:v.n, k:'h', vi, o:String(v.h), t:String(v.h).normalize('NFC').split('\n').map(x => x.trim()).filter(Boolean).join(' ⏎ ') });
+      out.push({ b:m.name, c:ci + 1, n:v.n, k:'v', vi, o:String(v.t == null ? '' : v.t), t:flat(v.t) });
+      (v.fn || []).forEach((f, i) => out.push({ b:m.name, c:ci + 1, n:v.n, k:'f', i, vi, o:String(f == null ? '' : f), t:flat(f) }));
     }));
   }
   sx.idx = out; sx.gen = gen; return out;
@@ -5529,7 +5548,7 @@ async function sxRun(){
   const info = $('#sxInfo'), body = $('#sxBody');
   $('#sxClr').hidden = !q;
   if (!bibleMeta.length){ info.textContent = 'Chưa có dữ liệu Kinh Thánh trong máy.'; body.innerHTML = ''; return; }
-  if (fold(q.trim()).length < 2){ info.textContent = 'Nhập ít nhất 2 ký tự để tìm trong lời văn, chú thích và tiêu đề của toàn bộ Kinh Thánh.'; body.innerHTML = ''; sx.res = []; return; }
+  if (fold(q.trim()).length < 2){ info.textContent = 'Nhập ít nhất 2 ký tự để tìm trong lời văn, chú thích và tiêu đề của toàn bộ Kinh Thánh.'; body.innerHTML = ''; sx.res = []; sxSyncRep(); return; }
   info.textContent = sx.idx && sx.gen === (bs.gen || 0) ? 'Đang tìm…' : 'Đang chuẩn bị dữ liệu (chỉ lần đầu)…';
   const idx = await sxBuild(); if ($('#sxQ').value !== q || !sx.el) return;
   const rx = sxRegexes(q, sx.acc), sc = sx.scope, test = bsScopeFn(sc);
@@ -5540,8 +5559,8 @@ async function sxRun(){
     const tg = sxNorm(e.t, sx.acc);
     if (rx.every(r => { r.lastIndex = 0; return r.test(tg); })) res.push(e);
   }
-  sx.res = res; sx.rx = rx; sx.shown = Math.min(SX_PAGE, res.length);
-  if (!res.length){ info.textContent = ''; body.innerHTML = `<div class="sxem"><b>Không tìm thấy “${esc(q.trim())}”</b><br>trong ${esc(sxScopeLabel())}${sx.kind ? ' · ' + SX_KIND[sx.kind].toLowerCase() : ''}.<br><small>Thử bỏ “Đúng dấu” hoặc “Nguyên từ” để tìm rộng hơn.</small></div>`; return; }
+  sx.res = res; sx.rx = rx; sx.shown = Math.min(SX_PAGE, res.length); sxSyncRep();
+  if (!res.length){ sxSyncRep(); info.textContent = ''; body.innerHTML = `<div class="sxem"><b>Không tìm thấy “${esc(q.trim())}”</b><br>trong ${esc(sxScopeLabel())}${sx.kind ? ' · ' + SX_KIND[sx.kind].toLowerCase() : ''}.<br><small>Thử bỏ “Đúng dấu” hoặc “Nguyên từ” để tìm rộng hơn.</small></div>`; return; }
   const cnt = { v:0, f:0, h:0 }; res.forEach(e => cnt[e.k]++);
   const books = new Set(res.map(e => e.b)).size;
   info.textContent = `Tìm thấy ${res.length} chỗ · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề · ${books} sách`;
@@ -5574,7 +5593,15 @@ function sxOptsHtml(){
 }
 function sxSyncUi(){
   $$('#sxKinds [data-k]').forEach(b => b.classList.toggle('on', b.dataset.k === sx.kind));
-  $('#sxAcc').classList.toggle('on', sx.acc); $('#sxWord').classList.toggle('on', sx.word); $('#sxAll').classList.toggle('on', sx.all);
+  $('#sxAcc').classList.toggle('on', sx.acc); $('#sxWord').classList.toggle('on', sx.word); $('#sxAll').classList.toggle('on', sx.all); $('#sxKeep').classList.toggle('on', sx.keep);
+  sxSyncRep();
+}
+function sxSyncRep(){
+  const go = $('#sxRepGo'), un = $('#sxUndo'), row = $('#sxRepRow'); if (!go) return;
+  if (row) row.hidden = !isAdmin();
+  go.disabled = !(sx.res && sx.res.length) || sx.all;
+  go.title = sx.all ? 'Hãy tắt “Đủ các từ” để thay thế' : '';
+  if (un) un.hidden = !(sx.undo && sx.undo.items && sx.undo.items.length);
 }
 function openSxFind(){
   if (sx.el) return;
@@ -5586,7 +5613,8 @@ function openSxFind(){
     <div class="sxq"><input type="search" id="sxQ" placeholder="Từ, cụm từ hoặc chữ trong chú thích…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button type="button" id="sxClr" aria-label="Xóa chữ đã gõ" hidden>✕</button></div>
     <div class="sxrow"><select id="sxScope" aria-label="Phạm vi">${sxOptsHtml()}</select></div>
     <div class="sxrow" id="sxKinds"><button type="button" class="sxchip" data-k="">Tất cả</button><button type="button" class="sxchip" data-k="v">Lời văn</button><button type="button" class="sxchip" data-k="f">Chú thích</button><button type="button" class="sxchip" data-k="h">Tiêu đề</button></div>
-    <div class="sxrow"><button type="button" class="sxchip" id="sxAcc" title="Bật: gõ “tội” chỉ ra “tội”. Tắt: “toi” cũng ra “tội”, dùng để tìm chữ bị sai dấu">Đúng dấu</button><button type="button" class="sxchip" id="sxWord" title="Bật: “ác” không ra “tác”">Nguyên từ</button><button type="button" class="sxchip" id="sxAll" title="Bật: câu phải có đủ các từ, không cần đứng liền nhau">Đủ các từ</button></div>
+    <div class="sxrow"><button type="button" class="sxchip" id="sxAcc" title="Bật: gõ “tội” chỉ ra “tội”. Tắt: “toi” cũng ra “tội”, dùng để tìm chữ bị sai dấu">Đúng dấu</button><button type="button" class="sxchip" id="sxWord" title="Bật: “ác” không ra “tác”">Nguyên từ</button><button type="button" class="sxchip" id="sxAll" title="Bật: câu phải có đủ các từ, không cần đứng liền nhau">Đủ các từ</button><button type="button" class="sxchip" id="sxKeep" title="Bật khi thay thế: “Đều” đầu câu → “Đề”, “đều” → “đề”, “ĐỀU” → “ĐỀ”">Giữ chữ Hoa</button></div>
+    <div class="sxrow" id="sxRepRow"><input type="text" id="sxRep" class="sxrepin" placeholder="Thay bằng… (để trống = xóa)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-label="Chữ thay thế"><button type="button" class="sxchip pri" id="sxRepGo" disabled>🔁 Thay tất cả…</button><button type="button" class="sxchip" id="sxUndo" hidden title="Trả lại lần thay thế gần nhất">↩ Hoàn tác</button></div>
   </div><div class="sxinfo" id="sxInfo"></div><div class="sxbody bkbody" id="sxBody"></div></div>`;
   document.body.appendChild(el); sx.el = el;
   const sc = $('#sxScope'); sc.value = sx.scope; if (sc.value !== sx.scope){ sx.scope = ''; sc.value = ''; }
@@ -5597,8 +5625,11 @@ function openSxFind(){
   $('#sxClr').onclick = () => { $('#sxQ').value = ''; sxRun(); $('#sxQ').focus(); };
   sc.onchange = () => { sx.scope = sc.value; sxSave(); sxRun(); };
   $('#sxKinds').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; sx.kind = b.dataset.k; sxSave(); sxSyncUi(); sxRun(); });
-  [['#sxAcc', 'acc'], ['#sxWord', 'word'], ['#sxAll', 'all']].forEach(([q, k]) => $(q).onclick = () => { sx[k] = !sx[k]; sxSave(); sxSyncUi(); sxRun(); });
+  [['#sxAcc', 'acc'], ['#sxWord', 'word'], ['#sxAll', 'all'], ['#sxKeep', 'keep']].forEach(([q, k]) => $(q).onclick = () => { sx[k] = !sx[k]; sxSave(); sxSyncUi(); sxRun(); });
   $('#sxX').onclick = sxClose;
+  $('#sxRepGo').onclick = () => sxReplaceStart();
+  $('#sxUndo').onclick = () => sxUndoLast();
+  $('#sxRep').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
   el.addEventListener('click', async e => {
     if (e.target === el) return sxClose();
     if (e.target.closest('[data-more]')){ const a = sx.shown; sx.shown = Math.min(a + SX_PAGE, sx.res.length); const bd = $('#sxBody'); bd.querySelector('.sxmore')?.remove(); bd.insertAdjacentHTML('beforeend', sxItems(a, sx.shown) + sxMoreBtn()); return; }
@@ -5611,6 +5642,142 @@ function openSxFind(){
   requestAnimationFrame(() => el.classList.add('in'));
   if (fold(sx.q.trim()).length >= 2) sxRun().then(() => { try { $('#sxBody').scrollTop = sx.scroll || 0; } catch(e){} });
   else { $('#sxInfo').textContent = 'Nhập ít nhất 2 ký tự để tìm trong lời văn, chú thích và tiêu đề của toàn bộ Kinh Thánh.'; setTimeout(() => { try { $('#sxQ').focus(); } catch(e){} }, 120); }
+}
+/* ===== THAY TẤT CẢ (có xem trước) =====
+   Thay đúng các chỗ đang hiện trong danh sách kết quả (theo bộ lọc Lời văn / Chú thích / Tiêu đề và phạm vi đang chọn), lời văn lẫn chú thích đồng bộ cùng lúc.
+   Luôn xem trước từng chỗ (bỏ tích chỗ không muốn) rồi mới áp dụng; nút ✏️ Sửa › ở danh sách vẫn dùng để sửa tay từng chỗ. Có Hoàn tác lần gần nhất. */
+function sxCase(m, rep, keep){
+  if (!keep || !rep) return rep;
+  const ls = [...m].filter(c => c.toLowerCase() !== c.toUpperCase());
+  if (!ls.length) return rep;
+  if (ls.length > 1 && ls.every(c => c === c.toUpperCase())) return rep.toUpperCase();
+  if (ls[0] === ls[0].toUpperCase()) return rep.charAt(0).toUpperCase() + rep.slice(1);
+  return rep;
+}
+function sxCalc(e, rx, acc, rep, keep){
+  const raw = e.o; if (typeof raw !== 'string' || !raw) return null;
+  const base = raw.normalize('NFC');
+  if (sxNorm(base, acc).length !== base.length) return null;
+  const rg = sxRanges(base, rx, acc); if (!rg.length) return null;
+  if (rg.some(([a, b]) => base.slice(a, b).indexOf('\n') >= 0)) return 'nl';       // chỗ khớp vắt qua xuống dòng → không tự thay (tránh làm lệch dòng thơ)
+  let out = '', pos = 0; const nr = [];
+  rg.forEach(([a, b]) => { out += base.slice(pos, a); const t = sxCase(base.slice(a, b), rep, keep); nr.push([out.length, out.length + t.length]); out += t; pos = b; });
+  out += base.slice(pos);
+  if (out === raw) return null;
+  return { out, base, rg, nr, n: rg.length };
+}
+function sxPlan(rep){
+  const rx = sxRegexes(sx.q, sx.acc), plan = []; let nl = 0, skip = 0;
+  for (const e of sx.res){ const c = sxCalc(e, rx, sx.acc, rep, sx.keep); if (c === 'nl') nl++; else if (c) plan.push({ e, c, on:true }); else skip++; }
+  return { plan, nl, skip };
+}
+function sxReplaceStart(){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới được sửa nội dung.');
+  if (sx.all) return toast('Hãy tắt “Đủ các từ” rồi thay thế (chỉ thay được cụm từ nguyên văn).');
+  if ($('#sxQ').value !== sx.q) return toast('Kết quả đang cập nhật, bấm lại sau giây lát.');
+  if (!sx.res.length) return toast('Chưa có kết quả để thay.');
+  const rep = $('#sxRep').value.replace(/^\s+|\s+$/g, '');
+  if (/[\r\n]/.test($('#sxRep').value)) return toast('Chữ thay thế không được có xuống dòng.');
+  const P = sxPlan(rep);
+  if (!P.plan.length) return toast(P.nl ? 'Các chỗ tìm thấy đều vắt qua xuống dòng — hãy dùng ✏️ Sửa › để sửa tay.' : 'Không có chỗ nào cần thay (chữ thay thế giống chữ cũ).');
+  sxReview(rep, P);
+}
+function sxReview(rep, P){
+  const plan = P.plan, KIND = SX_KIND, q = sx.q.trim();
+  const el = document.createElement('div'); el.className = 'overlay sxp sxr'; el.style.zIndex = 97;
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Xem trước thay thế');
+  el.innerHTML = `<div class="sheet sxsheet"><div class="sxhead">
+    <div class="sxtop"><h2>🔁 Xem trước thay thế</h2><button type="button" class="sxx" id="srX" aria-label="Đóng">✕</button></div>
+    <div class="srsum" id="srSum"></div>
+    <div class="sxrow"><button type="button" class="sxchip" id="srAll">Chọn hết</button><button type="button" class="sxchip" id="srNone">Bỏ chọn hết</button></div>
+  </div><div class="sxinfo" id="srInfo"></div><div class="sxbody bkbody" id="srBody"></div>
+  <div class="srfoot"><button type="button" class="btn" id="srBack">← Quay lại</button><button type="button" class="btn primary" id="srGo">Thay</button></div></div>`;
+  document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('in'));
+  let shown = Math.min(SX_PAGE, plan.length);
+  const sum = () => {
+    const on = plan.filter(p => p.on), cnt = { v:0, f:0, h:0 }; let times = 0; on.forEach(p => { cnt[p.e.k]++; times += p.c.n; });
+    const warn = [];
+    if (!sx.acc) warn.push('⚠ Đang TẮT “Đúng dấu”: chữ khác dấu cũng bị thay — xem kỹ từng chỗ.');
+    if (!sx.word) warn.push('⚠ Chưa bật “Nguyên từ”: chữ nằm trong từ dài hơn cũng bị thay.');
+    if (!rep) warn.push('⚠ Chữ thay thế để trống: các chỗ khớp sẽ bị XÓA.');
+    $('#srSum').innerHTML = `<div>“<b>${esc(q)}</b>” → ${rep ? '“<b>' + esc(rep) + '</b>”' : '<b>(xóa)</b>'} · ${esc(sxScopeLabel())}</div>` + warn.map(w => `<div class="srwarn">${esc(w)}</div>`).join('');
+    $('#srInfo').textContent = `Sẽ thay ${on.length}/${plan.length} chỗ (${times} lần) · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề` + (P.nl ? `\n${P.nl} chỗ vắt qua xuống dòng không tự thay (dùng ✏️ Sửa › để sửa tay).` : '');
+    $('#srGo').textContent = on.length ? `Thay ${on.length} chỗ` : 'Chưa chọn chỗ nào'; $('#srGo').disabled = !on.length;
+  };
+  const dsp = t => t.replace(/\n/g, ' ');
+  const item = i => {
+    const p = plan[i], e = p.e, c = p.c;
+    return `<div class="sxit sxrv" data-i="${i}"><label class="srchk"><input type="checkbox" data-i="${i}"${p.on ? ' checked' : ''} aria-label="Thay chỗ này"></label><div class="srmain">
+      <span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${KIND[e.k]}</span>${c.n > 1 ? `<span class="srn">${c.n} lần</span>` : ''}<button type="button" class="srEd" data-ed="${i}">✏️ Sửa tay</button></span>
+      <div class="srb">${sxSnippet(dsp(c.base), c.rg)}</div><div class="sra">${sxSnippet(dsp(c.out), c.nr).replace(/<mark>/g, '<mark class="srnew">')}</div></div></div>`;
+  };
+  const more = () => shown < plan.length ? `<button type="button" class="sxmore" data-more="1">Xem thêm ${Math.min(SX_PAGE, plan.length - shown)} chỗ · còn ${plan.length - shown}</button>` : '';
+  const body = $('#srBody'); body.innerHTML = plan.slice(0, shown).map((_, i) => item(i)).join('') + more(); sum();
+  const close = () => { el.classList.remove('in'); setTimeout(() => el.remove(), 180); };
+  $('#srX').onclick = $('#srBack').onclick = close;
+  $('#srAll').onclick = () => { plan.forEach(p => p.on = true); body.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = true); sum(); };
+  $('#srNone').onclick = () => { plan.forEach(p => p.on = false); body.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false); sum(); };
+  body.addEventListener('click', ev => {
+    if (ev.target.closest('[data-more]')){ const a = shown; shown = Math.min(a + SX_PAGE, plan.length); body.querySelector('.sxmore')?.remove(); body.insertAdjacentHTML('beforeend', plan.slice(a, shown).map((_, k) => item(a + k)).join('') + more()); return; }
+    const ed1 = ev.target.closest('[data-ed]');
+    if (ed1){ const r = plan[+ed1.dataset.ed]; if (!r) return; close(); sxClose(); sxOpenHit(r.e); return; }
+    const row = ev.target.closest('.sxrv'); if (!row) return;
+    const cb = row.querySelector('input[type=checkbox]'); if (ev.target !== cb) cb.checked = !cb.checked;
+    plan[+row.dataset.i].on = cb.checked; sum();
+  });
+  $('#srGo').onclick = async () => {
+    const on = plan.filter(p => p.on); if (!on.length) return;
+    const times = on.reduce((a, p) => a + p.c.n, 0), bk = new Set(on.map(p => p.e.b)).size;
+    if (!confirm(`Thay ${on.length} chỗ (${times} lần) trong ${bk} sách?\n“${q}” → ${rep ? '“' + rep + '”' : '(xóa)'}\n\nSau khi thay, bấm “↩ Hoàn tác” để trả lại nếu cần.`)) return;
+    $('#srGo').disabled = true; close();
+    await sxApply(on);
+  };
+}
+async function sxGroupWrite(items, field){            // field 'nw' = ghi chữ mới (thay), 'old' = ghi chữ cũ (hoàn tác); chỉ ghi khi dữ liệu hiện tại đúng như lúc xem trước
+  const from = field === 'nw' ? 'old' : 'nw', by = new Map(), written = []; let stale = 0;
+  items.forEach(it => { if (!by.has(it.b)) by.set(it.b, []); by.get(it.b).push(it); });
+  for (const [name, list] of by){
+    const rec = await dbGet('books', name); if (!rec){ stale += list.length; continue; }
+    let touched = false;
+    for (const it of list){
+      const v = (rec.chapters[it.c - 1] || [])[it.vi]; if (!v){ stale++; continue; }
+      const cur = it.k === 'h' ? v.h : it.k === 'v' ? v.t : (v.fn || [])[it.i];
+      if (String(cur == null ? '' : cur) !== it[from]){ stale++; continue; }
+      if (it.k === 'h') v.h = it[field]; else if (it.k === 'v') v.t = it[field]; else v.fn[it.i] = it[field];
+      written.push(it); touched = true;
+    }
+    if (touched) await dbPut('books', [rec]);
+  }
+  return { ok:written.length, stale, written };
+}
+async function sxAfterWrite(){
+  await initBible(); await refreshStats(); markDirty();
+  try { if (!$('#editor').hidden) await edLoad(); } catch(e){}      // ô soạn đang mở: nạp lại chương từ dữ liệu mới, tránh tự lưu đè bản cũ
+  if (sx.el) sxRun();
+}
+async function sxApply(on){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới được sửa nội dung.');
+  try {
+    await edAuto();                                                   // lưu nốt chương đang soạn dở trước khi đổi dữ liệu
+    const items = on.map(p => ({ b:p.e.b, c:p.e.c, vi:p.e.vi, k:p.e.k, i:p.e.i, old:p.e.o, nw:p.c.out, n:p.c.n }));
+    const r = await sxGroupWrite(items, 'nw');
+    sx.undo = r.written.length ? { at:Date.now(), items:r.written } : null;      // Hoàn tác chỉ gồm các chỗ đã thật sự ghi
+    try { const js = sx.undo ? JSON.stringify(sx.undo) : ''; if (js && js.length < 600000) localStorage.setItem('kt.sxundo', js); else localStorage.removeItem('kt.sxundo'); } catch(e){}
+    await sxAfterWrite();
+    toast(`✔ Đã thay ${r.ok} chỗ` + (r.stale ? ` · bỏ qua ${r.stale} chỗ đã đổi` : ''));
+  } catch(e){ toast('Lỗi khi thay: ' + (e.message || e)); }
+}
+async function sxUndoLast(){
+  const u = sx.undo; if (!u || !u.items || !u.items.length) return;
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới được sửa nội dung.');
+  if (!confirm(`Hoàn tác lần thay gần nhất (${u.items.length} chỗ)?`)) return;
+  try {
+    await edAuto();
+    const r = await sxGroupWrite(u.items, 'old');
+    sx.undo = null; try { localStorage.removeItem('kt.sxundo'); } catch(e){}
+    await sxAfterWrite();
+    toast(`↩ Đã hoàn tác ${r.ok} chỗ` + (r.stale ? ` · bỏ qua ${r.stale} chỗ đã sửa sau đó` : ''));
+  } catch(e){ toast('Lỗi khi hoàn tác: ' + (e.message || e)); }
 }
 /* Mở chương chứa kết quả vào ô soạn rồi bôi chọn đúng chỗ tìm thấy */
 async function sxOpenHit(r){
