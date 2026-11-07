@@ -677,6 +677,37 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .bkrow[disabled]:hover,.bkrow[disabled]:active{background:transparent}
 .bkrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media (prefers-reduced-motion:reduce){.overlay.bkpick,.bkpick .bksheet{transition:none}}
+/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — CSS công cụ tìm toàn bộ Kinh Thánh (kể cả chú thích) trong trình soạn thảo ▼▼▼ */
+.overlay.sxp{z-index:96;align-items:stretch;opacity:0;transition:opacity .15s ease}
+.overlay.sxp.in{opacity:1}
+.sxp .sxsheet{padding:0;max-width:720px;width:100%;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;border-radius:0;max-height:none;height:100%;background:var(--card)}
+@media(min-width:760px){.overlay.sxp{align-items:center;padding:20px 0}.sxp .sxsheet{height:min(88vh,860px);border-radius:18px}}
+.sxhead{flex:none;padding:10px 12px 8px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
+.sxtop{display:flex;align-items:center;gap:8px}
+.sxtop h2{flex:1;margin:0;font-size:17px;font-weight:700;color:var(--accent)}
+.sxtop .sxx{flex:none;width:40px;height:40px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.sxtop .sxx:active{background:var(--line)}
+.sxq{display:flex;align-items:center;gap:6px;margin-top:6px}
+.sxq input{flex:1;min-width:0;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:17px}
+.sxq input:focus{outline:none;border-color:var(--accent)}
+#sxQ::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.sxq button{flex:none;height:44px;min-width:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font-size:16px;cursor:pointer}
+.sxrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.sxrow select{flex:1 1 150px;min-width:0;height:36px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:14px;padding:0 8px}
+.sxchip{flex:none;height:34px;padding:0 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg);font:inherit;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sxchip.on{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:700}
+.sxinfo{flex:none;padding:8px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);min-height:20px;white-space:pre-line}
+.sxbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.sxit{display:block;width:100%;text-align:left;padding:11px 14px 12px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--card);box-shadow:none;color:var(--fg);font-family:var(--serif);font-size:16px;line-height:1.55;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sxit:active{background:var(--accent-soft)}
+.sxit .sxref{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:3px;font-family:inherit}
+.sxit .sxref b{color:var(--accent)}
+.sxit .sxk{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);letter-spacing:.02em}
+.sxit .sxk.f{background:var(--hl)}
+.sxit .sxgo{margin-left:auto;font-size:13px;color:var(--muted)}
+.sxmore{display:block;margin:12px auto 0;padding:10px 18px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
+.sxem{padding:28px 18px;text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.overlay.sxp{transition:none}}
 /* §§ ▼▼▼ MỤC 3 · BỘ NHỚ LƯU TRỮ TRÊN MÁY — CSS đánh dấu vị trí đọc (Bookmark) ▼▼▼ */
 /* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
 .reader .v,#bibleText,#bibleText *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -1444,6 +1475,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edPara">¶ Đoạn mới</button>
           <button class="btn" id="edNorm">Chuẩn hóa</button>
           <button class="btn" id="edClean">🧹 Dọn lỗi</button>
+          <button class="btn" id="edFindAll" title="Tìm trong TOÀN BỘ Kinh Thánh đang có trong máy, gồm cả lời văn, chú thích [n], ghi chú in nghiêng và tiêu đề; bấm kết quả để mở đúng chương vào ô soạn và bôi chọn chỗ tìm thấy">🔍 Tìm toàn bộ</button>
           <button class="btn" id="edHy" title="Quét các từ còn dấu gạch ngang giữa chữ (tội-lỗi, phước-hạnh…) để sửa">🔎 Gạch nối</button>
           <button class="btn" id="edArch" title="Thay các từ cổ theo từ điển do bạn tự nhập, xem trước từng chỗ rồi mới sửa">🔁 Từ cổ</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
@@ -1531,7 +1563,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5296,6 +5328,186 @@ $('#edBookList').onclick = async () => {
   ed.Chap.value = m.name === S.book && S.chapter ? S.chapter : 1;
   await edLoad();
 };
+/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Tìm toàn bộ Kinh Thánh (lời văn + chú thích + tiêu đề) để sửa chính tả / cập nhật chú thích ▼▼▼ */
+/* Nút "🔍 Tìm toàn bộ" trong trình soạn thảo: tìm trong MỌI sách trong máy, kể cả chú thích [n], ghi chú in nghiêng (*) và tiêu đề (#).
+   Bấm một kết quả → lưu chương đang soạn, mở đúng chương đó vào ô soạn và bôi chọn chỗ tìm thấy để sửa ngay. */
+const SX_KEY = 'kt.sxopts';
+const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
+try { const o = JSON.parse(localStorage.getItem(SX_KEY) || '{}'); ['kind', 'scope'].forEach(k => { if (typeof o[k] === 'string') sx[k] = o[k]; }); ['acc', 'word', 'all'].forEach(k => { if (typeof o[k] === 'boolean') sx[k] = o[k]; }); } catch(e){}
+const sxSave = () => { try { localStorage.setItem(SX_KEY, JSON.stringify({ kind:sx.kind, scope:sx.scope, acc:sx.acc, word:sx.word, all:sx.all })); } catch(e){} };
+const SX_PAGE = 60, SX_KIND = { v:'Lời văn', f:'Chú thích', h:'Tiêu đề' };
+const _sxFc = new Map();
+const sxFoldCh = c => { let r = _sxFc.get(c); if (r === undefined){ r = fold(c); if (r.length !== 1) r = c.toLowerCase().length === 1 && !/[\u0300-\u036f]/.test(c) ? c.toLowerCase() : ' '; _sxFc.set(c, r); } return r; };
+/* Chuẩn hoá để so khớp mà KHÔNG đổi độ dài chuỗi (vị trí tô sáng luôn đúng): gạch nối giữa 2 chữ = khoảng trắng; acc=true giữ dấu, false bỏ dấu */
+function sxNorm(str, acc){
+  const t = String(str).replace(/(?<=\p{L})[-\u2010\u2011](?=\p{L})/gu, ' ');
+  if (acc) return bsTone(t.toLowerCase());
+  let o = ''; for (const c of t) o += sxFoldCh(c); return o;
+}
+async function sxBuild(){
+  const gen = bs.gen || 0;
+  if (sx.idx && sx.gen === gen) return sx.idx;
+  const recs = new Map((await dbAll('books')).map(b => [b.name, b]));
+  const out = [], flat = x => String(x == null ? '' : x).normalize('NFC').replace(/\s*\n\s*/g, ' ').trim();
+  for (const m of bibleMeta){
+    const rec = recs.get(m.name); if (!rec) continue;
+    rec.chapters.forEach((vs, ci) => (vs || []).forEach(v => {
+      if (v.h) out.push({ b:m.name, c:ci + 1, n:v.n, k:'h', t:String(v.h).normalize('NFC').split('\n').map(x => x.trim()).filter(Boolean).join(' ⏎ ') });
+      out.push({ b:m.name, c:ci + 1, n:v.n, k:'v', t:flat(v.t) });
+      (v.fn || []).forEach((f, i) => out.push({ b:m.name, c:ci + 1, n:v.n, k:'f', i, t:flat(f) }));
+    }));
+  }
+  sx.idx = out; sx.gen = gen; return out;
+}
+function sxRegexes(q, acc){
+  const nq = sxNorm(q.normalize('NFC').trim().replace(/\s+/g, ' '), acc);
+  const terms = sx.all ? nq.split(' ').filter(Boolean) : [nq];
+  const mk = t => {
+    let src = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+    if (sx.word) src = '(?<![\\p{L}\\p{N}])' + src + '(?![\\p{L}\\p{N}])';
+    return new RegExp(src, 'gu');
+  };
+  try { return terms.map(mk); } catch(e){ return terms.map(t => new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gu')); }
+}
+function sxRanges(text, rx, acc){
+  const target = sxNorm(text, acc), rs = [];
+  rx.forEach(r => { r.lastIndex = 0; let m; while ((m = r.exec(target)) && m[0]){ rs.push([m.index, m.index + m[0].length]); if (r.lastIndex === m.index) r.lastIndex++; } });
+  rs.sort((a, b) => a[0] - b[0]);
+  const mg = []; rs.forEach(r => { const l = mg[mg.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else mg.push(r.slice()); });
+  return mg;
+}
+function sxSnippet(text, rg){
+  const MAX = 260; let a = 0, b = text.length;
+  if (b > MAX){ const f = rg[0] ? rg[0][0] : 0; a = Math.max(0, f - 90); b = Math.min(text.length, a + MAX); }
+  let out = a > 0 ? '… ' : '', pos = a;
+  rg.forEach(([x, y]) => { if (y <= a || x >= b) return; x = Math.max(x, a); y = Math.min(y, b); out += esc(text.slice(pos, x)) + '<mark>' + esc(text.slice(x, y)) + '</mark>'; pos = y; });
+  return out + esc(text.slice(pos, b)) + (b < text.length ? ' …' : '');
+}
+async function sxRun(){
+  if (!sx.el) return;
+  const q = $('#sxQ').value; sx.q = q;
+  const info = $('#sxInfo'), body = $('#sxBody');
+  $('#sxClr').hidden = !q;
+  if (!bibleMeta.length){ info.textContent = 'Chưa có dữ liệu Kinh Thánh trong máy.'; body.innerHTML = ''; return; }
+  if (fold(q.trim()).length < 2){ info.textContent = 'Nhập ít nhất 2 ký tự để tìm trong lời văn, chú thích và tiêu đề của toàn bộ Kinh Thánh.'; body.innerHTML = ''; sx.res = []; return; }
+  info.textContent = sx.idx && sx.gen === (bs.gen || 0) ? 'Đang tìm…' : 'Đang chuẩn bị dữ liệu (chỉ lần đầu)…';
+  const idx = await sxBuild(); if ($('#sxQ').value !== q || !sx.el) return;
+  const rx = sxRegexes(q, sx.acc), sc = sx.scope, test = bsScopeFn(sc);
+  const res = [];
+  for (const e of idx){
+    if (sx.kind && e.k !== sx.kind) continue;
+    if (test && !test(e)) continue;
+    const tg = sxNorm(e.t, sx.acc);
+    if (rx.every(r => { r.lastIndex = 0; return r.test(tg); })) res.push(e);
+  }
+  sx.res = res; sx.rx = rx; sx.shown = Math.min(SX_PAGE, res.length);
+  if (!res.length){ info.textContent = ''; body.innerHTML = `<div class="sxem"><b>Không tìm thấy “${esc(q.trim())}”</b><br>trong ${esc(sxScopeLabel())}${sx.kind ? ' · ' + SX_KIND[sx.kind].toLowerCase() : ''}.<br><small>Thử bỏ “Đúng dấu” hoặc “Nguyên từ” để tìm rộng hơn.</small></div>`; return; }
+  const cnt = { v:0, f:0, h:0 }; res.forEach(e => cnt[e.k]++);
+  const books = new Set(res.map(e => e.b)).size;
+  info.textContent = `Tìm thấy ${res.length} chỗ · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề · ${books} sách`;
+  body.innerHTML = sxItems(0, sx.shown) + sxMoreBtn(); body.scrollTop = 0;
+}
+const sxScopeLabel = () => { const v = sx.scope; return !v ? 'cả Kinh Thánh' : v === '@OT' ? 'Cựu Ước' : v === '@NT' ? 'Tân Ước' : v; };
+function sxItems(a, b){
+  return sx.res.slice(a, b).map((e, k) => {
+    const i = a + k, rg = sxRanges(e.t, sx.rx, sx.acc);
+    return `<button type="button" class="sxit" data-i="${i}"><span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${SX_KIND[e.k]}</span><span class="sxgo">✏️ Sửa ›</span></span>${sxSnippet(e.t, rg)}</button>`;
+  }).join('');
+}
+const sxMoreBtn = () => sx.shown < sx.res.length ? `<button type="button" class="sxmore" data-more="1">Xem thêm ${Math.min(SX_PAGE, sx.res.length - sx.shown)} chỗ · còn ${sx.res.length - sx.shown}</button>` : '';
+function sxClose(){
+  const el = sx.el; if (!el) return;
+  try { sx.scroll = $('#sxBody').scrollTop; } catch(e){}
+  sx.el = null; document.removeEventListener('keydown', sxKey, true);
+  if (window.visualViewport){ visualViewport.removeEventListener('resize', sxVV); visualViewport.removeEventListener('scroll', sxVV); }
+  el.classList.remove('in'); setTimeout(() => el.remove(), 180);
+}
+function sxKey(e){ if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); sxClose(); } }
+function sxVV(){ const el = sx.el, vv = window.visualViewport; if (!el || !vv) return; el.style.bottom = 'auto'; el.style.top = vv.offsetTop + 'px'; el.style.height = vv.height + 'px'; }
+function sxOptsHtml(){
+  const opt = m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`;
+  const nt = bsNtIdx();
+  let h = '<option value="">Cả Kinh Thánh</option>';
+  if (nt > 0) h += '<option value="@OT">Cựu Ước</option><option value="@NT">Tân Ước</option>' + `<optgroup label="Cựu Ước">${bibleMeta.slice(0, nt).map(opt).join('')}</optgroup><optgroup label="Tân Ước">${bibleMeta.slice(nt).map(opt).join('')}</optgroup>`;
+  else h += bibleMeta.map(opt).join('');
+  return h;
+}
+function sxSyncUi(){
+  $$('#sxKinds [data-k]').forEach(b => b.classList.toggle('on', b.dataset.k === sx.kind));
+  $('#sxAcc').classList.toggle('on', sx.acc); $('#sxWord').classList.toggle('on', sx.word); $('#sxAll').classList.toggle('on', sx.all);
+}
+function openSxFind(){
+  if (sx.el) return;
+  bs.nt = bsNtIdx();      // bsScopeFn cần mốc Tân Ước
+  const el = document.createElement('div');
+  el.className = 'overlay sxp'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Tìm toàn bộ Kinh Thánh');
+  el.innerHTML = `<div class="sheet sxsheet"><div class="sxhead">
+    <div class="sxtop"><h2>🔍 Tìm toàn bộ Kinh Thánh</h2><button type="button" class="sxx" id="sxX" aria-label="Đóng">✕</button></div>
+    <div class="sxq"><input type="search" id="sxQ" placeholder="Từ, cụm từ hoặc chữ trong chú thích…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button type="button" id="sxClr" aria-label="Xóa chữ đã gõ" hidden>✕</button></div>
+    <div class="sxrow"><select id="sxScope" aria-label="Phạm vi">${sxOptsHtml()}</select></div>
+    <div class="sxrow" id="sxKinds"><button type="button" class="sxchip" data-k="">Tất cả</button><button type="button" class="sxchip" data-k="v">Lời văn</button><button type="button" class="sxchip" data-k="f">Chú thích</button><button type="button" class="sxchip" data-k="h">Tiêu đề</button></div>
+    <div class="sxrow"><button type="button" class="sxchip" id="sxAcc" title="Bật: gõ “tội” chỉ ra “tội”. Tắt: “toi” cũng ra “tội”, dùng để tìm chữ bị sai dấu">Đúng dấu</button><button type="button" class="sxchip" id="sxWord" title="Bật: “ác” không ra “tác”">Nguyên từ</button><button type="button" class="sxchip" id="sxAll" title="Bật: câu phải có đủ các từ, không cần đứng liền nhau">Đủ các từ</button></div>
+  </div><div class="sxinfo" id="sxInfo"></div><div class="sxbody bkbody" id="sxBody"></div></div>`;
+  document.body.appendChild(el); sx.el = el;
+  const sc = $('#sxScope'); sc.value = sx.scope; if (sc.value !== sx.scope){ sx.scope = ''; sc.value = ''; }
+  $('#sxQ').value = sx.q; sxSyncUi();
+  let tm; const run = () => { clearTimeout(tm); tm = setTimeout(sxRun, 220); };
+  $('#sxQ').addEventListener('input', run);
+  $('#sxQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ clearTimeout(tm); sxRun(); e.target.blur(); } });
+  $('#sxClr').onclick = () => { $('#sxQ').value = ''; sxRun(); $('#sxQ').focus(); };
+  sc.onchange = () => { sx.scope = sc.value; sxSave(); sxRun(); };
+  $('#sxKinds').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; sx.kind = b.dataset.k; sxSave(); sxSyncUi(); sxRun(); });
+  [['#sxAcc', 'acc'], ['#sxWord', 'word'], ['#sxAll', 'all']].forEach(([q, k]) => $(q).onclick = () => { sx[k] = !sx[k]; sxSave(); sxSyncUi(); sxRun(); });
+  $('#sxX').onclick = sxClose;
+  el.addEventListener('click', async e => {
+    if (e.target === el) return sxClose();
+    if (e.target.closest('[data-more]')){ const a = sx.shown; sx.shown = Math.min(a + SX_PAGE, sx.res.length); const bd = $('#sxBody'); bd.querySelector('.sxmore')?.remove(); bd.insertAdjacentHTML('beforeend', sxItems(a, sx.shown) + sxMoreBtn()); return; }
+    const it = e.target.closest('.sxit'); if (!it) return;
+    const r = sx.res[+it.dataset.i]; if (!r) return;
+    sxClose(); await sxOpenHit(r);
+  });
+  document.addEventListener('keydown', sxKey, true);
+  if (window.visualViewport){ visualViewport.addEventListener('resize', sxVV); visualViewport.addEventListener('scroll', sxVV); sxVV(); }
+  requestAnimationFrame(() => el.classList.add('in'));
+  if (fold(sx.q.trim()).length >= 2) sxRun().then(() => { try { $('#sxBody').scrollTop = sx.scroll || 0; } catch(e){} });
+  else { $('#sxInfo').textContent = 'Nhập ít nhất 2 ký tự để tìm trong lời văn, chú thích và tiêu đề của toàn bộ Kinh Thánh.'; setTimeout(() => { try { $('#sxQ').focus(); } catch(e){} }, 120); }
+}
+/* Mở chương chứa kết quả vào ô soạn rồi bôi chọn đúng chỗ tìm thấy */
+async function sxOpenHit(r){
+  await edAuto();
+  const m = bibleMeta.find(x => x.name === r.b);
+  if (!m) return toast('Không thấy sách ' + r.b);
+  ed.Book.value = m.name; ed.Abbr.value = m.abbr || ''; ed.Sub.value = m.sub || ''; ed.Title.value = m.title || ''; ed.SubPos.value = m.subPos === 'below' ? 'below' : ''; edSubFit();
+  ed.Chap.value = r.c;
+  await edLoad();
+  const eb = $('#edSeg [data-p="edit"]'); if (eb && !eb.classList.contains('on')) eb.click();
+  const t = ed.Text, v = t.value;
+  if (v.normalize('NFC').length !== v.length){ t.scrollTop = 0; return toast(`${r.b} ${r.c}:${r.n} — đã mở chương`); }
+  const lines = v.split('\n'), starts = []; { let o = 0; lines.forEach(l => { starts.push(o); o += l.length + 1; }); }
+  const vre = new RegExp('^(?:>{1,2}\\s*)?' + r.n + '(?:\\s*[-–_]\\s*\\d+)?(?:\\s|$)');
+  let vi = lines.findIndex(l => vre.test(l.trim())); if (vi < 0) vi = 0;
+  let nx = lines.length; for (let i = vi + 1; i < lines.length; i++){ if (/^(?:>{1,2}\s*)?\d{1,3}(?:\s*[-–_]\s*\d{1,3})?\s/.test(lines[i].trim()) && !/^\d{1,3}\s*[:,.]\s*\d/.test(lines[i].trim())){ nx = i; break; } }
+  let from = vi, to = nx;
+  if (r.k === 'h'){ to = vi; from = 0; while (to > 0 && (lines[to - 1].trim() === '' || /^#/.test(lines[to - 1].trim()))) to--; }
+  else if (r.k === 'f'){
+    const lab = String(r.t).match(/^\[(\d{1,3})\]/);
+    let fi = -1; for (let i = vi + 1; i < nx; i++){ const l = lines[i].trim(); if (lab ? l.startsWith('[' + lab[1] + ']') : /^\*/.test(l) && i >= vi + 1){ fi = i; break; } }
+    if (fi >= 0) from = fi; else from = vi + 1;
+  }
+  const rx = sxRegexes(sx.q, sx.acc);
+  const pick = (a, b) => { for (let i = a; i < b && i < lines.length; i++){ const g = sxRanges(lines[i], rx, sx.acc); if (g.length) return [starts[i] + g[0][0], starts[i] + g[0][1], i]; } return null; };
+  let hit = pick(from, Math.max(to, from + 1)) || pick(vi, nx) || pick(0, lines.length);
+  if (!hit){ hit = [starts[vi], starts[vi], vi]; }
+  try {
+    t.focus({ preventScroll:true }); t.setSelectionRange(hit[0], hit[1]); edSel.s = hit[0]; edSel.e = hit[1];
+    const lh = parseFloat(getComputedStyle(t).lineHeight) || 22;
+    const approx = (hit[2] + Math.floor(starts[hit[2]] ? 0 : 0)) * lh;
+    t.scrollTop = Math.max(0, approx - t.clientHeight / 3);
+    t.scrollIntoView({ block:'nearest' });
+  } catch(e){}
+  toast(`${r.b} ${r.c}:${r.n} · ${SX_KIND[r.k].toLowerCase()} — chỗ tìm thấy đang được bôi chọn`);
+}
+$('#edFindAll').onclick = openSxFind;
 /* ↕ Dời chương: sắp lại thứ tự các chương của sách đang soạn khi bị đảo lộn (dùng ▲ ▼ hoặc bấm số để dời thẳng tới vị trí khác) */
 async function edMoveChapters(){
   if (!isAdmin()) return;
