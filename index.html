@@ -1337,21 +1337,26 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
     </div>
 
     <div class="card">
-      <h4>4. Xuất trọn bộ 1 sách / Cựu Ước / Tân Ước / cả Kinh Thánh &amp; khôi phục</h4>
-      <p class="hint">Khi hoàn thành một sách, xuất thành 1 tệp PDF dàn trang như sách in. Trong PDF có kèm sẵn dữ liệu, nên nếu web lỗi hoặc mất dữ liệu, bạn dùng chính tệp PDF này (hoặc tệp JSON đi kèm) để khôi phục. Có thể chọn <b>Cựu Ước (39 sách)</b>, <b>Tân Ước (27 sách)</b> hoặc <b>Toàn bộ Kinh Thánh (66 sách)</b> để xuất 1 tệp JSON gộp. Nút “📄 Xuất Word” xuất 1 sách thành 1 tệp Word; khi chọn Cựu Ước / Tân Ước / cả Kinh Thánh thì thành “Xuất Word theo nhóm” (nhiều tệp, mỗi nhóm sách một tệp). Nút Khôi phục tự nhận diện tệp (1 sách, trọn bộ, PDF, sao lưu).</p>
-      <select id="exBook" aria-label="Chọn sách hoặc trọn bộ cần xuất"></select>
-      <label class="lbl" for="exName" style="display:block;margin:10px 0 4px">Tên tệp khi xuất <span style="font-weight:400;color:var(--muted)">(không cần gõ đuôi .pdf / .json / .docx)</span></label>
+      <h4>4. Xuất file &amp; khôi phục</h4>
+      <p class="hint" style="margin:0 0 4px">Chọn phạm vi → (đặt tên nếu muốn) → bấm nút xuất. Xong sẽ hiện bảng cho bạn <b>sửa tên từng tệp</b> và <b>chọn thư mục lưu</b> trước khi lưu.</p>
+      <label class="lbl" for="exBook">① Phạm vi xuất</label>
+      <select id="exBook" aria-label="Chọn sách, nhóm sách hoặc trọn bộ cần xuất"></select>
+      <p class="hint" id="exSetHint" hidden style="margin:6px 0 0"></p>
+      <label class="lbl" for="exName">② Tên tệp <span style="font-weight:400;color:var(--muted)">(tùy chọn · không cần gõ đuôi .pdf / .json / .docx)</span></label>
       <input type="text" id="exName" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="Để trống = dùng tên gợi ý" style="width:100%;box-sizing:border-box">
-      <p class="hint" id="exSetHint" hidden style="margin:8px 0 0"></p>
-      <div class="btns">
+      <label class="lbl">③ Xuất ra</label>
+      <div class="btns" style="margin-top:0">
         <button class="btn primary" id="exGo">📕 Xuất PDF + JSON</button>
         <button class="btn" id="exWord">📄 Xuất Word</button>
+      </div>
+      <label class="lbl" style="margin-top:16px">Khôi phục &amp; đối chiếu</label>
+      <div class="btns" style="margin-top:0">
         <button class="btn" id="exRestore">♻️ Khôi phục từ PDF/JSON</button>
         <button class="btn" id="exCheck">🔍 Đối chiếu với tệp</button>
       </div>
       <input type="file" id="exFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
       <input type="file" id="exCheckFile" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
-      <p class="hint" style="margin:8px 0 0">Mỗi sách khi xuất đều có <b>mã kiểm chứng SHA-256</b> (chỉ cần sai một dấu phẩy là mã đổi hoàn toàn). Khôi phục xong, app tự đọc lại từng sách trong máy và so mã với tệp. Nút “Đối chiếu với tệp” cho phép so dữ liệu đang có với một tệp bất kỳ mà không ghi gì, nếu khác sẽ chỉ rõ chương và câu nào khác.</p>
+      <p class="hint" style="margin:10px 0 0">Mỗi sách khi xuất đều có <b>mã kiểm chứng SHA-256</b> (sai một dấu phẩy là mã đổi hoàn toàn). Khôi phục xong, app tự đọc lại từng sách trong máy và so mã với tệp. “Đối chiếu với tệp” so dữ liệu đang có với một tệp bất kỳ mà không ghi gì, nếu khác sẽ chỉ rõ chương và câu nào khác.</p>
       <div class="log" id="exLog"></div>
     </div>
 
@@ -1564,7 +1569,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07h';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4081,7 +4086,8 @@ async function refreshStats(){
         const txt = (c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách') + (c.extra ? ' + ' + c.extra + ' sách khác' : '');
         return `<option value="${EX_SET_PREFIX}${k}"${(c.have + c.extra) ? '' : ' disabled'}>${esc(sp.label)} (${txt})</option>`;
       };
-      exSets = '<optgroup label="Trọn bộ">' + ['ot', 'nt', 'all'].map(mk).join('') + '</optgroup>';
+      exSets = '<optgroup label="Trọn bộ">' + ['all', 'ot', 'nt'].map(mk).join('') + '</optgroup>'
+             + '<optgroup label="Theo nhóm trong mục lục (Cựu-Ước)">' + ['mo', 'ls', 'vt', 'tt'].map(mk).join('') + '</optgroup>';
     }
   } catch(e){ exSets = ''; }
   exSel.innerHTML = exSets ? exSets + '<optgroup label="Từng sách">' + exOpts + '</optgroup>' : (exOpts || '<option value="">(chưa có sách)</option>');
@@ -6183,13 +6189,8 @@ function exCleanName(s, fallback){
   s = String(s || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/\.(pdf|json|docx)$/i, '').replace(/^\.+/, '').replace(/[. ]+$/, '').trim();
   return (s || fallback || 'Sach').slice(0, 120);
 }
-async function exportBookWord(name, autoSave, baseName){   // Xuất Word cả sách: hỏi chọn thư mục NGAY khi bấm (trình duyệt chỉ cho mở hộp chọn thư mục ngay sau thao tác bấm), rồi mới dựng file
+async function exportBookWord(name, autoSave, baseName){   // Xuất Word cả sách: dựng file rồi hiện bảng sửa tên + chọn thư mục
   name = String(name || '').trim(); if (!name) return toast('Hãy chọn sách cần xuất');
-  let dir = null;
-  if (canPickDir() && askDirPref()){
-    try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); }
-    catch(e){ if (e && e.name === 'AbortError'){ toast('Đã hủy – chưa lưu tệp nào'); return; } }
-  }
   try {
     if (autoSave){ try { await edAuto(); } catch(e){} }
     const rec = await dbGet('books', name);
@@ -6197,13 +6198,8 @@ async function exportBookWord(name, autoSave, baseName){   // Xuất Word cả s
     if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
     const meta = bibleMeta.find(m => m.name === name) || {}, fname = exCleanName(baseName, bookFileBase(name)) + '.docx';
     const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
-    if (dir){
-      try {
-        const fh = await dir.getFileHandle(f.name, { create:true }); const w = await fh.createWritable(); await w.write(f); await w.close();
-        return toast(`📁 Đã lưu file Word “${f.name}” vào thư mục “${dir.name}”`);
-      } catch(e){ toast('Không ghi được vào thư mục đã chọn, chuyển sang tải về máy: ' + (e.message || e)); }
-    }
-    await saveFiles([f]); toast('📄 Đã tạo file Word: ' + fname);
+    const st = docxSrcStat(chapters);
+    exSetResult('Đã tạo file Word: ' + name, [f], [`${name}: ${st.chapters} chương · ${st.verses} câu · ${st.fns} chú thích — đã đếm lại, khớp 100% dữ liệu trong máy.`], true);
   } catch(e){ toast('Không xuất được file Word: ' + (e.message || e)); }
 }
 function exportResult(name, pdf, json, pages, rep){
@@ -6381,7 +6377,12 @@ function docxBookFile(bookName, sub, chapters, fname, title, subBelow){        /
 const EX_SETS = {
   ot:  { label:'Cựu Ước',            from:1, to:39, file:'Cuu-Uoc_01-39' },
   nt:  { label:'Tân Ước',            from:40, to:66, file:'Tan-Uoc_40-66' },
-  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' }
+  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' },
+  /* các nhóm trong mục lục Kinh Thánh (Tân-Ước chỉ có một nhóm nên dùng chung "nt") */
+  mo:  { label:'Năm quyển sách của Môi-se', from:1, to:5,  file:'Ngu-Kinh_01-05',  group:true },
+  ls:  { label:'Các sách về Lịch-sử',       from:6, to:17, file:'Lich-Su_06-17',   group:true },
+  vt:  { label:'Các sách Văn-thơ',          from:18, to:22, file:'Van-Tho_18-22',  group:true },
+  tt:  { label:'Các sách Tiên-tri',         from:23, to:39, file:'Tien-Tri_23-39', group:true }
 };
 const EX_SET_PREFIX = '@set:';
 function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) && EX_SETS[v.slice(EX_SET_PREFIX.length)]) ? v.slice(EX_SET_PREFIX.length) : null; }
@@ -6470,8 +6471,8 @@ function exSyncUI(){                                              // đổi nhã
   const sel = $('#exBook'), go = $('#exGo'), h = $('#exSetHint'), nm = $('#exName'), wd = $('#exWord'); if (!sel || !go) return;
   const k = exSetKey(sel.value);
   go.textContent = k ? '🧾 Xuất JSON trọn bộ' : '📕 Xuất PDF + JSON';
-  if (wd){ wd.hidden = false; wd.textContent = k ? '📄 Xuất Word theo nhóm' : '📄 Xuất Word'; }   // 1 sách → 1 tệp Word · trọn bộ → nhiều tệp Word theo nhóm sách
-  if (h){ h.hidden = !k; h.textContent = k ? `Đang chọn “${EX_SETS[k].label}”: bấm “🧾 Xuất JSON trọn bộ” để xuất 1 tệp JSON gộp có mã kiểm chứng SHA-256, hoặc “📄 Xuất Word theo nhóm” để xuất nhiều tệp Word (mỗi nhóm sách một tệp: Ngũ Kinh, Lịch-sử, Văn-thơ, Tiên-tri, Tân-Ước; nhóm lớn tự chia phần).` : ''; }
+  if (wd){ wd.hidden = false; wd.textContent = k ? (EX_SETS[k].group || k === 'nt' ? '📄 Xuất Word' : '📄 Xuất Word theo nhóm') : '📄 Xuất Word'; }   // 1 sách → 1 tệp Word · trọn bộ → nhiều tệp Word theo nhóm sách
+  if (h){ h.hidden = !k; h.textContent = k ? (EX_SETS[k].group || k === 'nt' ? `“${EX_SETS[k].label}”: “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256; “📄 Xuất Word” tạo tệp Word của nhóm này (nhóm quá lớn tự chia phần).` : `“${EX_SETS[k].label}”: “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256; “📄 Xuất Word theo nhóm” tạo mỗi nhóm trong mục lục một tệp Word (Ngũ Kinh, Lịch-sử, Văn-thơ, Tiên-tri, Tân-Ước; nhóm quá lớn tự chia phần).`) : ''; }
   if (nm){                                                        // ô tên tệp: gợi ý sẵn, chỉ ghi đè khi người dùng chưa tự sửa
     const auto = k ? EX_SETS[k].file : (sel.value ? bookFileBase(sel.value) : '');
     if (!nm.value.trim() || nm.value === nm.dataset.auto) nm.value = auto;
@@ -6559,25 +6560,46 @@ async function exBuildSetJson(key, list, ui, baseName){
   } catch(e){ ok = false; }
   return { file, st, ok };
 }
-/* Bảng kết quả: nút Lưu là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
+/* Bảng kết quả / lưu tệp: SỬA TÊN từng tệp + CHỌN THƯ MỤC lưu (máy tính), rồi mới bấm Lưu. Nút là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
 function exSetResult(title, files, lines, ok){
-  const mb = f => (f.size / 1048576).toFixed(1) + ' MB';
+  const mb = f => (f.size / 1048576).toFixed(1) + ' MB', extOf = n => (String(n).match(/\.[A-Za-z0-9]+$/) || [''])[0];
+  let dir = null;
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
-  o.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3>
-    <div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 8px;white-space:pre-wrap">${esc(lines.join('\n'))}</div>
-    <p class="hint" style="margin:0 0 8px;font-size:13px;color:var(--muted)">${files.map(f => esc(f.name) + ' (' + mb(f) + ')').join(' · ')}</p>
-    <div class="btns" style="flex-direction:column">
-      ${canPickDir() ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:0 0 2px"><input type="checkbox" id="exAsk" ${askDirPref() ? 'checked' : ''}> Hỏi chọn thư mục lưu mỗi lần</label>`
-        : `<p class="hint" style="margin:0;font-size:13px;color:var(--muted)">Điện thoại: bảng chia sẻ sẽ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
-      <button class="btn primary" data-k="save">📁 Lưu tệp</button>
-      <button class="btn" data-k="x">Xong</button></div></div>`;
+  const rows = files.map((f, i) => `<div style="margin:0 0 8px"><div style="display:flex;gap:6px;align-items:center"><input type="text" data-i="${i}" value="${esc(f.name.slice(0, f.name.length - extOf(f.name).length))}" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Tên tệp ${i + 1}" style="flex:1;min-width:0;box-sizing:border-box"><span style="flex:none;font-weight:700;color:var(--muted)">${esc(extOf(f.name))}</span></div><small style="color:var(--muted)">${mb(f)}</small></div>`).join('');
+  o.innerHTML = `<div class="sheet"><h3 style="margin-top:0">${esc(title)}</h3>
+    <div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 10px;white-space:pre-wrap;max-height:28vh;overflow:auto">${esc(lines.join('\n'))}</div>
+    <label class="lbl" style="margin-top:0">Tên tệp ${files.length > 1 ? '(sửa được từng tệp)' : '(sửa được)'}</label>${rows}
+    ${canPickDir()
+      ? `<label class="lbl">Thư mục lưu</label><div style="display:flex;gap:8px;align-items:center;margin:0 0 4px"><button class="btn" data-k="dir" type="button">📁 Chọn thư mục…</button><span id="exDirName" style="flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Chưa chọn – sẽ tải về thư mục mặc định</span></div>`
+      : `<p class="hint" style="margin:4px 0 0;font-size:13px;color:var(--muted)">Điện thoại: bấm Lưu thì bảng chia sẻ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
+    <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="save" type="button">💾 Lưu tệp</button><button class="btn" data-k="x" type="button">Xong</button></div></div>`;
   o.addEventListener('click', async e => {
     const b = e.target.closest('[data-k]');
     if (!b){ if (e.target === o) o.remove(); return; }
-    if (b.dataset.k === 'x') return o.remove();
-    await saveSmart(files);
+    const k = b.dataset.k;
+    if (k === 'x') return o.remove();
+    if (k === 'dir'){
+      try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); o.querySelector('#exDirName').textContent = '📁 ' + dir.name; o.querySelector('#exDirName').style.color = 'var(--fg)'; }
+      catch(err){ if (!(err && err.name === 'AbortError')) toast('Không mở được thư mục: ' + (err.message || err)); }
+      return;
+    }
+    if (k === 'save'){
+      const used = new Set(), out = files.map((f, i) => {
+        const ext = extOf(f.name), inp = o.querySelector(`input[data-i="${i}"]`);
+        let nm = exCleanName(inp ? inp.value : '', f.name.slice(0, f.name.length - ext.length)), c = 1, full = nm + ext;
+        while (used.has(full.toLowerCase())) full = nm + '_' + (++c) + ext;
+        used.add(full.toLowerCase()); if (inp) inp.value = full.slice(0, full.length - ext.length);
+        return new File([f], full, { type:f.type });
+      });
+      if (dir){
+        try {
+          for (const f of out){ const fh = await dir.getFileHandle(f.name, { create:true }); const w = await fh.createWritable(); await w.write(f); await w.close(); }
+          return toast(`📁 Đã lưu ${out.length} tệp vào thư mục “${dir.name}”`);
+        } catch(err){ toast('Không ghi được vào thư mục đã chọn, chuyển sang tải về máy: ' + (err.message || err)); }
+      }
+      await saveFiles(out);
+    }
   });
-  o.addEventListener('change', e => { if (e.target.id === 'exAsk'){ try { localStorage.setItem('kt.askDir', e.target.checked ? '1' : '0'); } catch(err){} } });
   document.body.appendChild(o);
 }
 async function exportSet(key, kind, baseName){                     // chỉ xuất JSON trọn bộ (đã bỏ Word theo nhóm / trọn bộ)
@@ -6643,7 +6665,7 @@ async function exportSetWord(key, baseName){
     const names = plan.missing.slice(0, 8).map(n => BIBLE66[n - 1]).join(', ') + (plan.missing.length > 8 ? '…' : '');
     if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách CÓ NỘI DUNG trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.\nVẫn xuất ${plan.list.length} sách đang có?`)) return;
   }
-  const ci = await choose('Xuất Word: ' + sp.label, `${plan.list.length} sách sẽ được chia thành nhiều tệp .docx. Chọn cách chia:`, [...EX_WSIZES.map(o => ({ t:o.t, cls:o.cls || '' })), { t:'Hủy' }]);
+  const ci = (sp.group || key === 'nt') ? 0 : await choose('Xuất Word: ' + sp.label, `${plan.list.length} sách sẽ được chia thành nhiều tệp .docx. Chọn cách chia:`, [...EX_WSIZES.map(o => ({ t:o.t, cls:o.cls || '' })), { t:'Hủy' }]);
   if (ci < 0 || ci >= EX_WSIZES.length) return;
   const limit = EX_WSIZES[ci].max, perBook = limit === 0;
   exBusy = true; exSetBusy(true);
@@ -6680,7 +6702,7 @@ async function exportSetWord(key, baseName){
     for (let pi = 0; pi < parts.length; pi++){
       const pt = parts[pi], first = pt.books[0], last = pt.books[pt.books.length - 1];
       const nn = (a, b) => (a.no ? pad(a.no) : '') + (b !== a && b.no ? '-' + pad(b.no) : '');
-      const fname = perBook ? `${base}_${bookFileBase(first.m.name)}.docx`
+      const fname = (!perBook && parts.length === 1) ? `${base}.docx` : perBook ? `${base}_${bookFileBase(first.m.name)}.docx`
         : `${base}_${pad(pi + 1)}_${pt.g.tag}${pt.n > 1 ? '_phan' + pt.k : ''}${nn(first, last) ? '_' + nn(first, last) : ''}.docx`;
       const stat = { chapters:0, verses:0, fns:0 }, src = { chapters:0, verses:0, fns:0 };
       let body = '';
