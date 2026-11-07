@@ -1569,7 +1569,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07i';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07j';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6150,6 +6150,7 @@ function bookSlug(name){
   const w = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean);
   return w.map((x, i) => (i === 0 && /^i{1,3}$/.test(x)) ? x.toUpperCase() : x.charAt(0).toUpperCase() + x.slice(1)).join('-') || 'Sach';
 }
+function wordFileBase(name){ return bookFileBase(name).replace(/-/g, '_'); }   // tên tệp Word: 01_Sang_The_Ky … 66_Khai_Huyen
 function bookFileBase(name){ const n = bookNoOf(name); return (n.no ? String(n.no).padStart(2, '0') + '_' : '') + bookSlug(name); }
 /* Kiểm tra bản xuất NGAY trước khi giao cho người dùng: đọc lại dữ liệu khôi phục nằm trong PDF và JSON, so với sách đang có trong máy */
 async function verifyExport(pdf, jsonStr, srcChapters, name){
@@ -6196,7 +6197,7 @@ async function exportBookWord(name, autoSave, baseName){   // Xuất Word cả s
     const rec = await dbGet('books', name);
     const chapters = rec ? rec.chapters.map((vs, i) => ({ ch:i + 1, vs })).filter(c => c.vs && c.vs.length) : [];
     if (!chapters.length) return toast('Sách này chưa có chương nào có nội dung');
-    const meta = bibleMeta.find(m => m.name === name) || {}, fname = exCleanName(baseName, bookFileBase(name)) + '.docx';
+    const meta = bibleMeta.find(m => m.name === name) || {}, fname = ((!baseName || String(baseName).trim() === bookFileBase(name)) ? wordFileBase(name) : exCleanName(baseName, wordFileBase(name))) + '.docx';
     const f = docxBookFile(name, meta.sub || '', chapters, fname, (meta.title || '').trim(), meta.subPos === 'below');
     const st = docxSrcStat(chapters);
     exSetResult('Đã tạo file Word: ' + name, [f], [`${name}: ${st.chapters} chương · ${st.verses} câu · ${st.fns} chú thích — đã đếm lại, khớp 100% dữ liệu trong máy.`], true);
@@ -6651,9 +6652,9 @@ const EX_WGROUPS = [
   { tag:'Sach-Khac', label:'CÁC SÁCH KHÁC',             from:0,  to:0  }
 ];
 const EX_WSIZES = [
-  { t:'Theo nhóm sách (mỗi nhóm 1 tệp) — khuyên dùng', cls:'primary', max:9000 },
-  { t:'Chia nhỏ hơn (tối đa khoảng 2.500 câu mỗi tệp)', max:2500 },
-  { t:'Mỗi sách một tệp', max:0 }
+  { t:'Mỗi sách một tệp: 01_Sang_The_Ky … 66_Khai_Huyen (khuyên dùng)', cls:'primary', max:0 },
+  { t:'Gộp theo nhóm mục lục (mỗi nhóm 1 tệp)', max:9000 },
+  { t:'Gộp theo nhóm, chia nhỏ (tối đa khoảng 2.500 câu mỗi tệp)', max:2500 }
 ];
 async function exportSetWord(key, baseName){
   if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
@@ -6665,7 +6666,7 @@ async function exportSetWord(key, baseName){
     const names = plan.missing.slice(0, 8).map(n => BIBLE66[n - 1]).join(', ') + (plan.missing.length > 8 ? '…' : '');
     if (!confirm(`${sp.label} mới có ${plan.have}/${sp.to - sp.from + 1} sách CÓ NỘI DUNG trong máy.\nCòn thiếu ${plan.missing.length} sách: ${names}.\nVẫn xuất ${plan.list.length} sách đang có?`)) return;
   }
-  const ci = (sp.group || key === 'nt') ? 0 : await choose('Xuất Word: ' + sp.label, `${plan.list.length} sách sẽ được chia thành nhiều tệp .docx. Chọn cách chia:`, [...EX_WSIZES.map(o => ({ t:o.t, cls:o.cls || '' })), { t:'Hủy' }]);
+  const ci = await choose('Xuất Word: ' + sp.label, `${plan.list.length} sách sẽ được chia thành nhiều tệp .docx. Chọn cách chia:`, [...EX_WSIZES.map(o => ({ t:o.t, cls:o.cls || '' })), { t:'Hủy' }]);
   if (ci < 0 || ci >= EX_WSIZES.length) return;
   const limit = EX_WSIZES[ci].max, perBook = limit === 0;
   exBusy = true; exSetBusy(true);
@@ -6675,7 +6676,7 @@ async function exportSetWord(key, baseName){
   window.addEventListener('beforeunload', guard);
   try {
     await new Promise(r => setTimeout(r, 30));
-    const base = exCleanName(baseName, sp.file), pad = n => String(n).padStart(2, '0');
+    const typed = exCleanName(baseName, ''), pre = (typed && typed !== sp.file) ? typed + '_' : '', pad = n => String(n).padStart(2, '0');   // chỉ thêm tiền tố khi người dùng tự gõ tên (tên gợi ý tự điền thì bỏ qua)
     /* 1) đọc số câu từng sách → chia nhóm / phần */
     const items = [];
     for (let i = 0; i < plan.list.length; i++){
@@ -6701,9 +6702,7 @@ async function exportSetWord(key, baseName){
     let doneBooks = 0, tv = 0;
     for (let pi = 0; pi < parts.length; pi++){
       const pt = parts[pi], first = pt.books[0], last = pt.books[pt.books.length - 1];
-      const nn = (a, b) => (a.no ? pad(a.no) : '') + (b !== a && b.no ? '-' + pad(b.no) : '');
-      const fname = (!perBook && parts.length === 1) ? `${base}.docx` : perBook ? `${base}_${bookFileBase(first.m.name)}.docx`
-        : `${base}_${pad(pi + 1)}_${pt.g.tag}${pt.n > 1 ? '_phan' + pt.k : ''}${nn(first, last) ? '_' + nn(first, last) : ''}.docx`;
+      const fname = pre + ((first === last || perBook) ? wordFileBase(first.m.name) : `${wordFileBase(first.m.name)}_den_${wordFileBase(last.m.name)}`) + (pt.n > 1 ? '_phan' + pt.k : '') + '.docx';   // 01_Sang_The_Ky.docx … 66_Khai_Huyen.docx · nhóm: 01_Sang_The_Ky_den_05_Phuc_Truyen_Luat_Le_Ky.docx
       const stat = { chapters:0, verses:0, fns:0 }, src = { chapters:0, verses:0, fns:0 };
       let body = '';
       if (!perBook){
