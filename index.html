@@ -765,6 +765,9 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .lsnote{flex:none;margin:6px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4}
 .bmhint{font-size:12px;color:var(--muted);margin:-6px 0 10px}
 .bmitem{display:flex;align-items:stretch;gap:4px;border-bottom:1px solid var(--line)}
+.phhead{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 4px;font-size:14px;color:var(--accent)}
+.phclr{border:0;background:transparent;box-shadow:none;color:var(--danger);font:inherit;font-size:13px;padding:4px 6px;cursor:pointer}
+.phitem .iconbtn{font-size:17px}
 .bmmain{flex:1;min-width:0;text-align:left;border:0;background:none;padding:10px 4px;font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--fg)}
 .bmmain b{display:block;font-family:var(--sans);font-size:13px;color:var(--accent);margin-bottom:2px}
 .bmmain .bmt{display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -1596,7 +1599,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07o';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2366,6 +2369,30 @@ let RSH = []; try { RSH = JSON.parse(localStorage.getItem('kt.rshist') || '[]');
 const saveRsh = () => { try { localStorage.setItem('kt.rshist', JSON.stringify(RSH)); } catch(e){} };
 function rsLog(book, ch, n){ const k = dayKey(); RSH = RSH.filter(x => dayKey(x.at) !== k); RSH.unshift({ book, ch, n, at:Date.now() }); if (RSH.length > 60) RSH.length = 60; saveRsh(); }
 const rsRef = r => `${r.book} ${r.ch}${r.n > 1 ? ':' + r.n : ''}`;
+/* LỊCH SỬ GHIM (kt.pinhist): mỗi lần ghim “📍 Đọc đến đây” sang chỗ khác (hoặc bỏ ghim), chỗ đã ghim trước đó được đưa vào đây (mới nhất ở trên).
+   Cùng một vị trí chỉ giữ một dòng (bản mới nhất). Chỉ lưu vị trí có số câu (≥ 1); chỗ tự đặt theo đầu chương không vào lịch sử.
+   Xem & dùng trong 🔖: bấm để mở · 📍 ghim lại (chỗ đang ghim sẽ tự vào lịch sử) · ✕ xóa. Có trong sao lưu / khôi phục / đồng bộ như các dữ liệu khác. */
+const PH_KEY = 'kt.pinhist', PH_MAX = 200;
+let PH = []; try { PH = JSON.parse(localStorage.getItem(PH_KEY) || '[]'); if (!Array.isArray(PH)) PH = []; } catch(e){ PH = []; }
+PH = PH.filter(x => x && x.book && x.ch >= 1 && x.at);
+const savePH = () => { try { PH.length ? localStorage.setItem(PH_KEY, JSON.stringify(PH)) : localStorage.removeItem(PH_KEY); } catch(e){} };
+const phKey = x => `${x.book}|${x.ch}|${x.n || 0}`;
+const phCopy = () => PH.map(x => ({ ...x }));
+function phPush(r){
+  if (!r || !r.book || !(r.ch >= 1) || !((r.n || 0) >= 1)) return;
+  PH = PH.filter(x => phKey(x) !== phKey(r));
+  PH.unshift({ book:r.book, ch:r.ch, n:r.n, at:r.at || Date.now(), to:Date.now() });
+  if (PH.length > PH_MAX) PH.length = PH_MAX;
+  savePH();
+}
+function phRepin(i){
+  const x = PH[i]; if (!x) return;
+  const prev = RESUME ? { ...RESUME } : null, off = rsIsOff(), prevH = RSH.map(y => ({ ...y })), prevP = phCopy();
+  if (prev && phKey(prev) !== phKey(x)) phPush(prev);
+  PH = PH.filter(y => phKey(y) !== phKey(x)); savePH();
+  setResume(x.book, x.ch, x.n); rsLog(x.book, x.ch, x.n); markResume(true);
+  toastAct(`📍 Đã ghim lại ${x.book} ${x.ch}:${x.n}`, 'Hoàn tác', () => { RESUME = prev; saveResume(); rsSetOff(off); RSH = prevH; saveRsh(); PH = prevP; savePH(); markResume(true); });
+}
 function setResume(book, ch, n){ RESUME = { book, ch, n:n || 0, at:Date.now() }; saveResume(); rsSetOff(false); }
 const rsDate = t => new Date(t).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' }) + ' · ' + rsAgo(t);
 const rsAgo = t => { if (!t) return ''; const d = Math.round((Date.parse(dayKey()) - Date.parse(dayKey(t))) / 864e5); return d <= 0 ? 'hôm nay' : d === 1 ? 'hôm qua' : d + ' ngày trước'; };
@@ -2378,14 +2405,16 @@ function toggleResumeAt(n){                                         // 📍 Đ�
   if (!curBook) return;
   const book = curBook.name, ch = S.chapter, prev = RESUME ? { ...RESUME } : null, off = rsIsOff();
   const was = !!(RESUME && RESUME.book === book && RESUME.ch === ch && RESUME.n === n);
-  const prevH = RSH.map(x => ({ ...x }));
-  const undo = () => { RESUME = prev; saveResume(); rsSetOff(off); RSH = prevH; saveRsh(); markResume(true); };
+  const prevH = RSH.map(x => ({ ...x })), prevP = phCopy();
+  const undo = () => { RESUME = prev; saveResume(); rsSetOff(off); RSH = prevH; saveRsh(); PH = prevP; savePH(); markResume(true); };
   hideResumeChip();
-  if (was){ RESUME = null; saveResume(); rsSetOff(true); RSH = RSH.filter(x => !(dayKey(x.at) === dayKey() && x.book === book && x.ch === ch && x.n === n)); saveRsh(); markResume(true); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', undo); return; }
+  if (was){ phPush(prev); RESUME = null; saveResume(); rsSetOff(true); RSH = RSH.filter(x => !(dayKey(x.at) === dayKey() && x.book === book && x.ch === ch && x.n === n)); saveRsh(); markResume(true); toastAct('Đã bỏ chỗ đọc tiếp (đã lưu vào lịch sử ghim 🔖)', 'Hoàn tác', undo); return; }
+  const moved = prev && (prev.book !== book || prev.ch !== ch || (prev.n || 0) !== n);
+  if (moved) phPush(prev);                                            // lần ghim trước → lịch sử ghim
+  PH = PH.filter(x => phKey(x) !== phKey({ book, ch, n })); savePH();   // vị trí đang ghim không lặp lại trong lịch sử
   setResume(book, ch, n); rsLog(book, ch, n); markResume(true);
   try { navigator.vibrate && navigator.vibrate(25); } catch(e){}
-  const moved = prev && (prev.book !== book || prev.ch !== ch || (prev.n || 0) !== n);
-  toastAct(moved ? `📍 Đã dời chỗ đọc tiếp: ${rsRef(prev)} → ${book} ${ch}:${n} (đã lưu vào nhật ký 🔖)` : `📍 Đã ghi nhớ ${book} ${ch}:${n} và lưu vào nhật ký 🔖`, 'Hoàn tác', undo);
+  toastAct(moved ? `📍 Đã dời chỗ đọc tiếp: ${rsRef(prev)} → ${book} ${ch}:${n} (chỗ cũ đã vào lịch sử ghim 🔖)` : `📍 Đã ghi nhớ ${book} ${ch}:${n} và lưu vào nhật ký 🔖`, 'Hoàn tác', undo);
 }
 /* TỰ GHI NHỚ VỊ TRÍ ĐỌC — dành cho người ĐÃ CHỌN KẾ HOẠCH ĐỌC (người chưa chọn kế hoạch vẫn dùng như cũ: tự đặt bằng “Đọc tiếp từ đây”).
    - Chọn kế hoạch → chỗ đọc tiếp nối bắt đầu từ đầu Kinh Thánh (nếu chưa có).
@@ -2486,10 +2515,15 @@ async function restoreBookmark(){        // gọi một lần khi mở app
 const bmWhen = t => { const d = new Date(t); return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 function openMarks(){
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 70;
+  let phShown = 5;
+  const phHtml = () => !PH.length ? '' : `<div class="phhead"><b>🕘 Lịch sử ghim (${PH.length})</b><button type="button" class="phclr" data-phclr="1">Xóa lịch sử</button></div>`
+    + PH.slice(0, phShown).map((x, i) => `<div class="bmitem phitem"><button class="bmmain" data-ph="${i}"><b>${esc(x.book)} ${x.ch}:${x.n}</b><small>Ghim ${esc(bmWhen(x.at))} · ${esc(rsAgo(x.at))}</small></button><button class="iconbtn" data-phpin="${i}" aria-label="Ghim lại chỗ này" title="Ghim lại chỗ này">📍</button><button class="iconbtn" data-phdel="${i}" aria-label="Xóa khỏi lịch sử"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
+    + (PH.length > phShown ? `<button type="button" class="sxmore" data-phmore="1">Xem thêm · còn ${PH.length - phShown}</button>` : '');
   const draw = () => {
     o.innerHTML = `<div class="sheet"><h3>🔖 Vị trí đã đánh dấu</h3>
       <p class="bmhint">Chạm giữ một câu: <b>📍 Đọc đến đây</b> để lần sau app tiếp tục từ đó, <b>🔖 Đánh dấu</b> để lưu câu vào danh sách này.</p>
       ${(RESUME && bibleMeta.some(m => m.name === RESUME.book)) ? `<div class="bmitem rsitem"><button class="bmmain" data-rsgo="1"><b>📍 Chỗ đọc tiếp · ${esc(RESUME.book)} ${RESUME.ch}${RESUME.n > 1 ? ':' + RESUME.n : ''}</b><span class="bmt">Chạm để mở đúng chỗ đang đọc dở</span><small>${esc(rsAgo(RESUME.at))}</small></button><button class="iconbtn" data-rsdel="1" aria-label="Bỏ chỗ đọc tiếp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ''}
+      ${phHtml()}
       ${BM.length ? BM.map((b, i) => `<div class="bmitem"><button class="bmmain" data-go="${i}"><b>${esc(b.book)} ${b.ch}:${b.n}</b><span class="bmt">${esc(b.text)}</span><small>${esc(bmWhen(b.at))}</small></button><button class="iconbtn" data-del="${i}" aria-label="Xóa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
         : '<div class="empty" style="padding:28px 10px"><b>Chưa có vị trí nào</b>Chạm giữ vào một câu để đánh dấu.</div>'}
       <div class="btns">${BM.length ? '<button class="btn danger" data-clear="1">Xóa tất cả</button>' : ''}<button class="btn primary" data-close="1" style="margin-left:auto">Đóng</button></div></div>`;
@@ -2498,7 +2532,13 @@ function openMarks(){
   o.addEventListener('click', async e => {
     if (e.target === o || e.target.closest('[data-close]')) return o.remove();
     const g = e.target.closest('[data-go]'), d = e.target.closest('[data-del]');
-    if (e.target.closest('[data-rsdel]')){ const prev = RESUME ? { ...RESUME } : null, off = rsIsOff(); RESUME = null; saveResume(); rsSetOff(true); markResume(true); draw(); toastAct('Đã bỏ chỗ đọc tiếp', 'Hoàn tác', () => { RESUME = prev; saveResume(); rsSetOff(off); markResume(true); }); return; }
+    if (e.target.closest('[data-rsdel]')){ const prev = RESUME ? { ...RESUME } : null, off = rsIsOff(), prevP = phCopy(); phPush(prev); RESUME = null; saveResume(); rsSetOff(true); markResume(true); draw(); toastAct('Đã bỏ chỗ đọc tiếp (đã lưu vào lịch sử ghim)', 'Hoàn tác', () => { RESUME = prev; saveResume(); rsSetOff(off); PH = prevP; savePH(); markResume(true); }); return; }
+    const phg = e.target.closest('[data-ph]'), php = e.target.closest('[data-phpin]'), phd = e.target.closest('[data-phdel]');
+    if (e.target.closest('[data-phmore]')){ phShown += 10; draw(); return; }
+    if (e.target.closest('[data-phclr]')){ if (confirm('Xóa toàn bộ lịch sử ghim? (Chỗ đang ghim không bị ảnh hưởng)')){ PH = []; savePH(); draw(); } return; }
+    if (php){ phRepin(+php.dataset.phpin); draw(); return; }
+    if (phd){ PH.splice(+phd.dataset.phdel, 1); savePH(); draw(); return; }
+    if (phg){ const x = PH[+phg.dataset.ph]; o.remove(); if (x) await goBookmark({ book:x.book, ch:x.ch, n:x.n || 1 }); return; }
     if (e.target.closest('[data-rsgo]')){ const r = RESUME; o.remove(); if (r) await goBookmark({ book:r.book, ch:r.ch, n:r.n || 1 }); return; }
     const rh = e.target.closest('[data-rh]'), rhd = e.target.closest('[data-rhdel]');
     if (rhd){ RSH.splice(+rhd.dataset.rhdel, 1); saveRsh(); draw(); return; }
@@ -7807,7 +7847,7 @@ async function pgFlip(dir){                                        // chạm mé
 const dtDefName = withDate => 'NhatKy_DocKT' + (withDate ? '_' + dayKey().split('-').reverse().join('-') : '');   // NhatKy_DocKT_02-11-2026 (Ngày-Tháng-Năm)
 const dtClean = n => (String(n || '').replace(/\.json$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim() || dtDefName(true)) + '.json';
 function dtPayload(){
-  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, planCustom:PCUST, resume:RESUME, rshist:RSH };
+  return { app:'kinhthanh', kind:'user-data', version:1, exportedAt:new Date().toISOString(), appVersion:APP_VERSION, reads:RD, lessons:LS, marks:BM, plan:PLAN, planCustom:PCUST, resume:RESUME, rshist:RSH, pinhist:PH };
 }
 async function dtDownload(name){          // → true nếu đã xuất; false nếu người dùng hủy ở bảng Chia sẻ
   const json = JSON.stringify(dtPayload(), null, 2);
@@ -7843,11 +7883,12 @@ async function dtApply(j, srcName){          // khôi phục từ một đối t
     [{ t:'Khôi phục (khuyên dùng)', cls:'primary' }, { t:'Thay hoàn toàn bằng bản này', cls:'danger' }, { t:'Hủy' }]);
   if (i !== 0 && i !== 1) return;
   await PStore.safety('Lưu tạm trước khi khôi phục');      // giữ lại bản hiện tại phòng khi chọn nhầm
-  if (i === 1){ RD = {}; LS = []; BM = []; RSH = []; saveRsh(); }
+  if (i === 1){ RD = {}; LS = []; BM = []; RSH = []; saveRsh(); PH = []; savePH(); }
   if (planOK(j.plan) && (i === 1 || !PLAN)){ PLAN = planNorm(j.plan); savePlan(); }
   if (j.planCustom && (i === 1 || !PCUST) && (j.planCustom.mode === 'days' || j.planCustom.mode === 'chapters')){ PCUST = { mode:j.planCustom.mode, val:j.planCustom.val }; try { localStorage.setItem('kt.planCustom', JSON.stringify(PCUST)); } catch(e){} }
   if (j.resume && j.resume.book && j.resume.ch >= 1 && (i === 1 || !RESUME)){ RESUME = { book:String(j.resume.book), ch:+j.resume.ch, n:+j.resume.n || 0, at:+j.resume.at || Date.now() }; saveResume(); }
   if (Array.isArray(j.rshist)){ const m = new Map(RSH.map(x => [dayKey(x.at), x])); j.rshist.forEach(x => { if (x && x.book && x.ch >= 1 && x.at){ const k = dayKey(x.at), c = m.get(k); if (!c || x.at > c.at) m.set(k, x); } }); RSH = [...m.values()].sort((a, b) => b.at - a.at).slice(0, 60); saveRsh(); }
+  if (Array.isArray(j.pinhist)){ const m = new Map(PH.map(x => [phKey(x), x])); j.pinhist.forEach(x => { if (x && x.book && x.ch >= 1 && x.n >= 1 && x.at){ const c = m.get(phKey(x)); if (!c || (x.to || x.at) > (c.to || c.at)) m.set(phKey(x), { book:String(x.book), ch:+x.ch, n:+x.n, at:+x.at, to:+x.to || +x.at }); } }); PH = [...m.values()].sort((a, b) => (b.to || b.at) - (a.to || a.at)).slice(0, PH_MAX); savePH(); }
   days.forEach(k => { const set = new Set(RD[k] || []); reads[k].forEach(x => { if (typeof x === 'string') set.add(x); }); RD[k] = [...set]; });
   const lm = new Map(LS.map(x => [dtKeyL(x), x])); L.forEach(x => { const c = lm.get(dtKeyL(x)); if (!c || (x.at || 0) > (c.at || 0)) lm.set(dtKeyL(x), x); });
   LS = [...lm.values()].sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -8593,7 +8634,7 @@ planSum();
  *  localStorage vẫn là bộ nhớ làm việc đồng bộ của app (toàn bộ code hiện có đọc ngay lúc khởi động); PStore là lớp bảo hiểm.
  * ========================================================= */
 const PStore = (() => {
-  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist'];
+  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist', 'kt.pinhist'];
   const SOFT = ['kt.resume'];                                      // đổi liên tục khi cuộn đọc → chép thưa hơn
   const META_KEY = 'kt.pstore.meta', EMPTY_KEY = 'kt.pstore.empty', RELOAD_KEY = 'kt.pstore.reloaded';
   const MIRROR_MS = 1500, MIRROR_SOFT_MS = 30000, PERIOD_MS = 24 * 3600e3, TICK_MS = 15 * 60e3;
@@ -8624,14 +8665,14 @@ const PStore = (() => {
   const readJ = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch(e){ return d; } };
   const snapshot = () => ({ app:'kinhthanh', kind:'user-data', version:1, appVersion:APP_VERSION,
     reads:readJ('kt.reads', {}), lessons:readJ('kt.lessons', []), marks:readJ('kt.marks', []),
-    plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []) });
+    plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []), pinhist:readJ('kt.pinhist', []) });
   const hashOf = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + '-' + (h >>> 0).toString(16); };
   const hasData = s => !!(s && ((s.lessons && s.lessons.length) || (s.reads && Object.keys(s.reads).length) || (s.marks && s.marks.length) || s.plan));
   const counts = s => ({ lessons:s.lessons.length, days:Object.keys(s.reads).length, marks:s.marks.length, plan:!!s.plan });
   const clean = d => (d && d.app === 'kinhthanh' && d.kind === 'user-data') ? {
     reads:(d.reads && typeof d.reads === 'object' && !Array.isArray(d.reads)) ? d.reads : {},
     lessons:Array.isArray(d.lessons) ? d.lessons : [], marks:Array.isArray(d.marks) ? d.marks : [],
-    plan:d.plan || null, planCustom:d.planCustom || null, resume:d.resume || null, rshist:Array.isArray(d.rshist) ? d.rshist : [] } : null;
+    plan:d.plan || null, planCustom:d.planCustom || null, resume:d.resume || null, rshist:Array.isArray(d.rshist) ? d.rshist : [], pinhist:Array.isArray(d.pinhist) ? d.pinhist : [] } : null;
 
   /* ---------- 1) Phản chiếu localStorage → IndexedDB ---------- */
   function syncMarker(s){          // dấu "người dùng chủ động xóa hết": để lần mở sau không tự khôi phục lại thứ đã xóa
@@ -8669,7 +8710,7 @@ const PStore = (() => {
       if (!hasData(d)) return false;
       const put = (k, v) => { if (v != null) rawSet.call(localStorage, k, JSON.stringify(v)); };
       put('kt.reads', d.reads); put('kt.lessons', d.lessons); put('kt.marks', d.marks);
-      put('kt.plan', d.plan); put('kt.planCustom', d.planCustom); put('kt.resume', d.resume); put('kt.rshist', d.rshist);
+      put('kt.plan', d.plan); put('kt.planCustom', d.planCustom); put('kt.resume', d.resume); put('kt.rshist', d.rshist); put('kt.pinhist', d.pinhist);
       try { rawRemove.call(localStorage, EMPTY_KEY); sessionStorage.setItem(RELOAD_KEY, '1'); } catch(e){}
       notifyRestoredAfterReload(); setTimeout(() => location.reload(), 400);
       return true;
@@ -8785,7 +8826,7 @@ const PStore = (() => {
 const USYNC_ENDPOINT = '';      // ví dụ: 'https://kinhthanh-sync.ten-ban.workers.dev'
 const UserSync = (() => {
   const CODE_KEY = 'kt.usersync.code', META_KEY = 'kt.usersync.meta';
-  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist'];
+  const TRACKED = ['kt.lessons', 'kt.reads', 'kt.marks', 'kt.plan', 'kt.planCustom', 'kt.resume', 'kt.rshist', 'kt.pinhist'];
   const SOFT = ['kt.resume'];                                   // đổi liên tục khi cuộn đọc → gom lại, đẩy thưa hơn
   const DEBOUNCE = 4000, DEBOUNCE_SOFT = 90000, ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const LABEL = { off:'Chưa có bản sao lưu', ok:'Đã sao lưu', busy:'Đang đồng bộ…', dirty:'Có thay đổi, sắp sao lưu', err:'Lỗi sao lưu', conflict:'Cần khôi phục', offline:'Chưa có mạng' };
@@ -8810,7 +8851,7 @@ const UserSync = (() => {
   function snapshot(){
     return { app:'kinhthanh', kind:'user-data', version:1,
       reads:readJ('kt.reads', {}), lessons:readJ('kt.lessons', []), marks:readJ('kt.marks', []),
-      plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []) };
+      plan:readJ('kt.plan', null), planCustom:readJ('kt.planCustom', null), resume:readJ('kt.resume', null), rshist:readJ('kt.rshist', []), pinhist:readJ('kt.pinhist', []) };
   }
   const hashOf = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + '-' + (h >>> 0).toString(16); };
   const hasData = s => !!(s.lessons.length || Object.keys(s.reads).length || s.marks.length || s.plan);
@@ -8906,7 +8947,8 @@ const UserSync = (() => {
       plan:(j.plan && /^\d{4}-\d{2}-\d{2}$/.test(j.plan.start || '')) ? j.plan : null,
       planCustom:j.planCustom || null,
       resume:(j.resume && j.resume.book && j.resume.ch >= 1) ? j.resume : null,
-      rshist:Array.isArray(j.rshist) ? j.rshist.filter(x => x && x.book && x.ch >= 1 && x.at) : []
+      rshist:Array.isArray(j.rshist) ? j.rshist.filter(x => x && x.book && x.ch >= 1 && x.at) : [],
+      pinhist:Array.isArray(j.pinhist) ? j.pinhist.filter(x => x && x.book && x.ch >= 1 && x.n >= 1 && x.at) : []
     };
   }
   const lk = x => `${x.book}|${x.ch}|${(x.ns || [x.n]).join(',')}`;
@@ -8916,7 +8958,7 @@ const UserSync = (() => {
       const put = (k, v) => { if (v == null) rawRemove.call(localStorage, k); else rawSet.call(localStorage, k, JSON.stringify(v)); };
       if (mode === 'replace'){
         put('kt.reads', r.reads); put('kt.lessons', r.lessons); put('kt.marks', r.marks);
-        put('kt.plan', r.plan); put('kt.planCustom', r.planCustom); put('kt.resume', r.resume); put('kt.rshist', r.rshist);
+        put('kt.plan', r.plan); put('kt.planCustom', r.planCustom); put('kt.resume', r.resume); put('kt.rshist', r.rshist); put('kt.pinhist', r.pinhist);
       } else {
         const cur = snapshot(), reads = Object.assign({}, cur.reads);
         Object.keys(r.reads).forEach(d => { if (Array.isArray(r.reads[d])) reads[d] = [...new Set([...(reads[d] || []), ...r.reads[d]])]; });
@@ -8931,6 +8973,7 @@ const UserSync = (() => {
         if (!cur.planCustom && r.planCustom) put('kt.planCustom', r.planCustom);
         if (!cur.resume && r.resume) put('kt.resume', r.resume);
         { const m = new Map(); [...(cur.rshist || []), ...r.rshist].forEach(x => { const k = dayKey(x.at), c = m.get(k); if (!c || x.at > c.at) m.set(k, x); }); put('kt.rshist', [...m.values()].sort((a, b) => b.at - a.at).slice(0, 60)); }
+        { const m = new Map(); [...(cur.pinhist || []), ...r.pinhist].forEach(x => { const k = `${x.book}|${x.ch}|${x.n}`, c = m.get(k); if (!c || (x.to || x.at) > (c.to || c.at)) m.set(k, x); }); put('kt.pinhist', [...m.values()].sort((a, b) => (b.to || b.at) - (a.to || a.at)).slice(0, 200)); }
       }
     } finally { suppress--; }
   }
