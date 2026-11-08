@@ -713,6 +713,12 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .sxit .sxgo{margin-left:auto;font-size:13px;color:var(--muted)}
 .sxmore{display:block;margin:12px auto 0;padding:10px 18px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
 .sxem{padding:28px 18px;text-align:center;color:var(--muted)}
+.sxit .sxgo{display:flex;align-items:center;gap:10px}
+.sxit .sxskip{height:30px;padding:0 11px;border:1.5px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg);box-shadow:none;font:inherit;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sxit .sxskip:active{background:var(--accent-soft)}
+.sxit.sk{opacity:.55}
+.sxskipbar{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--bg)}
+.sxskipbar .sxchip{height:30px;font-size:13px;padding:0 11px}
 .sxrow input.sxrepin{flex:1 1 150px;min-width:0;height:38px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;padding:0 10px}
 .sxrow input.sxrepin:focus{outline:none;border-color:var(--accent)}
 .sxchip.pri{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:700}
@@ -1599,7 +1605,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07p';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.07q';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5530,11 +5536,27 @@ $('#edBookList').onclick = async () => {
 /* Nút "🔍 Tìm toàn bộ" trong trình soạn thảo: tìm trong MỌI sách trong máy, kể cả chú thích [n], ghi chú in nghiêng (*) và tiêu đề (#).
    Bấm một kết quả → lưu chương đang soạn, mở đúng chương đó vào ô soạn và bôi chọn chỗ tìm thấy để sửa ngay. */
 const SX_KEY = 'kt.sxopts';
-const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, keep:true, undo:null, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
+const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, keep:true, undo:null, showSkip:false, skipSet:null, qk:'', nSkip:0, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
 try { const o = JSON.parse(localStorage.getItem(SX_KEY) || '{}'); ['kind', 'scope'].forEach(k => { if (typeof o[k] === 'string') sx[k] = o[k]; }); ['acc', 'word', 'all', 'keep'].forEach(k => { if (typeof o[k] === 'boolean') sx[k] = o[k]; }); } catch(e){}
 try { const u = JSON.parse(localStorage.getItem('kt.sxundo') || 'null'); if (u && Array.isArray(u.items) && u.items.length) sx.undo = u; } catch(e){}
 const sxSave = () => { try { localStorage.setItem(SX_KEY, JSON.stringify({ kind:sx.kind, scope:sx.scope, acc:sx.acc, word:sx.word, all:sx.all, keep:sx.keep })); } catch(e){} };
 const SX_PAGE = 60, SX_KIND = { v:'Lời văn', f:'Chú thích', h:'Tiêu đề' };
+/* BỎ QUA (kt.sxskip): đánh dấu những chỗ ĐÃ ĐÚNG để ẩn khỏi danh sách, còn lại là chỗ cần xem/sửa. Lưu riêng theo từ đang tìm (và theo chế độ Đúng dấu), chỉ trên máy này.
+   Mỗi chỗ gắn với nội dung lúc bỏ qua: nếu sau đó chỗ ấy bị sửa thì tự hiện lại. Chỗ đã bỏ qua KHÔNG bị “Thay tất cả” đụng tới. */
+const SKIP_KEY = 'kt.sxskip', SKIP_MAX = 6000;
+let SXS = {}; try { SXS = JSON.parse(localStorage.getItem(SKIP_KEY) || '{}'); if (!SXS || typeof SXS !== 'object' || Array.isArray(SXS)) SXS = {}; } catch(e){ SXS = {}; }
+const sxSkipSave = () => { try { Object.keys(SXS).length ? localStorage.setItem(SKIP_KEY, JSON.stringify(SXS)) : localStorage.removeItem(SKIP_KEY); } catch(e){} };
+const sxH = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+const sxQk = () => (sx.acc ? 'a:' : 'f:') + sxNorm(sx.q.normalize('NFC').trim().replace(/\s+/g, ' '), sx.acc);
+const sxEk = e => `${e.b}|${e.c}|${e.vi}|${e.k}${e.k === 'f' ? e.i : ''}|${sxH(e.o || '')}`;
+const sxIsSkip = e => !!(sx.skipSet && sx.skipSet.size && sx.skipSet.has(sxEk(e)));
+function sxSkipSet(e, on){
+  const a = new Set(SXS[sx.qk] || []), k = sxEk(e); on ? a.add(k) : a.delete(k);
+  delete SXS[sx.qk]; if (a.size) SXS[sx.qk] = [...a];                 // nhóm vừa dùng đưa về cuối (cũ nhất bị bỏ trước khi vượt giới hạn)
+  let tot = Object.values(SXS).reduce((n, v) => n + v.length, 0);
+  for (const kq of Object.keys(SXS)){ if (tot <= SKIP_MAX) break; if (kq === sx.qk) continue; tot -= SXS[kq].length; delete SXS[kq]; }
+  sxSkipSave(); sx.skipSet = new Set(SXS[sx.qk] || []);
+}
 const _sxFc = new Map();
 const sxFoldCh = c => { let r = _sxFc.get(c); if (r === undefined){ r = fold(c); if (r.length !== 1) r = c.toLowerCase().length === 1 && !/[\u0300-\u036f]/.test(c) ? c.toLowerCase() : ' '; _sxFc.set(c, r); } return r; };
 /* Chuẩn hoá để so khớp mà KHÔNG đổi độ dài chuỗi (vị trí tô sáng luôn đúng): gạch nối giữa 2 chữ = khoảng trắng; acc=true giữ dấu, false bỏ dấu */
@@ -5592,25 +5614,63 @@ async function sxRun(){
   info.textContent = sx.idx && sx.gen === (bs.gen || 0) ? 'Đang tìm…' : 'Đang chuẩn bị dữ liệu (chỉ lần đầu)…';
   const idx = await sxBuild(); if ($('#sxQ').value !== q || !sx.el) return;
   const rx = sxRegexes(q, sx.acc), sc = sx.scope, test = bsScopeFn(sc);
-  const res = [];
+  const qk = sxQk(); if (qk !== sx.qk) sx.showSkip = false;
+  sx.qk = qk; sx.skipSet = new Set(SXS[qk] || []);
+  const found = [];
   for (const e of idx){
     if (sx.kind && e.k !== sx.kind) continue;
     if (test && !test(e)) continue;
     const tg = sxNorm(e.t, sx.acc);
-    if (rx.every(r => { r.lastIndex = 0; return r.test(tg); })) res.push(e);
+    if (rx.every(r => { r.lastIndex = 0; return r.test(tg); })) found.push(e);
   }
-  sx.res = res; sx.rx = rx; sx.shown = Math.min(SX_PAGE, res.length); sxSyncRep();
-  if (!res.length){ sxSyncRep(); info.textContent = ''; body.innerHTML = `<div class="sxem"><b>Không tìm thấy “${esc(q.trim())}”</b><br>trong ${esc(sxScopeLabel())}${sx.kind ? ' · ' + SX_KIND[sx.kind].toLowerCase() : ''}.<br><small>Thử bỏ “Đúng dấu” hoặc “Nguyên từ” để tìm rộng hơn.</small></div>`; return; }
-  const cnt = { v:0, f:0, h:0 }; res.forEach(e => cnt[e.k]++);
-  const books = new Set(res.map(e => e.b)).size;
-  info.textContent = `Tìm thấy ${res.length} chỗ · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề · ${books} sách`;
+  sx.nSkip = sx.skipSet.size ? found.filter(sxIsSkip).length : 0;
+  const res = (sx.showSkip || !sx.nSkip) ? found : found.filter(e => !sxIsSkip(e));     // mặc định ẩn các chỗ đã bỏ qua
+  sx.res = res; sx.rx = rx; sx.shown = Math.min(SX_PAGE, res.length); sxSyncRep(); sxBar();
+  if (!res.length){ sxSyncRep(); info.textContent = ''; body.innerHTML = sxEmptyHtml(); return; }
+  sxInfoSet();
   body.innerHTML = sxItems(0, sx.shown) + sxMoreBtn(); body.scrollTop = 0;
+}
+function sxEmptyHtml(){
+  const q = sx.q.trim();
+  return sx.nSkip ? `<div class="sxem"><b>Đã bỏ qua hết ${sx.nSkip} chỗ “${esc(q)}”</b><br><small>Bấm “Xem” ở thanh phía trên để hiện lại các chỗ đã bỏ qua.</small></div>`
+    : `<div class="sxem"><b>Không tìm thấy “${esc(q)}”</b><br>trong ${esc(sxScopeLabel())}${sx.kind ? ' · ' + SX_KIND[sx.kind].toLowerCase() : ''}.<br><small>Thử bỏ “Đúng dấu” hoặc “Nguyên từ” để tìm rộng hơn.</small></div>`;
+}
+function sxInfoSet(){
+  const res = sx.res, cnt = { v:0, f:0, h:0 }; res.forEach(e => cnt[e.k]++);
+  const books = new Set(res.map(e => e.b)).size;
+  $('#sxInfo').textContent = `Tìm thấy ${res.length} chỗ · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề · ${books} sách`;
+}
+function sxBar(){
+  const b = $('#sxSkipBar'); if (!b) return;
+  const n = sx.nSkip || 0; b.hidden = !n; if (!n) return;
+  b.innerHTML = `<span>🙈 Đã bỏ qua <b>${n}</b> chỗ đã đúng</span><button type="button" class="sxchip${sx.showSkip ? ' on' : ''}" data-showskip="1">${sx.showSkip ? 'Ẩn lại' : 'Xem'}</button><button type="button" class="sxchip" data-clrskip="1" title="Hiện lại tất cả chỗ đã bỏ qua của từ này">Hiện lại hết</button>`;
+}
+function sxSkipRow(row){
+  const i = +row.dataset.i, e = sx.res[i]; if (!e || !sx.skipSet) return;
+  const was = sx.skipSet.has(sxEk(e));
+  sxSkipSet(e, !was);
+  const body = $('#sxBody');
+  if (sx.showSkip){                                                   // đang xem cả chỗ đã bỏ qua: chỉ đổi trạng thái dòng
+    sx.nSkip += was ? -1 : 1; row.classList.toggle('sk', !was);
+    const bt = row.querySelector('.sxskip'); if (bt) bt.textContent = was ? '✓ Bỏ qua' : '↩ Hiện lại';
+    sxBar(); sxSyncRep(); return;
+  }
+  sx.res.splice(i, 1); sx.nSkip++; sx.shown--; row.remove();
+  body.querySelectorAll('.sxit').forEach((n, k) => { n.dataset.i = k; });
+  body.querySelector('.sxmore')?.remove();
+  if (sx.shown < sx.res.length){ body.insertAdjacentHTML('beforeend', sxItems(sx.shown, sx.shown + 1)); sx.shown++; }   // giữ đủ một trang
+  body.insertAdjacentHTML('beforeend', sxMoreBtn());
+  sxBar(); sxSyncRep();
+  if (!sx.res.length){ $('#sxInfo').textContent = ''; body.innerHTML = sxEmptyHtml(); }
+  else sxInfoSet();
+  toastAct('Đã bỏ qua 1 chỗ (đã đúng)', 'Hoàn tác', () => { if (!sx.el) return; sxSkipSet(e, false); const st = $('#sxBody').scrollTop; sxRun().then(() => { try { $('#sxBody').scrollTop = st; } catch(x){} }); });
 }
 const sxScopeLabel = () => { const v = sx.scope; return !v ? 'cả Kinh Thánh' : v === '@OT' ? 'Cựu Ước' : v === '@NT' ? 'Tân Ước' : v; };
 function sxItems(a, b){
   return sx.res.slice(a, b).map((e, k) => {
     const i = a + k, rg = sxRanges(e.t, sx.rx, sx.acc);
-    return `<button type="button" class="sxit" data-i="${i}"><span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${SX_KIND[e.k]}</span><span class="sxgo">✏️ Sửa ›</span></span>${sxSnippet(e.t, rg)}</button>`;
+    const sk = sx.showSkip && sxIsSkip(e);
+    return `<div class="sxit${sk ? ' sk' : ''}" role="button" tabindex="0" data-i="${i}"><span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${SX_KIND[e.k]}</span><span class="sxgo"><button type="button" class="sxskip" title="Chỗ này đã đúng: ẩn khỏi danh sách (chỗ đã bỏ qua không bị Thay tất cả đụng tới)">${sk ? '↩ Hiện lại' : '✓ Bỏ qua'}</button><span class="sxedit">✏️ Sửa ›</span></span></span>${sxSnippet(e.t, rg)}</div>`;
   }).join('');
 }
 const sxMoreBtn = () => sx.shown < sx.res.length ? `<button type="button" class="sxmore" data-more="1">Xem thêm ${Math.min(SX_PAGE, sx.res.length - sx.shown)} chỗ · còn ${sx.res.length - sx.shown}</button>` : '';
@@ -5655,7 +5715,7 @@ function openSxFind(){
     <div class="sxrow" id="sxKinds"><button type="button" class="sxchip" data-k="">Tất cả</button><button type="button" class="sxchip" data-k="v">Lời văn</button><button type="button" class="sxchip" data-k="f">Chú thích</button><button type="button" class="sxchip" data-k="h">Tiêu đề</button></div>
     <div class="sxrow"><button type="button" class="sxchip" id="sxAcc" title="Bật: gõ “tội” chỉ ra “tội”. Tắt: “toi” cũng ra “tội”, dùng để tìm chữ bị sai dấu">Đúng dấu</button><button type="button" class="sxchip" id="sxWord" title="Bật: “ác” không ra “tác”">Nguyên từ</button><button type="button" class="sxchip" id="sxAll" title="Bật: câu phải có đủ các từ, không cần đứng liền nhau">Đủ các từ</button><button type="button" class="sxchip" id="sxKeep" title="Bật khi thay thế: “Đều” đầu câu → “Đề”, “đều” → “đề”, “ĐỀU” → “ĐỀ”">Giữ chữ Hoa</button></div>
     <div class="sxrow" id="sxRepRow"><input type="text" id="sxRep" class="sxrepin" placeholder="Thay bằng… (để trống = xóa)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-label="Chữ thay thế"><button type="button" class="sxchip pri" id="sxRepGo" disabled>🔁 Thay tất cả…</button><button type="button" class="sxchip" id="sxUndo" hidden title="Trả lại lần thay thế gần nhất">↩ Hoàn tác</button></div>
-  </div><div class="sxinfo" id="sxInfo"></div><div class="sxbody bkbody" id="sxBody"></div></div>`;
+  </div><div class="sxinfo" id="sxInfo"></div><div class="sxskipbar" id="sxSkipBar" hidden></div><div class="sxbody bkbody" id="sxBody"></div></div>`;
   document.body.appendChild(el); sx.el = el;
   const sc = $('#sxScope'); sc.value = sx.scope; if (sc.value !== sx.scope){ sx.scope = ''; sc.value = ''; }
   $('#sxQ').value = sx.q; sxSyncUi();
@@ -5672,11 +5732,15 @@ function openSxFind(){
   $('#sxRep').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
   el.addEventListener('click', async e => {
     if (e.target === el) return sxClose();
+    const skb = e.target.closest('.sxskip'); if (skb){ const row = skb.closest('.sxit'); if (row) sxSkipRow(row); return; }
+    if (e.target.closest('[data-showskip]')){ sx.showSkip = !sx.showSkip; sxRun(); return; }
+    if (e.target.closest('[data-clrskip]')){ delete SXS[sx.qk]; sxSkipSave(); sx.showSkip = false; sxRun(); return; }
     if (e.target.closest('[data-more]')){ const a = sx.shown; sx.shown = Math.min(a + SX_PAGE, sx.res.length); const bd = $('#sxBody'); bd.querySelector('.sxmore')?.remove(); bd.insertAdjacentHTML('beforeend', sxItems(a, sx.shown) + sxMoreBtn()); return; }
     const it = e.target.closest('.sxit'); if (!it) return;
     const r = sx.res[+it.dataset.i]; if (!r) return;
     sxClose(); await sxOpenHit(r);
   });
+  el.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('sxit')){ e.preventDefault(); e.target.click(); } });
   document.addEventListener('keydown', sxKey, true);
   if (window.visualViewport){ visualViewport.addEventListener('resize', sxVV); visualViewport.addEventListener('scroll', sxVV); sxVV(); }
   requestAnimationFrame(() => el.classList.add('in'));
@@ -5708,7 +5772,7 @@ function sxCalc(e, rx, acc, rep, keep){
 }
 function sxPlan(rep){
   const rx = sxRegexes(sx.q, sx.acc), plan = []; let nl = 0, skip = 0;
-  for (const e of sx.res){ const c = sxCalc(e, rx, sx.acc, rep, sx.keep); if (c === 'nl') nl++; else if (c) plan.push({ e, c, on:true }); else skip++; }
+  for (const e of sx.res){ if (sxIsSkip(e)) continue; const c = sxCalc(e, rx, sx.acc, rep, sx.keep); if (c === 'nl') nl++; else if (c) plan.push({ e, c, on:true }); else skip++; }
   return { plan, nl, skip };
 }
 function sxReplaceStart(){
