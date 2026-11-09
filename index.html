@@ -1616,7 +1616,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.09v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.09w';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5981,7 +5981,8 @@ function toneOpen(){
       if (it.b !== lastB){ lastB = it.b; h += `<div class="hynote" style="margin:12px 0 6px"><b>${esc(it.b)}</b></div>`; }
       h += `<div class="hyrow" data-i="${i}"><label class="artag"><input type="checkbox" data-i="${i}"${boxes ? (it.on ? ' checked' : '') + '' : ' disabled checked'}> <b>${esc(toneRef(it))}</b></label><div class="hyctx">${ctxOf(it)}</div></div>`;
     });
-    return h + (list.length > lim ? `<div class="hybtn"><button class="sbtn" data-a="more">Hiện thêm (còn ${nm(list.length - lim)} chỗ)</button></div>` : '');
+    const head = `<p class="hynote" style="margin:10px 0 0"><b>Đang hiện ${nm(Math.min(lim, list.length))} / ${nm(list.length)} chỗ</b>${list.length > lim ? ' — bấm “Hiện tất cả” để xem đủ.' : ' — đã hiện đủ.'}</p>`;
+    return head + h + (list.length > lim ? `<div class="hybtn"><button class="sbtn" data-a="more">Hiện thêm 300</button><button class="sbtn" data-a="showall" style="background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700">Hiện tất cả (${nm(list.length)} chỗ)</button></div>` : '');
   };
   const plainList = list => {                      // danh sách chữ thường, theo thứ tự sách
     let t = '', lastB = '';
@@ -6049,6 +6050,7 @@ function toneOpen(){
     const a = b.dataset.a;
     if (a === 'close') return o.remove();
     if (a === 'more'){ shown += 300; return draw(); }
+    if (a === 'showall'){ shown = 1e9; return draw(); }
     if (a === 'dir'){ dir = b.dataset.d; shown = 300; view = 'scan'; return draw(); }
     if (a === 'all' || a === 'none'){ R[dir].forEach(x => x.on = a === 'all'); return draw(); }
     if (a === 'rescan' || a === 'back'){ view = 'scan'; return load(); }
