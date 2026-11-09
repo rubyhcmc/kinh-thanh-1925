@@ -1529,6 +1529,7 @@ JSON: bấm "Chèn mẫu định dạng" để xem.</pre>
           <button class="btn" id="edFindAll" title="Tìm trong TOÀN BỘ Kinh Thánh đang có trong máy, gồm cả lời văn, chú thích [n], ghi chú in nghiêng và tiêu đề; bấm kết quả để mở đúng chương vào ô soạn và bôi chọn chỗ tìm thấy">🔍 Tìm toàn bộ</button>
           <button class="btn" id="edHy" title="Quét các từ còn dấu gạch ngang giữa chữ (tội-lỗi, phước-hạnh…) để sửa">🔎 Gạch nối</button>
           <button class="btn" id="edArch" title="Thay các từ cổ theo từ điển do bạn tự nhập, xem trước từng chỗ rồi mới sửa">🔁 Từ cổ</button>
+          <button class="btn" id="edTone" title="Quét cả Kinh Thánh để đổi cách đặt dấu thanh (hòa ↔ hoà, khỏe ↔ khoẻ, thủy ↔ thuỷ); xem trước từng chỗ, có hoàn tác">🔤 Dấu thanh</button>
           <button class="btn" id="edQHist" hidden title="Các chỗ đã sửa nhanh từ cửa sổ tìm kiếm — xem và hoàn tác (đang mở chương nào thì hiện các chỗ của chương đó)">🕘 Sửa nhanh</button>
           <button class="btn danger" id="edClear">Xóa ô</button>
         </div>
@@ -1615,7 +1616,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.07v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.09v';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5881,6 +5882,213 @@ function archOpen(){
   });
 }
 $('#edArch').onclick = archOpen;
+/* ---- 🔤 DẤU THANH: quét & đổi cách đặt dấu thanh cho TOÀN BỘ Kinh Thánh (hòa ↔ hoà, khỏe ↔ khoẻ, thủy ↔ thuỷ) ----
+   Chỉ đụng tới 3 cặp vần: oa, oe, uy — và CHỈ khi âm tiết kết thúc ở đó (không chữ cái nào theo sau).
+   Nhờ vậy hoàn, toàn, loài, hoạt, đoạn, quý, quả, múa, mùa… không bao giờ bị đổi.  "qu" cũng được loại trừ (quý, quỳ, quỷ).
+   Quét đọc từ dữ liệu trong máy: lời văn + tiêu đề + chú thích của cả 66 sách, theo thứ tự Sáng-thế Ký → Khải-huyền.
+   Xem trước từng chỗ, bỏ tích chỗ nào không muốn đổi; chỉ ghi khi chữ hiện tại còn đúng như lúc quét; có hoàn tác (lưu trong máy). Độ dài chữ không đổi. */
+const TN_KEY = 'kt.toneundo';
+const TN_L = '[\\p{L}\\p{M}]';
+const TN_RX = {                                    // cu = đổi SANG kiểu cũ 1925 (hòa→hoà) · moi = đổi SANG kiểu mới (hoà→hòa)
+  cu : new RegExp('(?:[òóỏõọÒÓỎÕỌ][aAeE]|[ùúủũụÙÚỦŨỤ][yY])(?!' + TN_L + ')', 'gu'),
+  moi: new RegExp('(?<![qQ])(?:[oO][àáảãạÀÁẢÃẠèéẻẽẹÈÉẺẼẸ]|[uU][ỳýỷỹỵỲÝỶỸỴ])(?!' + TN_L + ')', 'gu')
+};
+function toneConv(m, dir){                         // m: đúng 2 ký tự khớp luật; trả về dạng đã đổi (cùng độ dài, giữ hoa/thường)
+  if (dir === 'cu'){ const d = m[0].normalize('NFD'); return d[0] + (m[1] + d.slice(1)).normalize('NFC'); }
+  const d = m[1].normalize('NFD'); return (m[0] + d.slice(1)).normalize('NFC') + d[0];
+}
+function toneFind(s, dir){                         // [{pos, from, to, word, wordTo}] trong một chuỗi
+  const out = [], rx = TN_RX[dir]; rx.lastIndex = 0; let m;
+  const isL = ch => /[\p{L}\p{M}]/u.test(ch);
+  while ((m = rx.exec(s))){
+    const pos = m.index, from = m[0], to = toneConv(from, dir);
+    if (from.length !== 2 || to.length !== 2 || to === from) continue;
+    let a = pos; while (a > 0 && isL(s[a - 1])) a--;
+    const pre = s.slice(a, pos);
+    out.push({ pos, from, to, word: (pre + from).toLowerCase(), wordTo: (pre + to).toLowerCase() });
+  }
+  return out;
+}
+async function toneWrite(entries){                 // entries: [{b,c,vi,k,i,segs:[[pos,from,to]]}] — ghi seg nào còn đúng như lúc quét
+  const by = new Map(), done = []; let ok = 0, stale = 0;
+  entries.forEach(e => { if (!by.has(e.b)) by.set(e.b, []); by.get(e.b).push(e); });
+  for (const [name, list] of by){
+    const rec = await dbGet('books', name);
+    if (!rec){ stale += list.reduce((a, e) => a + e.segs.length, 0); continue; }
+    let touched = false;
+    for (const e of list){
+      const v = (rec.chapters[e.c - 1] || [])[e.vi];
+      const cur0 = v ? (e.k === 'h' ? v.h : e.k === 'v' ? v.t : (v.fn || [])[e.i]) : null;
+      if (typeof cur0 !== 'string'){ stale += e.segs.length; continue; }
+      let cur = cur0; const okSegs = [];
+      e.segs.forEach(([p, f, t]) => {
+        if (cur.slice(p, p + f.length) === f){ cur = cur.slice(0, p) + t + cur.slice(p + f.length); okSegs.push([p, f, t]); } else stale++;
+      });
+      if (!okSegs.length) continue;
+      if (e.k === 'h') v.h = cur; else if (e.k === 'v') v.t = cur; else v.fn[e.i] = cur;
+      ok += okSegs.length; done.push(Object.assign({}, e, { segs: okSegs })); touched = true;
+    }
+    if (touched) await dbPut('books', [rec]);
+  }
+  return { ok, stale, done };
+}
+async function toneScanAll(){                      // → { cu:[item], moi:[item] } theo thứ tự sách/chương/câu
+  const R = { cu: [], moi: [] }; let cnt = 0;
+  for (const m of bibleMeta){
+    const rec = await dbGet('books', m.name); if (!rec) continue;
+    (rec.chapters || []).forEach((vs, ci) => (vs || []).forEach((v, vi) => {
+      const strs = [];
+      if (typeof v.h === 'string') strs.push(['h', 0, v.h]);
+      if (typeof v.t === 'string') strs.push(['v', 0, v.t]);
+      if (Array.isArray(v.fn)) v.fn.forEach((f, i) => { if (typeof f === 'string') strs.push(['f', i, f]); });
+      strs.forEach(([k, i, s]) => {
+        if (!/[òóỏõọùúủũụoOuUÒÓỎÕỌÙÚỦŨỤ]/.test(s)) return;
+        ['cu', 'moi'].forEach(dir => toneFind(s, dir).forEach(f =>
+          R[dir].push({ b: m.name, c: ci + 1, n: v.n, vi, k, i, s, pos: f.pos, from: f.from, to: f.to, word: f.word, wordTo: f.wordTo, on: true })));
+      });
+    }));
+    if (++cnt % 4 === 0) await exYield();
+  }
+  return R;
+}
+function toneRef(it){ return `${it.b} ${it.c}:${it.n == null ? '?' : it.n}${it.k === 'h' ? ' (tiêu đề)' : it.k === 'f' ? ' (chú thích)' : ''}`; }
+function toneEntries(items){                       // gộp các chỗ cùng một chuỗi thành một mục ghi
+  const m = new Map();
+  items.forEach(it => {
+    const key = [it.b, it.c, it.vi, it.k, it.i].join('|');
+    if (!m.has(key)) m.set(key, { b: it.b, c: it.c, n: it.n, vi: it.vi, k: it.k, i: it.i, segs: [] });
+    m.get(key).segs.push([it.pos, it.from, it.to]);
+  });
+  return [...m.values()];
+}
+function toneOpen(){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới sửa được nội dung');
+  let dir = 'cu', R = null, view = 'scan', shown = 300, busy = false, last = null, undo = null;
+  try { const u = JSON.parse(localStorage.getItem(TN_KEY) || 'null'); if (u && Array.isArray(u.entries) && u.entries.length) undo = u; } catch(e){}
+  const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 95;
+  o.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(o);
+  const sheet = o.firstChild;
+  const nm = x => x.toLocaleString('vi-VN');
+  const ctxOf = it => {
+    const s = it.s, a = Math.max(0, it.pos - 32), b = Math.min(s.length, it.pos + 2 + 32);
+    return (a > 0 ? '…' : '') + esc(s.slice(a, it.pos).replace(/\n/g, ' ↵ ')) +
+      `<span class="hyw r">${esc(it.from)}</span><span class="hytag">→</span><span class="hyw y">${esc(it.to)}</span>` +
+      esc(s.slice(it.pos + 2, b).replace(/\n/g, ' ↵ ')) + (b < s.length ? '…' : '');
+  };
+  const rowsOf = (list, lim, boxes) => {
+    let h = '', lastB = '';
+    list.slice(0, lim).forEach((it, i) => {
+      if (it.b !== lastB){ lastB = it.b; h += `<div class="hynote" style="margin:12px 0 6px"><b>${esc(it.b)}</b></div>`; }
+      h += `<div class="hyrow" data-i="${i}"><label class="artag"><input type="checkbox" data-i="${i}"${boxes ? (it.on ? ' checked' : '') + '' : ' disabled checked'}> <b>${esc(toneRef(it))}</b></label><div class="hyctx">${ctxOf(it)}</div></div>`;
+    });
+    return h + (list.length > lim ? `<div class="hybtn"><button class="sbtn" data-a="more">Hiện thêm (còn ${nm(list.length - lim)} chỗ)</button></div>` : '');
+  };
+  const plainList = list => {                      // danh sách chữ thường, theo thứ tự sách
+    let t = '', lastB = '';
+    list.forEach(it => { if (it.b !== lastB){ lastB = it.b; t += (t ? '\n' : '') + '■ ' + it.b + '\n'; } t += `${it.c}:${it.n == null ? '?' : it.n}${it.k === 'h' ? ' (tiêu đề)' : it.k === 'f' ? ' (chú thích)' : ''} — ${it.from} → ${it.to}  [${it.word} → ${it.wordTo}]\n`; });
+    return t;
+  };
+  const draw = () => {
+    const keep = sheet.scrollTop;
+    if (!R){ sheet.innerHTML = '<h3>Đổi cách đặt dấu thanh</h3><p class="hynote">Đang quét toàn bộ Kinh Thánh…</p>'; return; }
+    const undoBtn = undo ? `<button class="sbtn" data-a="undo">↩ Hoàn tác lần đổi gần nhất (${nm(undo.entries.reduce((a, e) => a + e.segs.length, 0))} chỗ)</button>` : '';
+    if (view === 'done'){
+      const L = last.list;
+      sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">${last.undo ? '↩ Đã hoàn tác' : '✔ Đã đổi xong'}</h3>
+        <p class="hysum"><span class="hyw y">${nm(last.ok)} chỗ ${last.undo ? 'đã trả lại' : 'đã đổi'}</span>${last.stale ? ` <span class="hyw g">${nm(last.stale)} chỗ bỏ qua vì chữ đã bị sửa sau lúc quét</span>` : ''}</p>
+        <p class="hynote">${esc(last.verify || '')}</p>
+        <div class="hybtn" style="margin-top:0"><button class="sbtn" data-a="copy">📋 Sao chép danh sách</button>${undoBtn}<button class="sbtn" data-a="back">← Quét lại</button><button class="sbtn" data-a="close">Đóng</button></div></div>
+        <p class="hynote">Danh sách theo thứ tự từ Sáng-thế Ký đến Khải-huyền:</p>${rowsOf(L, shown, false)}`;
+      sheet.scrollTop = keep; return;
+    }
+    const L = R[dir], on = L.filter(x => x.on), words = new Map();
+    L.forEach(x => { const k = x.word + ' → ' + x.wordTo; const w = words.get(k) || { k, n: 0, on: 0 }; w.n++; if (x.on) w.on++; words.set(k, w); });
+    const chips = [...words.values()].sort((a, b) => b.n - a.n).map(w =>
+      `<label class="artag" style="margin:0 12px 6px 0"><input type="checkbox" data-w="${esc(w.k)}"${w.on === w.n ? ' checked' : ''}> ${esc(w.k)} <span class="hytag">(${w.n})</span></label>`).join('');
+    const bk = new Set(on.map(x => x.b)).size;
+    const btn = (d, label) => `<button class="sbtn" data-a="dir" data-d="${d}" style="${dir === d ? 'background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700' : ''}">${label}</button>`;
+    sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">🔤 Đổi cách đặt dấu thanh · toàn bộ Kinh Thánh</h3>
+      <p class="hynote">Chỉ đụng tới vần oa, oe, uy ở cuối âm tiết (hòa/hoà, khỏe/khoẻ, thủy/thuỷ). Các chữ như hoàn, toàn, loài, quý, quả… không bao giờ bị đổi. Xem trước từng chỗ, bỏ tích chỗ nào không muốn đổi rồi mới bấm đổi.</p>
+      <div class="hybtn" style="margin-top:0">${btn('cu', `Đổi sang kiểu CŨ 1925 · hòa → hoà (${nm(R.cu.length)} chỗ)`)}${btn('moi', `Đổi sang kiểu MỚI · hoà → hòa (${nm(R.moi.length)} chỗ)`)}</div>
+      <p class="hysum" style="margin-top:8px"><span class="hyw r">${nm(on.length)} chỗ sẽ đổi</span> <span class="hytag">${bk} sách · tổng ${nm(L.length)} chỗ tìm thấy</span></p>
+      <div class="hybtn" style="margin-top:0">
+        <button class="sbtn" data-a="apply"${on.length ? '' : ' disabled'} style="background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700">✅ Đổi ${nm(on.length)} chỗ đã chọn</button>
+        <button class="sbtn" data-a="all">Chọn hết</button><button class="sbtn" data-a="none">Bỏ chọn hết</button>
+        <button class="sbtn" data-a="copy">📋 Sao chép danh sách</button>${undoBtn}<button class="sbtn" data-a="rescan">Quét lại</button><button class="sbtn" data-a="close">Đóng</button>
+      </div></div>
+      ${L.length ? `<div class="hyrow"><div class="hynote" style="margin:0 0 6px"><b>Theo từng từ</b> (bỏ tích để không đổi từ đó):</div>${chips}</div>${rowsOf(L, shown, true)}` : '<p class="hynote">✔ Không còn chỗ nào cần đổi theo hướng này.</p>'}`;
+    sheet.scrollTop = keep;
+  };
+  const load = async () => {
+    R = null; draw();
+    try { await edAuto(); R = await toneScanAll(); } catch(e){ toast('Lỗi khi quét: ' + (e.message || e)); R = { cu: [], moi: [] }; }
+    shown = 300; draw();
+  };
+  const copyText = async t => {
+    try { await navigator.clipboard.writeText(t); toast('Đã sao chép danh sách'); }
+    catch(e){ const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Đã sao chép danh sách'); } catch(_){ toast('Không sao chép được'); } ta.remove(); }
+  };
+  const finish = async (res, isUndo, listItems) => {
+    await sxAfterWrite();
+    const list = [];
+    res.done.forEach(e => e.segs.forEach(([p, f, t]) => list.push(listItems.find(x => x.b === e.b && x.c === e.c && x.vi === e.vi && x.k === e.k && x.i === e.i && x.pos === (isUndo ? p : p)) || null)));
+    last = { ok: res.ok, stale: res.stale, undo: isUndo, list: list.filter(Boolean) };
+    R = await toneScanAll();                                  // quét lại từ dữ liệu thật để đối chiếu
+    const left = R[dir].length;
+    last.verify = isUndo ? `Đối chiếu lại từ dữ liệu trong máy: còn ${nm(left)} chỗ theo hướng đang chọn.` : `Đối chiếu lại từ dữ liệu trong máy: còn ${nm(left)} chỗ chưa đổi theo hướng này (gồm các chỗ bạn đã bỏ tích).`;
+    view = 'done'; shown = 300; draw();
+  };
+  o.addEventListener('change', e => {
+    const c = e.target; if (!R || c.type !== 'checkbox') return;
+    if (c.dataset.w){ R[dir].forEach(x => { if (x.word + ' → ' + x.wordTo === c.dataset.w) x.on = c.checked; }); return draw(); }
+    if (c.dataset.i != null && view === 'scan'){ R[dir][+c.dataset.i].on = c.checked; draw(); }
+  });
+  o.addEventListener('click', async e => {
+    if (e.target === o){ if (!busy) o.remove(); return; }
+    const b = e.target.closest('button[data-a]'); if (!b || busy) return;
+    const a = b.dataset.a;
+    if (a === 'close') return o.remove();
+    if (a === 'more'){ shown += 300; return draw(); }
+    if (a === 'dir'){ dir = b.dataset.d; shown = 300; view = 'scan'; return draw(); }
+    if (a === 'all' || a === 'none'){ R[dir].forEach(x => x.on = a === 'all'); return draw(); }
+    if (a === 'rescan' || a === 'back'){ view = 'scan'; return load(); }
+    if (a === 'copy'){ return copyText(view === 'done' ? plainList(last.list) : plainList(R[dir].filter(x => x.on))); }
+    if (a === 'apply'){
+      const on = R[dir].filter(x => x.on); if (!on.length) return;
+      if (!isAdmin()) return toast('Chỉ quản trị viên mới được sửa nội dung.');
+      const ex = on[0];
+      if (!confirm(`Đổi ${nm(on.length)} chỗ ở ${new Set(on.map(x => x.b)).size} sách?\n\nVí dụ: “${ex.from}” → “${ex.to}” (${toneRef(ex)})\n\nSau khi đổi, bấm “↩ Hoàn tác” để trả lại nếu cần.`)) return;
+      busy = true;
+      try {
+        await edAuto();
+        const entries = toneEntries(on), res = await toneWrite(entries);
+        undo = res.done.length ? { at: Date.now(), dir, entries: res.done } : null;
+        try { if (undo) localStorage.setItem(TN_KEY, JSON.stringify(undo)); else localStorage.removeItem(TN_KEY); } catch(e2){ toast('Không lưu được bản hoàn tác vào máy (vẫn hoàn tác được trong lần mở này)'); }
+        await finish(res, false, on);
+        toast(`✔ Đã đổi ${nm(res.ok)} chỗ` + (res.stale ? ` · bỏ qua ${res.stale} chỗ đã đổi` : ''));
+      } catch(err){ toast('Lỗi khi đổi: ' + (err.message || err)); }
+      busy = false; return;
+    }
+    if (a === 'undo'){
+      if (!undo) return;
+      const n = undo.entries.reduce((x, y) => x + y.segs.length, 0);
+      if (!confirm(`Hoàn tác lần đổi gần nhất (${nm(n)} chỗ)?`)) return;
+      busy = true;
+      try {
+        await edAuto();
+        const rev = undo.entries.map(e => Object.assign({}, e, { segs: e.segs.map(([p, f, t]) => [p, t, f]) }));
+        const res = await toneWrite(rev);
+        const items = []; undo.entries.forEach(e => e.segs.forEach(([p, f, t]) => items.push({ b: e.b, c: e.c, n: e.n, vi: e.vi, k: e.k, i: e.i, pos: p, from: t, to: f, word: t, wordTo: f, s: '' })));
+        undo = null; try { localStorage.removeItem(TN_KEY); } catch(e2){}
+        await finish(res, true, items);
+        toast(`↩ Đã hoàn tác ${nm(res.ok)} chỗ` + (res.stale ? ` · bỏ qua ${res.stale} chỗ đã sửa sau đó` : ''));
+      } catch(err){ toast('Lỗi khi hoàn tác: ' + (err.message || err)); }
+      busy = false;
+    }
+  });
+  load();
+}
+$('#edTone').onclick = toneOpen;
 $('#edQHist').onclick = () => sxeOpen({ b:ed.Book.value, c:+ed.Chap.value });
 /* --- Tên sách: báo sách có sẵn / sẽ tạo mới (bắt lỗi gõ nhầm), đổi tên, xóa sách --- */
 function edBookHint(){
