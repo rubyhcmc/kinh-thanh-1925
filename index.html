@@ -1616,7 +1616,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.09x';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.09z';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5940,8 +5940,16 @@ function yiCase(m, w){                              // giữ kiểu hoa của ch
   if (m[0] !== m[0].toLowerCase()) return w[0].toUpperCase() + w.slice(1);
   return w;
 }
+const HY_SUS = new Set(['a-dua','cu-đê','ra-ên','run-en','ta-lâng','phu-tù','ô-me','hô-me','mã-la','ten-rét','ten-sét','cà-lăm']);   // từ phiên âm viết thường mà vẫn có âm tiết quen → luôn đưa vào nhóm “cần xem”
+const HY_RX = /(?<![\p{L}\p{M}-])[\p{L}\p{M}]+(?:-[\p{L}\p{M}]+)+(?![\p{L}\p{M}-])/gu;
+function hyStartAt(s, pos){                          // chữ hoa này đứng đầu câu / đầu dòng thơ / đầu tiêu đề?
+  const raw = s.slice(0, pos);
+  if (/(^|\n)[\s"“‘'(\[\]\d]*$/.test(raw)) return true;
+  const pre = raw.replace(/[\s"“‘'(\[\]\d]+$/, '');
+  return !pre || /[.!?:;”"»]$/.test(pre);
+}
 async function toneScanAll(){                      // → { cu:[item], moi:[item] } theo thứ tự sách/chương/câu
-  const R = { cu: [], moi: [], yi: [], yiInfo: [] }, cand = []; let cnt = 0;
+  const R = { cu: [], moi: [], yi: [], yiInfo: [], hy: [], hySkip: { words: 0, n: 0 } }, cand = [], hyc = [], syl = new Map(); let cnt = 0;
   for (const m of bibleMeta){
     const rec = await dbGet('books', m.name); if (!rec) continue;
     (rec.chapters || []).forEach((vs, ci) => (vs || []).forEach((v, vi) => {
@@ -5950,6 +5958,9 @@ async function toneScanAll(){                      // → { cu:[item], moi:[item
       if (typeof v.t === 'string') strs.push(['v', 0, v.t]);
       if (Array.isArray(v.fn)) v.fn.forEach((f, i) => { if (typeof f === 'string') strs.push(['f', i, f]); });
       strs.forEach(([k, i, s]) => {
+        HY_RX.lastIndex = 0; let hm;
+        while ((hm = HY_RX.exec(s))){ const w = hm[0], cap = w[0] !== w[0].toLowerCase() ? (hyStartAt(s, hm.index) ? 's' : 'm') : 'l'; hyc.push({ b: m.name, c: ci + 1, n: v.n, vi, k, i, s, pos: hm.index, w, cap }); }
+        (s.replace(HY_RX, ' ').match(/[\p{Ll}\p{M}]+/gu) || []).forEach(t => syl.set(t, (syl.get(t) || 0) + 1));
         YI_RX.lastIndex = 0; let ym;
         while ((ym = YI_RX.exec(s))){ const lw = ym[0].toLowerCase().normalize('NFC'), pr = YI_MAP.get(lw); if (pr) cand.push({ b: m.name, c: ci + 1, n: v.n, vi, k, i, s, pos: ym.index, m: ym[0], pr }); }
         if (!/[òóỏõọùúủũụoOuUÒÓỎÕỌÙÚỦŨỤ]/.test(s)) return;
@@ -5966,6 +5977,15 @@ async function toneScanAll(){                      // → { cu:[item], moi:[item
   cand.forEach(x => { const [i, side] = x.pr; if (side === target[i]) return;
     const info = R.yiInfo.find(z => z.keep === YI_PAIRS[i][target[i]]), to = yiCase(x.m, YI_PAIRS[i][target[i]]);
     R.yi.push({ b: x.b, c: x.c, n: x.n, vi: x.vi, k: x.k, i: x.i, s: x.s, pos: x.pos, from: x.m, to, word: x.m.toLowerCase(), wordTo: to.toLowerCase(), on: info.auto }); });
+  const st = new Map();                                                   // thống kê theo từng từ (viết thường)
+  hyc.forEach(x => { const k = x.w.toLowerCase(); const o = st.get(k) || { l: 0, m: 0, s: 0 }; o[x.cap]++; st.set(k, o); });
+  st.forEach((o, k) => { if (o.l === 0 && o.m > 0){ R.hySkip.words++; R.hySkip.n += o.m; }
+    o.grp = o.m > 0 ? 'xem' : o.l === 0 ? 'dau' : (!HY_SUS.has(k) && k.split('-').every(t => (syl.get(t) || 0) >= 3) ? 'ok' : 'xem'); o.mixed = o.m > 0 && o.l > 0; });
+  hyc.forEach(x => { const o = st.get(x.w.toLowerCase());
+    if (o.l === 0 && o.m > 0) return;                                      // tên riêng (luôn viết hoa giữa câu): bỏ hẳn
+    if (x.cap === 'm') return;                                             // từ lẫn: chỉ đề xuất chỗ viết thường
+    const to = x.w.replace(/-/g, ' ');
+    R.hy.push({ b: x.b, c: x.c, n: x.n, vi: x.vi, k: x.k, i: x.i, s: x.s, pos: x.pos, from: x.w, to, word: x.w.toLowerCase(), wordTo: to.toLowerCase(), grp: o.grp, mixed: o.mixed, on: o.grp === 'ok' }); });
   return R;
 }
 function toneRef(it){ return `${it.b} ${it.c}:${it.n == null ? '?' : it.n}${it.k === 'h' ? ' (tiêu đề)' : it.k === 'f' ? ' (chú thích)' : ''}`; }
@@ -6021,13 +6041,23 @@ function toneOpen(){
     }
     const L = R[dir], on = L.filter(x => x.on), words = new Map();
     L.forEach(x => { const k = x.word + ' → ' + x.wordTo; const w = words.get(k) || { k, n: 0, on: 0 }; w.n++; if (x.on) w.on++; words.set(k, w); });
-    const chips = [...words.values()].sort((a, b) => b.n - a.n).map(w =>
-      `<label class="artag" style="margin:0 12px 6px 0"><input type="checkbox" data-w="${esc(w.k)}"${w.on === w.n ? ' checked' : ''}> ${esc(w.k)} <span class="hytag">(${w.n})</span></label>`).join('');
+    const chipOf = w => `<label class="artag" style="margin:0 12px 6px 0"><input type="checkbox" data-w="${esc(w.k)}"${w.on === w.n ? ' checked' : ''}> ${esc(w.k)} <span class="hytag">(${w.n})</span></label>`;
+    let chips;
+    if (dir === 'hy'){
+      const gof = new Map(); L.forEach(x => gof.set(x.word + ' → ' + x.wordTo, x.grp));
+      const secs = { ok: [], xem: [], dau: [] };
+      [...words.values()].sort((a, b) => b.n - a.n).forEach(w => secs[gof.get(w.k)].push(w));
+      const sec = (g, title, note) => secs[g].length ? `<div class="hynote" style="margin:10px 0 6px"><b>${title}</b> — ${nm(secs[g].length)} từ, ${nm(secs[g].reduce((a, w) => a + w.n, 0))} chỗ. ${note} <button class="sbtn" data-a="grp" data-g="${g}" data-v="1">Tích cả nhóm</button> <button class="sbtn" data-a="grp" data-g="${g}" data-v="0">Bỏ tích cả nhóm</button></div>${secs[g].map(chipOf).join('')}` : '';
+      chips = sec('ok', '✔ Từ thường, chắc chắn', 'Mọi âm tiết đều là chữ Việt quen thuộc trong sách, không có chỗ viết hoa giữa câu.') +
+              sec('xem', '⚠ Cần xem', 'Có âm tiết lạ (có thể là từ phiên âm như ta-lâng, siếc-lơ, hoặc từ hiếm) hoặc từ cũng có chỗ viết hoa giữa câu.') +
+              sec('dau', '⚠ Chỉ gặp ở đầu câu', 'Không phân biệt được từ thường hay tên riêng.');
+    } else chips = [...words.values()].sort((a, b) => b.n - a.n).map(chipOf).join('');
     const bk = new Set(on.map(x => x.b)).size;
     const btn = (d, label) => `<button class="sbtn" data-a="dir" data-d="${d}" style="${dir === d ? 'background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700' : ''}">${label}</button>`;
     sheet.innerHTML = `<div class="hybar"><h3 style="margin:0 0 6px">🔤 Đổi cách đặt dấu thanh · toàn bộ Kinh Thánh</h3>
       <p class="hynote">Chỉ đụng tới vần oa, oe, uy ở cuối âm tiết (hòa/hoà, khỏe/khoẻ, thủy/thuỷ). Các chữ như hoàn, toàn, loài, quý, quả… không bao giờ bị đổi. Xem trước từng chỗ, bỏ tích chỗ nào không muốn đổi rồi mới bấm đổi.</p>
-      <div class="hybtn" style="margin-top:0">${btn('cu', `Đổi sang kiểu CŨ 1925 · hòa → hoà (${nm(R.cu.length)} chỗ)`)}${btn('moi', `Đổi sang kiểu MỚI · hoà → hòa (${nm(R.moi.length)} chỗ)`)}${btn('yi', `Thống nhất y/i · kì → kỳ (${nm(R.yi.length)} chỗ)`)}</div>
+      <div class="hybtn" style="margin-top:0">${btn('cu', `Đổi sang kiểu CŨ 1925 · hòa → hoà (${nm(R.cu.length)} chỗ)`)}${btn('moi', `Đổi sang kiểu MỚI · hoà → hòa (${nm(R.moi.length)} chỗ)`)}${btn('yi', `Thống nhất y/i · kì → kỳ (${nm(R.yi.length)} chỗ)`)}${btn('hy', `Bỏ gạch nối · xem-xét → xem xét (${nm(R.hy.length)} chỗ)`)}</div>
+      ${dir === 'hy' ? `<p class="hynote" style="margin-top:8px"><b>Bỏ gạch nối:</b> đã tự LOẠI ${nm(R.hySkip.words)} từ tên riêng / phiên âm luôn viết hoa giữa câu (${nm(R.hySkip.n)} chỗ, ví dụ Giê-hô-va, Ê-díp-tô) — các từ này không xuất hiện trong danh sách và không bị đổi. Nhóm ✔ được tích sẵn; nhóm ⚠ để trống để bạn xem.</p>` : ''}
       ${dir === 'yi' ? `<p class="hynote" style="margin-top:8px"><b>Cách thống nhất:</b> mỗi chữ giữ kiểu đang có nhiều hơn, đổi các chỗ lẻ cho giống. Chữ nào số chỗ hai kiểu gần nhau thì để TRỐNG ô tích — bạn tự xem rồi tích.<br>${R.yiInfo.map(z => `${esc(z.keep)} ${z.nKeep} · ${esc(z.other)} ${z.nOther}${z.nOther ? (z.auto ? ' → đổi' : ' → cần xem') : ''}`).join(' &nbsp;|&nbsp; ')}</p>` : ''}
       <p class="hysum" style="margin-top:8px"><span class="hyw r">${nm(on.length)} chỗ sẽ đổi</span> <span class="hytag">${bk} sách · tổng ${nm(L.length)} chỗ tìm thấy</span></p>
       <div class="hybtn" style="margin-top:0">
@@ -6040,7 +6070,7 @@ function toneOpen(){
   };
   const load = async () => {
     R = null; draw();
-    try { await edAuto(); R = await toneScanAll(); } catch(e){ toast('Lỗi khi quét: ' + (e.message || e)); R = { cu: [], moi: [], yi: [], yiInfo: [] }; }
+    try { await edAuto(); R = await toneScanAll(); } catch(e){ toast('Lỗi khi quét: ' + (e.message || e)); R = { cu: [], moi: [], yi: [], yiInfo: [], hy: [], hySkip: { words: 0, n: 0 } }; }
     shown = 300; draw();
   };
   const copyText = async t => {
@@ -6069,6 +6099,7 @@ function toneOpen(){
     if (a === 'close') return o.remove();
     if (a === 'more'){ shown += 300; return draw(); }
     if (a === 'showall'){ shown = 1e9; return draw(); }
+    if (a === 'grp'){ R.hy.forEach(x => { if (x.grp === b.dataset.g) x.on = b.dataset.v === '1'; }); return draw(); }
     if (a === 'dir'){ dir = b.dataset.d; shown = 300; view = 'scan'; return draw(); }
     if (a === 'all' || a === 'none'){ R[dir].forEach(x => x.on = a === 'all'); return draw(); }
     if (a === 'rescan' || a === 'back'){ view = 'scan'; return load(); }
