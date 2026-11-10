@@ -1621,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.10e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6651,6 +6651,7 @@ function sxReplaceStart(){
   if (!sx.uni && /[\r\n]/.test($('#sxRep').value)) return toast('Chữ thay thế không được có xuống dòng.');
   const P = sxPlan(rep);
   if (!P.plan.length) return toast(P.nl ? 'Các chỗ tìm thấy đều vắt qua xuống dòng — hãy dùng ✏️ Sửa › để sửa tay.' : 'Không có chỗ nào cần thay (chữ thay thế giống chữ cũ).');
+  if (!sx.uni && !rep && P.plan.length > 2 && !confirm(`⚠ Ô "Thay bằng" đang TRỐNG: cách này sẽ XÓA “${sx.q}” ở ${P.plan.length} chỗ, để lại câu thiếu chữ.\n\nNếu bạn muốn đổi sang chữ khác (vd viết hoa “Toàn Năng”) thì bấm Hủy, gõ chữ mới vào ô "Thay bằng" rồi thử lại.\n\nChỉ bấm OK nếu thật sự muốn xóa.`)) return;
   sxReview(rep, P);
 }
 /* ===== NGOẶC KÉP CONG: đổi " (thẳng) → “ ” (cong) hàng loạt, có xem trước & Hoàn tác (dùng chung sxReview / sxApply) =====
