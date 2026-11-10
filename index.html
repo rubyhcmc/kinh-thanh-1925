@@ -217,7 +217,7 @@ html[data-paper] .v.flash .vn{background:#000;color:#f4f3ee;box-shadow:0 0 0 2px
 .sec .ref{display:block;font-weight:400;font-style:italic;font-size:.8em;color:var(--muted);margin-top:.15em}
 .hd{margin:1.5em 0 .6em;text-align:center}
 .hd .sec,.hd .sec2,.hd .ref1{margin:0}
-.sec2{font-size:.98em;font-weight:700;font-style:normal;color:var(--fg);line-height:1.35;margin-top:.3em}   /* tiểu mục (dòng # thứ 2 trở đi): cùng kiểu đậm, đủ đậm màu như mục lớn, chỉ nhỏ hơn một nấc; dòng tham chiếu (Từ 2:1 đến 3:22) mới là chữ nghiêng nhạt */
+.sec2{font-size:.9em;font-weight:400;font-style:normal;color:var(--fg);line-height:1.4;margin-top:.35em}   /* dòng dưới tiêu đề (dòng # thứ 2 trở đi): chữ thường, nhỏ hơn mục lớn — giống sách in (Thi-thiên: tiêu đề đậm, dòng mô tả bên dưới không đậm) */
 .ref1{font-style:italic;font-size:.8em;color:var(--muted)}
 .para{margin:0 0 .75em}
 .dc{float:left;font-size:3.5em;line-height:.8;font-weight:700;color:var(--accent);margin:.07em .12em 0 0}
@@ -1621,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.10f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
