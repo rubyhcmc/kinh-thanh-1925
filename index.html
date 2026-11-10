@@ -1621,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10f';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.11b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1984,7 +1984,7 @@ let kjTok = 0;
 function ktJumpVerse(n, top){
   const el0 = $('#v' + n); if (!el0) return false;
   const my = ++kjTok;
-  if (top && pgOn()) pgPinTop(el0);                                   // ghim / dấu trang / ghi chú: đưa câu lên đầu trang giấy
+  /* Trang giấy: KHÔNG ép câu sang đầu trang kế nữa — mở đúng trang mà câu đang nằm (đã gỡ pgPinTop khỏi đây), câu chỉ được tô nền nhẹ. */
   if (pgScrollTo(el0)){ pg.vWant = { n:String(n), page:pg.page, key:S.book + '|' + S.chapter }; flashVerse(el0); syncVerse(); return true; }
   const key0 = curBook ? curBook.name + '|' + S.chapter : '';
   const cn = $('#chapNav'); let user = false; const timers = [];
@@ -7888,16 +7888,62 @@ async function exBuildSetJson(key, list, ui, baseName){
   } catch(e){ ok = false; }
   return { file, st, ok };
 }
+/* ===== LƯU ĐÈ lên đúng tệp cũ (máy tính Chrome/Edge) =====
+   Chọn tệp MỘT lần → app nhớ → những lần sau chỉ bấm Lưu là ghi đè thẳng lên tệp đó (không còn tạo "Kinh-Thanh (1).json", "(2)"…).
+   Trước khi ghi: so với tệp cũ, cảnh báo nếu bản mới ÍT sách/câu hơn hoặc tệp cũ không phải JSON Kinh Thánh; sau khi ghi: đọc lại kiểm tra kích thước; có nút Hoàn tác trả lại nội dung cũ. */
+const canOverwrite = () => typeof window.showSaveFilePicker === 'function' && !matchMedia('(pointer:coarse)').matches;
+function ovrDB(){ return new Promise((res, rej) => { const r = indexedDB.open('ktHandles', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function ovrGet(k){ try { const db = await ovrDB(); return await new Promise(res => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch(e){ return null; } }
+async function ovrSet(k, v){ try { const db = await ovrDB(); await new Promise((res, rej) => { const t = db.transaction('h', 'readwrite'); if (v) t.objectStore('h').put(v, k); else t.objectStore('h').delete(k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch(e){} }
+function ovrSummary(txt){   // đọc JSON Kinh Thánh → { books, verses, map } hoặc null nếu không phải
+  try {
+    const j = JSON.parse(txt), bs = j && j.bible && j.bible.books; if (!Array.isArray(bs)) return null;
+    const map = new Map(); let verses = 0;
+    bs.forEach(b => (b.chapters || []).forEach((ch, ci) => (ch || []).forEach(v => { verses++; map.set(b.name + '|' + (ci + 1) + '|' + v.n, (v.t || '') + '\u0001' + (v.h || '') + '\u0001' + (v.fn || []).join('\u0002')); })));
+    return { books:bs.length, verses, map };
+  } catch(e){ return null; }
+}
+async function ovrWrite(h, file){   // trả về { cancel } hoặc { old, note }
+  let perm = await h.queryPermission({ mode:'readwrite' });
+  if (perm !== 'granted') perm = await h.requestPermission({ mode:'readwrite' });
+  if (perm !== 'granted') throw new Error('chưa được cấp quyền ghi vào tệp');
+  let oldText = ''; try { oldText = await (await h.getFile()).text(); } catch(e){}
+  const newText = await file.text();
+  let note = '';
+  if (/\.json$/i.test(h.name) && oldText.trim()){
+    const a = ovrSummary(oldText), b = ovrSummary(newText);
+    if (!a){ if (!confirm(`Tệp cũ “${h.name}” KHÔNG phải tệp JSON Kinh Thánh của app (hoặc bị hỏng).\n\nVẫn ghi đè lên nó?`)) return { cancel:true }; }
+    else if (b){
+      let diff = 0; for (const [k, v] of b.map) if (a.map.get(k) !== v) diff++; for (const k of a.map.keys()) if (!b.map.has(k)) diff++;
+      note = diff ? `${diff} câu khác bản cũ` : 'giống hệt bản cũ';
+      if (b.books < a.books || b.verses < a.verses){
+        if (!confirm(`⚠ BẢN MỚI ÍT HƠN BẢN CŨ\n\nTệp cũ: ${a.books} sách · ${a.verses} câu\nBản sắp lưu: ${b.books} sách · ${b.verses} câu\n\nCó thể bạn đang lưu nhầm (mới xuất một phần?). Vẫn ghi đè?`)) return { cancel:true };
+      }
+    }
+  }
+  const w = await h.createWritable(); await w.write(file); await w.close();
+  const sz = (await h.getFile()).size; if (sz !== file.size) throw new Error(`ghi xong nhưng dung lượng không khớp (${sz} ≠ ${file.size}) – hãy lưu lại`);
+  return { old: oldText, note };
+}
+async function ovrPick(file, key){
+  const prev = await ovrGet(key); const ext = (file.name.match(/\.[A-Za-z0-9]+$/) || ['.json'])[0];
+  const opt = { id:'ktoverwrite', suggestedName:file.name, types:[{ description:file.name, accept:{ [file.type || 'application/octet-stream']:[ext] } }] };
+  if (prev) opt.startIn = prev;
+  const h = await window.showSaveFilePicker(opt); await ovrSet(key, h); return h;
+}
 /* Bảng kết quả / lưu tệp: SỬA TÊN từng tệp + CHỌN THƯ MỤC lưu (máy tính), rồi mới bấm Lưu. Nút là một cú chạm MỚI nên hộp chọn thư mục / bảng chia sẻ của điện thoại hoạt động bình thường */
 function exSetResult(title, files, lines, ok, groups){
   const mb = f => (f.size / 1048576).toFixed(1) + ' MB', extOf = n => (String(n).match(/\.[A-Za-z0-9]+$/) || [''])[0];
-  let dir = null;
+  let dir = null, tgt = null;
+  const single = files.length === 1 && canOverwrite(), tgtKey = 'ovr:' + (files[0] ? files[0].name : '');
   const o = document.createElement('div'); o.className = 'overlay'; o.style.zIndex = 90;
   const rows = files.map((f, i) => (groups && groups[i] && groups[i] !== groups[i - 1] ? `<div style="margin:${i ? 14 : 0}px 0 6px;font-weight:700;font-size:13px;letter-spacing:.04em;color:var(--accent)">${esc(groups[i])}</div>` : '') + `<div style="margin:0 0 8px"><div style="display:flex;gap:6px;align-items:center"><input type="text" data-i="${i}" value="${esc(f.name.slice(0, f.name.length - extOf(f.name).length))}" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Tên tệp ${i + 1}" style="flex:1;min-width:0;box-sizing:border-box"><span style="flex:none;font-weight:700;color:var(--muted)">${esc(extOf(f.name))}</span></div><small style="color:var(--muted)">${mb(f)}</small></div>`).join('');
   o.innerHTML = `<div class="sheet"><h3 style="margin-top:0">${esc(title)}</h3>
     <div class="log ${ok ? 'ok' : 'err'}" style="margin:0 0 10px;white-space:pre-wrap;max-height:28vh;overflow:auto">${esc(lines.join('\n'))}</div>
     <label class="lbl" style="margin-top:0">Tên tệp ${files.length > 1 ? '(sửa được từng tệp)' : '(sửa được)'}</label>${rows}
-    ${canPickDir()
+    ${single
+      ? `<label class="lbl">Tệp đích — lưu ĐÈ lên tệp cũ</label><div style="display:flex;gap:8px;align-items:center;margin:0 0 4px"><button class="btn" data-k="tgt" type="button">📂 Chọn tệp…</button><span id="exTgt" style="flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Chưa chọn</span><button class="btn" data-k="tgtx" type="button" hidden title="Bỏ nhớ tệp này">✕</button></div><small style="color:var(--muted)">Chọn đúng tệp JSON cũ một lần; từ lần sau chỉ bấm Lưu là ghi đè thẳng lên tệp đó. Trước khi ghi app so với tệp cũ và cảnh báo nếu bản mới ít hơn.</small>`
+      : canPickDir()
       ? `<label class="lbl">Thư mục lưu</label><div style="display:flex;gap:8px;align-items:center;margin:0 0 4px"><button class="btn" data-k="dir" type="button">📁 Chọn thư mục…</button><span id="exDirName" style="flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Chưa chọn – sẽ tải về thư mục mặc định</span></div>`
       : `<p class="hint" style="margin:4px 0 0;font-size:13px;color:var(--muted)">Điện thoại: bấm Lưu thì bảng chia sẻ hiện ra – chọn “Lưu vào Tệp” rồi chọn thư mục.</p>`}
     <div class="btns" style="flex-direction:column"><button class="btn primary" data-k="save" type="button">💾 Lưu tệp</button><button class="btn" data-k="x" type="button">Xong</button></div></div>`;
@@ -7909,6 +7955,22 @@ function exSetResult(title, files, lines, ok, groups){
     if (k === 'dir'){
       try { dir = await window.showDirectoryPicker({ id:'ktexport', mode:'readwrite' }); o.querySelector('#exDirName').textContent = '📁 ' + dir.name; o.querySelector('#exDirName').style.color = 'var(--fg)'; }
       catch(err){ if (!(err && err.name === 'AbortError')) toast('Không mở được thư mục: ' + (err.message || err)); }
+      return;
+    }
+    if (k === 'tgt' || k === 'tgtx'){
+      if (k === 'tgtx'){ tgt = null; await ovrSet(tgtKey, null); return setTgt(); }
+      try { tgt = await ovrPick(files[0], tgtKey); setTgt(); } catch(err){ if (!(err && err.name === 'AbortError')) toast('Không mở được hộp chọn tệp: ' + (err.message || err)); }
+      return;
+    }
+    if (k === 'save' && single){
+      try {
+        if (!tgt){ try { tgt = await ovrPick(files[0], tgtKey); setTgt(); } catch(err){ if (err && err.name === 'AbortError') return toast('Đã hủy – chưa lưu tệp nào'); throw err; } }
+        const r = await ovrWrite(tgt, files[0]);
+        if (r.cancel) return toast('Đã hủy – tệp cũ giữ nguyên');
+        const msg = `💾 Đã lưu đè “${tgt.name}”${r.note ? ' · ' + r.note : ''}`, h = tgt;
+        if (r.old) toastAct(msg, 'Hoàn tác', async () => { try { const w = await h.createWritable(); await w.write(r.old); await w.close(); toast('↩ Đã trả tệp về nội dung cũ'); } catch(e){ toast('Không hoàn tác được: ' + (e.message || e)); } });
+        else toast(msg);
+      } catch(err){ toast('Không lưu đè được: ' + (err.message || err)); }
       return;
     }
     if (k === 'save'){
@@ -7928,7 +7990,14 @@ function exSetResult(title, files, lines, ok, groups){
       await saveFiles(out);
     }
   });
+  function setTgt(){
+    const sp = o.querySelector('#exTgt'), x = o.querySelector('[data-k="tgtx"]'), sv = o.querySelector('[data-k="save"]'), inp = o.querySelector('input[data-i="0"]');
+    if (!sp) return;
+    sp.textContent = tgt ? '📄 ' + tgt.name : 'Chưa chọn'; sp.style.color = tgt ? 'var(--fg)' : 'var(--muted)'; x.hidden = !tgt;
+    sv.textContent = tgt ? `💾 Lưu đè lên “${tgt.name}”` : '💾 Lưu tệp'; if (inp) inp.disabled = !!tgt;
+  }
   document.body.appendChild(o);
+  if (single) ovrGet(tgtKey).then(h => { if (h && !tgt){ tgt = h; setTgt(); } });
 }
 async function exportSet(key, kind, baseName){                     // chỉ xuất JSON trọn bộ (đã bỏ Word theo nhóm / trọn bộ)
   if (exBusy) return toast('Đang có tác vụ xuất/khôi phục khác, hãy chờ xong rồi thử lại');
