@@ -909,6 +909,8 @@ body.pg .pgv>.reader .pl,body.pg .pgv>.reader .fn,body.pg .pgv>.reader .fnx{brea
 /* Dàn trang v.n: khối tiêu đề (mục lớn + tiểu mục + dòng tham chiếu) không bị cắt đôi giữa hai trang; .pgbrk = JS phát hiện tiêu đề bị kẹt một mình cuối trang → đẩy cả khối sang đầu trang kế (iOS/WebKit bỏ qua break-after:avoid) */
 body.pg .pgv>.reader .hd{break-inside:avoid;-webkit-column-break-inside:avoid}
 body.pg .pgv>.reader .hd.pgbrk{break-before:column;-webkit-column-break-before:always;margin-top:0}
+/* .pgjmp = câu vừa được ghim / đánh dấu / mở từ ghi chú: ép bắt đầu ở ĐẦU trang để mở lại thấy ngay ở đầu màn hình (không nằm cuối trang trước) */
+body.pg .pgv>.reader .v.pgjmp{break-before:column;-webkit-column-break-before:always;margin-top:0}
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
 html[data-paper] .reader.print{text-align:justify}
 
@@ -1616,7 +1618,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.10b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1976,9 +1978,10 @@ $('#selChap').onchange = e => { S.chapter = +e.target.value; saveS(); renderChap
 /* Nhảy tới câu n và GIỮ câu ở đầu màn hình: sau khi render lại chương (gõ "7:14"), bố cục/phông chữ chưa ổn định
    nên 1 lần scrollIntoView sẽ lệch. Ở đây định vị lại nhiều lần cho tới khi ổn định hoặc người dùng chạm/cuộn. */
 let kjTok = 0;
-function ktJumpVerse(n){
+function ktJumpVerse(n, top){
   const el0 = $('#v' + n); if (!el0) return false;
   const my = ++kjTok;
+  if (top && pgOn()) pgPinTop(el0);                                   // ghim / dấu trang / ghi chú: đưa câu lên đầu trang giấy
   if (pgScrollTo(el0)){ pg.vWant = { n:String(n), page:pg.page, key:S.book + '|' + S.chapter }; flashVerse(el0); syncVerse(); return true; }
   const key0 = curBook ? curBook.name + '|' + S.chapter : '';
   const cn = $('#chapNav'); let user = false; const timers = [];
@@ -2515,14 +2518,14 @@ function removeBookmark(n){
   BM = BM.filter(b => b !== old); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){}
   toastAct(`Đã bỏ đánh dấu ${bk} ${ch0}:${n}`, 'Hoàn tác', () => { BM.unshift(old); saveBM(); markBookmarks(); try { pgPrepClear(true); } catch(e){} });
 }
-function scrollToVerse(n){
-  ktJumpVerse(n);
+function scrollToVerse(n, top){
+  ktJumpVerse(n, top);
 }
 async function goBookmark(b){
   if (!bibleMeta.some(m => m.name === b.book)){ toast('Sách "' + b.book + '" không còn trong máy'); return; }
   if (document.body.classList.contains('searching')) setSearch(false);
   if (!curBook || curBook.name !== b.book || S.chapter !== b.ch) await openBook(b.book, b.ch);
-  setTimeout(() => scrollToVerse(b.n), 60);
+  setTimeout(() => scrollToVerse(b.n, true), 60);
 }
 async function restoreBookmark(){        // gọi một lần khi mở app
   const b = BM[0];
@@ -8521,6 +8524,28 @@ function pgGo(p){
 }
 const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
 function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
+/* Câu vừa nhảy tới (ghim / dấu trang / tìm kiếm / gõ số câu) mà người đọc CHƯA lật sang trang khác: sau mỗi lần chữ dàn lại (phông chữ tải xong, thanh địa chỉ iPhone co giãn, xoay máy)
+   phải bám theo CÂU chứ không bám theo số trang, nếu không câu trôi sang trang kế và màn hình dừng ở cuối trang trước. */
+function pgWantEl(){
+  const w = pg.vWant; if (!w || w.key !== S.book + '|' + S.chapter || w.page !== pg.page) return null;
+  return $('#v' + w.n);
+}
+/* Ghim / đánh dấu / mở từ ghi chú: câu phải nằm ở ĐẦU trang. Nếu câu đang nằm giữa hoặc cuối trang thì ép nó bắt đầu trang kế (.pgjmp, chỉ một câu một lúc), rồi đếm lại số trang. */
+function pgPinTop(el){
+  try {
+    const a = $('#bibleText'); if (!a || !el || !pgOn()) return;
+    if (!pg.pages || pg.dirty){ pgCount(); pg.dirty = false; }
+    let changed = false;
+    a.querySelectorAll('.pgjmp').forEach(e => { if (e !== el){ e.classList.remove('pgjmp'); changed = true; } });
+    if (!el.classList.contains('pgjmp')){
+      const rc = el.getClientRects()[0], cs = getComputedStyle(a);
+      const lh = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) || 18) * 1.8;
+      const top0 = a.getBoundingClientRect().top + (parseFloat(a.style.paddingTop) || 0);
+      if (rc && rc.top - top0 > lh * 0.9){ el.classList.add('pgjmp'); changed = true; }      // chưa ở đầu trang → đẩy xuống đầu trang kế
+    }
+    if (changed){ pgPrepClear(true); pg.fit = null; pgCount(); pg.dirty = false; }
+  } catch(e){}
+}
 function pgFirstVisible(){
   const b = $('#pgView').getBoundingClientRect();
   const vs = $$('#bibleText .v');
@@ -8534,6 +8559,7 @@ function pgResetArt(art){
   const st = art.style;
   st.transform = st.lineHeight = st.height = st.paddingTop = st.paddingBottom = st.transition = st.willChange = '';
   art.querySelectorAll('.pgbrk').forEach(e => e.classList.remove('pgbrk')); art._brk = null;
+  art.querySelectorAll('.pgjmp').forEach(e => e.classList.remove('pgjmp'));
   if (!art.getAttribute('style')) art.removeAttribute('style');
   document.body.classList.remove('pgchrome');
 }
@@ -8545,6 +8571,8 @@ function pgRefresh(keepVerse){                                     // dựng l�
   const W = pgW(), widthSame = pg.lastW === W; pg.lastW = W;
   pgCount();
   if (pg.toEnd){ pg.toEnd = false; return pgGo(pg.pages - 1); }
+  const wv = pgWantEl();
+  if (wv){ pgGo(pgPageOf(wv)); if (pg.vWant) pg.vWant.page = pg.page; return; }   // vừa nhảy tới câu ghim: bám theo câu, không bám số trang
   if (keepVerse === undefined && widthSame) return pgGo(pg.page);   // chỉ đổi chiều cao (thanh địa chỉ iPhone co giãn) → giữ nguyên trang, không nhảy
   const n = keepVerse === undefined ? pgFirstVisible() : keepVerse, el = n ? $('#v' + n) : null;
   if (el) pgGo(pgPageOf(el)); else pgGo(pg.page);
