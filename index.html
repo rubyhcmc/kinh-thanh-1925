@@ -1621,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.11b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.11c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -2769,6 +2769,7 @@ let lsCur = null;
 function lsClose(){ const back = lsCur && lsCur.back; lsEl.classList.remove('open'); if (back) setTimeout(openLessons, 240); setTimeout(() => { lsEl.hidden = true; }, 220); try { lsTa.blur(); } catch(e){} }
 /* Hai chế độ: 'view' = xem bài học hoàn chỉnh · 'edit' = soạn thảo */
 function lsMode(m){
+  if (!lsCur) return;
   const v = m === 'view'; lsCur.mode = m;
   lsTa.hidden = v; $('.lspanel', lsEl).classList.toggle('viewing', v); $('#lsRead').hidden = !v; $('#lsSave').hidden = v; $('#lsEdit').hidden = !v;
   $('#lsLbl').textContent = v ? 'Bài học của bạn' : 'Bài học cá nhân';
