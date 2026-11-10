@@ -909,6 +909,9 @@ body.pg .pgv>.reader .pl,body.pg .pgv>.reader .fn,body.pg .pgv>.reader .fnx{brea
 /* Dàn trang v.n: khối tiêu đề (mục lớn + tiểu mục + dòng tham chiếu) không bị cắt đôi giữa hai trang; .pgbrk = JS phát hiện tiêu đề bị kẹt một mình cuối trang → đẩy cả khối sang đầu trang kế (iOS/WebKit bỏ qua break-after:avoid) */
 body.pg .pgv>.reader .hd{break-inside:avoid;-webkit-column-break-inside:avoid}
 body.pg .pgv>.reader .hd.pgbrk{break-before:column;-webkit-column-break-before:always;margin-top:0}
+/* Trang giấy: câu vừa mở (đọc tới đây / dấu trang / ghim) chỉ tô nền, KHÔNG vẽ khung viền đen + bóng tràn ra ngoài — khung ấy bị cột trang cắt mất cạnh trên, chồng lên chữ số chương và trông như vỡ giao diện */
+html body.pg .v.flash,html[data-paper] body.pg .v.flash{outline:0!important;box-shadow:none!important;animation:none!important;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+html body.pg .v.flash .vn,html[data-paper] body.pg .v.flash .vn{animation:none!important;box-shadow:none!important}
 /* .pgjmp = câu vừa được ghim / đánh dấu / mở từ ghi chú: ép bắt đầu ở ĐẦU trang để mở lại thấy ngay ở đầu màn hình (không nằm cuối trang trước) */
 body.pg .pgv>.reader .v.pgjmp{break-before:column;-webkit-column-break-before:always;margin-top:0}
 html[data-paper] .reader{padding-left:26px;padding-right:26px;line-height:1.85}
@@ -1618,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.10c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
