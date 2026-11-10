@@ -1621,7 +1621,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.10c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.10d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4761,10 +4761,29 @@ function edRefresh(){
 const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
+let persistWarn = [];
+/* Canh chừng mất dấu khi sửa tay: so chữ cũ với chữ mới trong cùng một câu; nếu một chữ bỏ nguyên các chữ cái nhưng RƠI mất dấu (vd "sự" → "su", "người" → "nguời") thì trả về danh sách để báo ngay */
+function ktMarkLoss(oldVs, newVs){
+  const strip = w => w.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+  const mk = w => (w.normalize('NFD').match(/\p{M}/gu) || []).length;
+  const out = [], by = new Map((oldVs || []).map(v => [v.n, v]));
+  for (const v of newVs){
+    const o = by.get(v.n); if (!o) continue;
+    for (const k of ['t', 'h']){
+      if (typeof o[k] !== 'string' || typeof v[k] !== 'string' || o[k] === v[k]) continue;
+      const a = o[k].match(/[\p{L}\p{M}]+/gu) || [], b = v[k].match(/[\p{L}\p{M}]+/gu) || [];
+      if (a.length !== b.length) continue;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && strip(a[i]) === strip(b[i]) && mk(b[i]) < mk(a[i]) && out.length < 12) out.push(`${a[i]} → ${b[i]} (câu ${v.n})`);
+    }
+  }
+  return out;
+}
 async function persistChapter(name, ch, vs, abbr, sub, title, subPos, dc){
   if (!isAdmin()) throw new Error('Chỉ quản trị viên mới được sửa nội dung.');   // chế độ chỉ đọc cho cộng đồng
   const rec = (await dbGet('books', name)) || { name, chapters:[] };
   while (rec.chapters.length < ch) rec.chapters.push([]);
+  vs.forEach(v => { ['t', 'h'].forEach(k => { if (typeof v[k] === 'string') v[k] = v[k].normalize('NFC'); }); if (Array.isArray(v.fn)) v.fn = v.fn.map(x => typeof x === 'string' ? x.normalize('NFC') : x); });   // luôn lưu dạng dấu dựng sẵn (NFC): dán từ nguồn khác có thể là dạng tổ hợp (dấu rời), hiển thị/tìm kiếm/AI đọc sẽ thấy "thiếu dấu"
+  persistWarn = ktMarkLoss(rec.chapters[ch - 1] || [], vs);
   rec.chapters[ch - 1] = vs;
   const metas = await dbAll('bookMeta');
   let meta = metas.find(m => m.name === name);
@@ -4785,6 +4804,7 @@ async function edAuto(){
     await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined, ed.Book.value.trim() === name ? ed.Title.value : undefined, ed.Book.value.trim() === name ? ed.SubPos.value : undefined, ed.Book.value.trim() === name ? ed.DcOff.value : undefined);
     edLoaded = text;
     try { localStorage.removeItem(draftKey()); } catch(e){}
+    if (persistWarn.length) toast('⚠ Có thể bị mất dấu: ' + persistWarn.slice(0, 4).join('; ') + (persistWarn.length > 4 ? '…' : '') + ' — kiểm tra lại', 6000);
     const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch(e){ ed.Auto.textContent = ''; toast('Lỗi tự lưu: ' + e.message); }
 }
