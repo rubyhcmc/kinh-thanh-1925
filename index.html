@@ -6509,6 +6509,7 @@ function sxSyncUi(){
 function sxSyncRep(){
   const go = $('#sxRepGo'), un = $('#sxUndo'), row = $('#sxRepRow'); if (!go) return;
   if (row) row.hidden = !isAdmin();
+  const qrow = $('#sxQtRow'); if (qrow) qrow.hidden = !isAdmin();
   go.disabled = !(sx.res && sx.res.length) || (sx.all && !sx.uni);
   go.title = sx.all && !sx.uni ? 'Hãy tắt “Đủ các từ” để thay thế' : '';
   go.textContent = sx.uni ? '🎯 Thống nhất tất cả…' : '🔁 Thay tất cả…';
@@ -6527,6 +6528,7 @@ function openSxFind(){
     <div class="sxrow" id="sxKinds"><button type="button" class="sxchip" data-k="">Tất cả</button><button type="button" class="sxchip" data-k="v">Lời văn</button><button type="button" class="sxchip" data-k="f">Chú thích</button><button type="button" class="sxchip" data-k="h">Tiêu đề</button></div>
     <div class="sxrow"><button type="button" class="sxchip" id="sxAcc" title="Bật: gõ “tội” chỉ ra “tội”. Tắt: “toi” cũng ra “tội”, dùng để tìm chữ bị sai dấu">Đúng dấu</button><button type="button" class="sxchip" id="sxWord" title="Bật: “ác” không ra “tác”">Nguyên từ</button><button type="button" class="sxchip" id="sxAll" title="Bật: câu phải có đủ các từ, không cần đứng liền nhau">Đủ các từ</button><button type="button" class="sxchip" id="sxKeep" title="Bật khi thay thế: “Đều” đầu câu → “Đề”, “đều” → “đề”, “ĐỀU” → “ĐỀ”. Tắt: chữ thay thế được ghi đúng như bạn gõ">Giữ chữ Hoa</button><button type="button" class="sxchip" id="sxUni" title="Gõ đúng dạng chuẩn một lần (vd: A-rôn hoặc nhiều từ: A-rôn; Môi-se). Mọi chỗ khớp theo nghĩa nhưng khác dạng đã gõ (a-rôn, A-RÔN, A rôn, hoà/hòa…) sẽ được đổi đúng thành dạng đã gõ. Không cần ô “Thay bằng”.">🎯 Thống nhất</button></div>
     <div class="sxrow" id="sxRepRow"><input type="text" id="sxRep" class="sxrepin" placeholder="Thay bằng… (để trống = xóa)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-label="Chữ thay thế"><button type="button" class="sxchip pri" id="sxRepGo" disabled>🔁 Thay tất cả…</button><button type="button" class="sxchip" id="sxUndo" hidden title="Trả lại lần thay thế gần nhất">↩ Hoàn tác</button></div>
+    <div class="sxrow" id="sxQtRow"><button type="button" class="sxchip" id="sxQuote" title="Đổi mọi dấu ngoặc kép thẳng &quot; thành ngoặc cong “ ”. Theo phạm vi và loại (Lời văn / Chú thích / Tiêu đề) đang chọn, có xem trước từng chỗ và Hoàn tác. Không cần gõ chữ tìm kiếm.">“ ” Ngoặc kép cong</button></div>
   </div><div class="sxinfo" id="sxInfo"></div><div class="sxskipbar" id="sxSkipBar" hidden></div><div class="sxbody bkbody" id="sxBody"></div></div>`;
   document.body.appendChild(el); sx.el = el;
   const sc = $('#sxScope'); sc.value = sx.scope; if (sc.value !== sx.scope){ sx.scope = ''; sc.value = ''; }
@@ -6542,6 +6544,7 @@ function openSxFind(){
   $('#sxX').onclick = sxClose;
   $('#sxRepGo').onclick = () => sxReplaceStart();
   $('#sxUndo').onclick = () => sxUndoLast();
+  $('#sxQuote').onclick = () => sxQuoteStart();
   $('#sxRep').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
   el.addEventListener('click', async e => {
     if (e.target === el) return sxClose();
@@ -6624,6 +6627,55 @@ function sxReplaceStart(){
   if (!P.plan.length) return toast(P.nl ? 'Các chỗ tìm thấy đều vắt qua xuống dòng — hãy dùng ✏️ Sửa › để sửa tay.' : 'Không có chỗ nào cần thay (chữ thay thế giống chữ cũ).');
   sxReview(rep, P);
 }
+/* ===== NGOẶC KÉP CONG: đổi " (thẳng) → “ ” (cong) hàng loạt, có xem trước & Hoàn tác (dùng chung sxReview / sxApply) =====
+   Ghép cặp theo thứ tự đọc: trong LỜI VĂN, trạng thái “đang mở ngoặc” được giữ xuyên các câu của cùng một chương (lời trích dẫn mở ở câu này, đóng ở câu sau);
+   chú thích / tiêu đề thì xét riêng từng đoạn. Chương hoặc đoạn có ngoặc không khớp cặp (lẻ, lồng nhau, mơ hồ) bị BỎ QUA và báo tên để sửa tay. Ngoặc cong có sẵn được giữ nguyên và tính vào việc ghép cặp. */
+function sxQuoteConv(s, inq){
+  const rg = []; let out = '', ok = true;
+  for (let i = 0; i < s.length; i++){
+    const ch = s[i];
+    if (ch === '\u201C'){ if (inq) ok = false; inq = true; out += ch; continue; }
+    if (ch === '\u201D'){ if (!inq) ok = false; inq = false; out += ch; continue; }
+    if (ch !== '"'){ out += ch; continue; }
+    const prev = i ? s[i - 1] : '', next = s[i + 1] || '';
+    const po = !prev || /[\s(\[{\u2014\u2013]/.test(prev), ne = !next || /[\s,.;:!?)\[\]}\u2014\u2013]/.test(next);
+    let t = po && !ne ? 'o' : (!po && ne ? 'c' : null);
+    if (!t && !prev && inq) t = 'c';
+    if (!t || (t === 'o') === inq){ ok = false; out += ch; continue; }
+    inq = t === 'o'; rg.push([i, i + 1]); out += inq ? '\u201C' : '\u201D';
+  }
+  return { out, rg, inq, ok };
+}
+function sxQuotePlan(entries){
+  const plan = [], bad = []; let badN = 0, ck = '', st = false, chBad = false, pend = [];
+  const flush = () => { if (!ck) return; if (st || chBad){ bad.push(ck); badN += pend.length; } else pend.forEach(p => plan.push(p)); pend = []; st = false; chBad = false; };
+  for (const e of entries){
+    const raw = e.o; if (typeof raw !== 'string' || !raw) continue;
+    const isV = e.k === 'v', key = e.b + ' ' + e.c;
+    if (isV && key !== ck){ flush(); ck = key; }
+    if (!/["\u201C\u201D]/.test(raw)) continue;
+    const base = raw.normalize('NFC');
+    if (base.length !== raw.length){ if (isV) chBad = true; else { bad.push(e.b + ' ' + e.c + ':' + e.n); badN++; } continue; }
+    const r = sxQuoteConv(base, isV ? st : false);
+    if (isV){ st = r.inq; if (!r.ok) chBad = true; }
+    else if (!r.ok || r.inq){ bad.push(e.b + ' ' + e.c + ':' + e.n); badN++; continue; }
+    if (r.rg.length){ const it = { e, c:{ out:r.out, base, rg:r.rg, nr:r.rg, n:r.rg.length }, on:true }; if (isV) pend.push(it); else plan.push(it); }
+  }
+  flush();
+  return { plan, bad, badN };
+}
+async function sxQuoteStart(){
+  if (!isAdmin()) return toast('Chỉ quản trị viên mới được sửa nội dung.');
+  if (!bibleMeta.length) return toast('Chưa có dữ liệu Kinh Thánh trong máy.');
+  toast('Đang quét ngoặc kép…');
+  const idx = await sxBuild(), test = bsScopeFn(sx.scope);
+  const ents = idx.filter(e => (!sx.kind || e.k === sx.kind) && (!test || test(e)));
+  const P = sxQuotePlan(ents);
+  if (!P.plan.length) return toast(P.bad.length ? `Không có chỗ nào tự đổi được. ${P.bad.length} chỗ ngoặc không khớp cặp: ${P.bad.slice(0, 5).join('; ')}` : 'Không còn dấu ngoặc kép thẳng nào trong phạm vi đang chọn.');
+  P.quote = true;
+  P.note = P.bad.length ? `⚠ ${P.bad.length} chương/đoạn có ngoặc không khớp cặp nên KHÔNG tự đổi (dùng ✏️ Sửa › để sửa tay): ${P.bad.slice(0, 6).join('; ')}${P.bad.length > 6 ? '…' : ''}` : '';
+  sxReview('', P);
+}
 function sxReview(rep, P){
   const plan = P.plan, KIND = SX_KIND, q = sx.q.trim();
   const el = document.createElement('div'); el.className = 'overlay sxp sxr'; el.style.zIndex = 97;
@@ -6639,11 +6691,13 @@ function sxReview(rep, P){
   const sum = () => {
     const on = plan.filter(p => p.on), cnt = { v:0, f:0, h:0 }; let times = 0; on.forEach(p => { cnt[p.e.k]++; times += p.c.n; });
     const warn = [];
+    if (!P.quote){
     if (!sx.acc) warn.push('⚠ Đang TẮT “Đúng dấu”: chữ khác dấu cũng bị thay — xem kỹ từng chỗ.');
     if (!sx.word) warn.push('⚠ Chưa bật “Nguyên từ”: chữ nằm trong từ dài hơn cũng bị thay.');
     if (!rep && !sx.uni) warn.push('⚠ Chữ thay thế để trống: các chỗ khớp sẽ bị XÓA.');
-    $('#srSum').innerHTML = (sx.uni ? `<div>🎯 Thống nhất theo đúng dạng: <b>${esc(rep)}</b> · ${esc(sxScopeLabel())}</div>` : `<div>“<b>${esc(q)}</b>” → ${rep ? '“<b>' + esc(rep) + '</b>”' : '<b>(xóa)</b>'} · ${esc(sxScopeLabel())}</div>`) + warn.map(w => `<div class="srwarn">${esc(w)}</div>`).join('');
-    $('#srInfo').textContent = `Sẽ thay ${on.length}/${plan.length} chỗ (${times} lần) · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề` + (P.nl ? `\n${P.nl} chỗ vắt qua xuống dòng không tự thay (dùng ✏️ Sửa › để sửa tay).` : '');
+    }
+    $('#srSum').innerHTML = (P.quote ? `<div>Đổi ngoặc kép thẳng <b>"</b> → ngoặc cong <b>“ ”</b> · ${esc(sxScopeLabel())}</div>` : (sx.uni ? `<div>🎯 Thống nhất theo đúng dạng: <b>${esc(rep)}</b> · ${esc(sxScopeLabel())}</div>` : `<div>“<b>${esc(q)}</b>” → ${rep ? '“<b>' + esc(rep) + '</b>”' : '<b>(xóa)</b>'} · ${esc(sxScopeLabel())}</div>`)) + warn.map(w => `<div class="srwarn">${esc(w)}</div>`).join('');
+    $('#srInfo').textContent = `Sẽ thay ${on.length}/${plan.length} chỗ (${times} lần) · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề` + (P.nl ? `\n${P.nl} chỗ vắt qua xuống dòng không tự thay (dùng ✏️ Sửa › để sửa tay).` : '') + (P.note ? '\n' + P.note : '');
     $('#srGo').textContent = on.length ? `Thay ${on.length} chỗ` : 'Chưa chọn chỗ nào'; $('#srGo').disabled = !on.length;
   };
   const dsp = t => t.replace(/\n/g, ' ');
@@ -6670,7 +6724,7 @@ function sxReview(rep, P){
   $('#srGo').onclick = async () => {
     const on = plan.filter(p => p.on); if (!on.length) return;
     const times = on.reduce((a, p) => a + p.c.n, 0), bk = new Set(on.map(p => p.e.b)).size;
-    if (!confirm(`Thay ${on.length} chỗ (${times} lần) trong ${bk} sách?\n${sx.uni ? 'Thống nhất: ' + rep : '“' + q + '” → ' + (rep ? '“' + rep + '”' : '(xóa)')}\n\nSau khi thay, bấm “↩ Hoàn tác” để trả lại nếu cần.`)) return;
+    if (!confirm(`Thay ${on.length} chỗ (${times} lần) trong ${bk} sách?\n${P.quote ? 'Ngoặc kép thẳng \" → cong “ ”' : sx.uni ? 'Thống nhất: ' + rep : '“' + q + '” → ' + (rep ? '“' + rep + '”' : '(xóa)')}\n\nSau khi thay, bấm “↩ Hoàn tác” để trả lại nếu cần.`)) return;
     $('#srGo').disabled = true; close();
     await sxApply(on);
   };
