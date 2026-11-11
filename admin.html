@@ -1703,7 +1703,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -9721,13 +9721,22 @@ planSum();
   const nativeFocus = HTMLElement.prototype.focus, nativeBlur = HTMLElement.prototype.blur;
   const actGet = Object.getOwnPropertyDescriptor(Document.prototype, 'activeElement').get;
   let vT = null;
-  const ok = () => typeof IS_IOS !== 'undefined' && IS_IOS && de.classList.contains('sa') && !de.classList.contains('mtop');
+  /* iPhone đời cũ (iOS 16 trở xuống, vd iPhone 8 Plus) mở từ Màn hình chính: bàn phím KHÔNG bật khi focus ô ẩn trong cú chạm → bỏ cơ chế ô ẩn, dùng ô thật (thanh menu tự bay lên bằng lớp .kbup/kbtop bên dưới).
+     Máy mới vẫn dùng ô ẩn; nếu lần focus ô ẩn không thành công thì tự tắt và nhớ lại (kt.kbproxy=off). */
+  const iosMajor = (() => { const m = /OS (\d+)[_.]/.exec(navigator.userAgent || ''); return m ? +m[1] : 99; })();
+  let proxyOff = false; try { proxyOff = localStorage.getItem('kt.kbproxy') === 'off'; } catch(e){}
+  const ok = () => !proxyOff && iosMajor >= 17 && typeof IS_IOS !== 'undefined' && IS_IOS && de.classList.contains('sa') && !de.classList.contains('mtop');
   Object.defineProperty(doc, 'activeElement', { configurable: true, get(){ const a = actGet.call(doc); return (a === proxy && vT) ? vT : a; } });
   const mark = (inp, on) => { const f = inp && inp.closest('.nf'); if (f) f.classList.toggle('vf', on); };
   function vFocus(inp){
     if (inp.disabled) return;
     const prev = vT; vT = inp; proxy.value = inp.value;
     if (actGet.call(doc) !== proxy) nativeFocus.call(proxy, { preventScroll: true });
+    if (actGet.call(doc) !== proxy){            // iOS không nhận ô ẩn → tắt cơ chế này, dùng ô thật ngay trong cú chạm này
+      proxyOff = true; try { localStorage.setItem('kt.kbproxy', 'off'); } catch(e){}
+      vT = null; mark(inp, false); if (prev) mark(prev, false);
+      nativeFocus.call(inp); return;
+    }
     if (prev !== inp){
       mark(prev, false); mark(inp, true);
       /* Chuyển thẳng từ ô Chương sang ô Câu (hoặc ngược lại): ô cũ phải được “rời đi” đúng cách để số vừa gõ (vd chương 1) được chốt NGAY,
