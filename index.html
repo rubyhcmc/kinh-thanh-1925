@@ -128,6 +128,11 @@ html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{top:calc(env(safe-area-ins
 /* Gõ ở ô Chương / Câu khi menu ở DƯỚI (class kbup): thanh menu GIỮ nguyên chỗ trong bố cục, chỉ được nâng lên ngay trên bàn phím bằng transform
    (không đụng tới bố cục nên nội dung trang chính đứng yên, không bị đẩy; bật ngay lúc chạm nên không có độ trễ). */
 html.sa.kbup:not(.mtop) .top,html.sa.kbup:not(.mtop) body:not(.pg) .top,html.sa.kbup:not(.mtop) body.pg:not(.searching) .top{transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;-webkit-transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;transition:none!important;z-index:60}
+/* Trang giấy + menu ở DƯỚI (Màn hình chính): thanh menu nằm TRONG LUỒNG bố cục (position:relative, thân trang là flex cột) y như chế độ thường.
+   Trước đây thanh là position:absolute sát đáy → iPhone đời cũ (iOS ≤16) chỉ hiện thanh Xong chứ không bung bàn phím khi chạm ô Chương/Câu/Tìm. Cấu trúc trong luồng là cấu trúc chế độ thường vẫn gõ được. */
+html.sa:not(.mtop) body.pg:not(.searching){display:flex;flex-direction:column}
+html.sa:not(.mtop) body.pg:not(.searching) .top{position:relative;top:auto;bottom:auto;left:auto;right:auto;width:100%;flex:none;order:2;margin-top:auto}
+html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{position:absolute;width:auto;margin-top:0}
 .rschip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px);z-index:26;display:flex;align-items:center;max-width:calc(100vw - 24px);background:var(--card);color:var(--fg);border:1px solid var(--accent);border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
 .rschip button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .rschip .rsgo{padding:10px 6px 10px 16px;min-width:0;text-align:left;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1368,7 +1373,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6414,7 +6419,7 @@ planSum();
    - Trong lúc bàn phím mở, tạm hoãn việc dàn lại trang (chế độ Trang giấy). */
 (function(){
   const b = document.body, vv = window.visualViewport;
-  const topInput = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.top') && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)); };
+  const topInput = () => { const a = document.activeElement; return !!(a && a.closest && (a.closest('.top') || a.id === 'kbJumpIn') && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !/^(checkbox|radio|button|submit|range|color|file)$/i.test(a.type)); };
   const pin = () => {
     window.ktKbFocus = topInput();
     if (!vv || document.documentElement.classList.contains('sa')) return;       // Màn hình chính đã có cách xử lý riêng ở dưới
@@ -6493,6 +6498,72 @@ planSum();
   doc.addEventListener('touchstart', e => { if (vT && !(e.target.closest && e.target.closest('.nf'))) vBlur(); }, { passive: true, capture: true });
 })();
 
+/* Ô gõ nổi cho Chương / Câu (iPhone đời cũ iOS ≤16, Màn hình chính, Trang giấy, menu ở DƯỚI).
+   Ở đây iOS không bung bàn phím khi chạm ô thật nằm trong thanh menu dưới đáy (chỉ hiện thanh "Xong"). Không có ô ẩn nào dùng được (iOS ≤16 từ chối ô ẩn).
+   Cách làm: chạm ô Chương/Câu → ngay trong cú chạm, mở một ô gõ HIỆN RÕ ở mép TRÊN màn hình (kèm nhãn + nút Xong) và focus ô đó → bàn phím luôn bung.
+   Ký tự gõ được chép sang ô thật rồi phát lại đúng sự kiện input/keydown/blur nên mọi logic nhảy chương/câu giữ nguyên. Máy khác không bị ảnh hưởng. */
+(function(){
+  const de = document.documentElement, doc = document, b = doc.body;
+  const nc = doc.getElementById('niChap'), nv = doc.getElementById('niVerse');
+  if (!nc || !nv) return;
+  const iosMajor = (() => { const m = /OS (\d+)[_.]/.exec(navigator.userAgent || ''); return m ? +m[1] : 99; })();
+  const use = () => typeof IS_IOS !== 'undefined' && IS_IOS && iosMajor < 17 && de.classList.contains('sa') && !de.classList.contains('mtop') && b.classList.contains('pg') && !b.classList.contains('searching');
+  const st = doc.createElement('style');
+  st.textContent = '#kbJump{position:fixed;left:10px;right:10px;top:calc(env(safe-area-inset-top) + var(--sbx,0px) + 8px);z-index:90;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;background:var(--bg);color:var(--fg);border:1.5px solid var(--accent);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.22);font-family:var(--sans)}'
+    + '#kbJump .kjl{font-size:14px;color:var(--muted);white-space:nowrap}'
+    + '#kbJump input{flex:1;min-width:0;height:40px;font-size:17px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:var(--fg);padding:0 10px;-webkit-appearance:none;appearance:none;outline:0}'
+    + '#kbJump button{border:0;background:var(--accent);color:#fff;border-radius:10px;height:40px;padding:0 16px;font-size:15px;font-weight:600}';
+  doc.head.appendChild(st);
+  let box = null, bi = null, bl = null, tgt = null;
+  const nativeFocus = HTMLElement.prototype.focus, nativeBlur = HTMLElement.prototype.blur;
+  function setTarget(inp){
+    tgt = inp; bl.textContent = inp === nc ? 'Chương' : 'Câu';
+    inp.dispatchEvent(new Event('focus'));                 // logic cũ: xóa số cũ, đặt dải số gợi ý vào placeholder
+    bi.value = inp.value; bi.placeholder = inp.placeholder || '';
+    window.ktKbFocus = true;
+  }
+  function open(inp){
+    if (box){ if (tgt !== inp){ const o = tgt; tgt = null; if (o) o.dispatchEvent(new Event('blur')); setTarget(inp); } return; }
+    box = doc.createElement('div'); box.id = 'kbJump';
+    box.innerHTML = '<span class="kjl"></span><input type="text" id="kbJumpIn" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" autocorrect="off" aria-label="Nhập số"><button type="button">Xong</button>';
+    bl = box.querySelector('.kjl'); bi = box.querySelector('input');
+    b.appendChild(box);
+    window.ktKbFocus = true;
+    nativeFocus.call(bi);                                  // CÙNG cú chạm → iOS bung bàn phím
+    setTarget(inp);
+    bi.addEventListener('input', () => {
+      const t = tgt; if (!t) return;
+      t.value = bi.value; t.dispatchEvent(new Event('input', { bubbles:true }));
+      if (box && tgt === t) bi.value = t.value;
+    });
+    bi.addEventListener('keydown', e => {
+      const t = tgt; if (!t) return;
+      if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Done') e.preventDefault();
+      const ev = new KeyboardEvent('keydown', { key:e.key, bubbles:true, cancelable:true });
+      t.dispatchEvent(ev); if (ev.defaultPrevented) e.preventDefault();
+      if (box && tgt === t && (e.key === 'Enter' || e.key === 'Go' || e.key === 'Done')) close();
+      else if (box && tgt === t) bi.value = t.value;
+    });
+    box.querySelector('button').addEventListener('click', () => close());
+    bi.addEventListener('blur', () => setTimeout(() => { if (box && doc.activeElement !== bi) close(); }, 80));
+  }
+  function close(){
+    if (!box) return;
+    const t = tgt, el = box; box = null; tgt = null;
+    try { nativeBlur.call(bi); } catch(e){}
+    el.remove();
+    window.ktKbFocus = false;
+    if (t) t.dispatchEvent(new Event('blur'));             // logic cũ: chốt số vừa gõ nếu hợp lệ
+  }
+  [nc, nv].forEach(inp => {
+    const f0 = inp.focus, bl0 = inp.blur;
+    inp.focus = function(o){ if (use() && !inp.disabled){ open(inp); return; } return f0.call(inp, o); };
+    inp.blur = function(){ if (box && tgt === inp){ close(); return; } return bl0.call(inp); };
+    inp.addEventListener('touchend', e => { if (!use() || inp.disabled) return; e.preventDefault(); e.stopPropagation(); open(inp); }, { passive:false, capture:true });
+  });
+  doc.addEventListener('touchstart', e => { if (box && !(e.target.closest && e.target.closest('#kbJump'))) close(); }, { passive:true, capture:true });
+})();
+
 /* Thanh menu nằm dưới (Màn hình chính): khi bàn phím mở.
    Vì sao trang bị "đẩy lên": ô nhập nằm sát đáy; iOS thấy bàn phím sắp che ô đó nên TỰ ĐẨY CẢ TRANG lên (cuộn khung nhìn), sau đó mã mới kịp chỉnh lại → nội dung giật.
    Cách làm mới (menu ở dưới): ngay lúc ô nhận con trỏ (trước khi iOS tính toán), thanh menu tạm bay lên TRÊN (class kbtop) như khi menu ở trên.
@@ -6517,6 +6588,7 @@ planSum();
     if (Math.abs(ns - cur) > 1) de.style.setProperty('--kbu', String(ns));
   };
   const fit = settle => {
+    if (document.getElementById('kbJump')) return;      // ô gõ nổi (Trang giấy, iOS ≤16) đang mở: không đụng vào bố cục
     const kb = Math.round(innerHeight - vv.height);
     if (de.classList.contains('kbup') && numBox()){ if (settle === true) place(); if (kb <= 1) return; }
     if (kb <= 1){ if (typing() && Date.now() < pend) return; reset(); return; }      // đang chờ bàn phím hiện: giữ vị trí ước lượng
@@ -6532,9 +6604,8 @@ planSum();
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    const pgPaper = b.classList.contains('pg') && !b.classList.contains('searching');   // Trang giấy: KHÔNG dời thanh menu ngay trong cú chạm (iOS ≤16 sẽ không bung bàn phím); fit() sẽ nâng thanh sau khi bàn phím đã mở
-    if (pgPaper){ if (inBar()) b.classList.add('pgchrome'); }
-    else if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
+    if (b.classList.contains('pg') && !b.classList.contains('searching') && inBar()) b.classList.add('pgchrome');   // Trang giấy: thanh menu phải ở yên (hiện) suốt lúc gõ
+    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
       /* Ô Chương/Câu: thanh menu nổi lên trên bàn phím NGAY lúc ô nhận con trỏ (dùng chiều cao bàn phím đã nhớ từ lần trước) → iOS không phải đẩy trang */
       let h = 0; try { h = +localStorage.getItem(KB) || 0; } catch(e){}
       if (h < 150 || h > 420) h = 271;
