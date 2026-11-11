@@ -1368,7 +1368,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.12b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.12c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1735,7 +1735,22 @@ function ktJumpVerse(n, top){
   const el0 = $('#v' + n); if (!el0) return false;
   const my = ++kjTok;
   /* Trang giấy: KHÔNG ép câu sang đầu trang kế nữa — mở đúng trang mà câu đang nằm (đã gỡ pgPinTop khỏi đây), câu chỉ được tô nền nhẹ. */
-  if (pgScrollTo(el0)){ pg.vWant = { n:String(n), page:pg.page, key:S.book + '|' + S.chapter }; flashVerse(el0); syncVerse(); return true; }
+  if (pgScrollTo(el0)){
+    pg.vWant = { n:String(n), page:pg.page, key:S.book + '|' + S.chapter }; flashVerse(el0); syncVerse();
+    /* Lưới an toàn: chữ/phông dàn lại muộn có thể làm câu trôi sang trang khác. Nếu người đọc chưa lật trang mà đầu câu không còn nằm trong trang đang hiện → đưa về đúng trang của câu. */
+    const keyP = S.book + '|' + S.chapter, nP = String(n);
+    [150, 450, 1000, 2000].forEach(t => setTimeout(() => {
+      try {
+        if (my !== kjTok || !pgOn() || pg.busy || pg.touching) return;
+        if (S.book + '|' + S.chapter !== keyP || !pg.vWant || pg.vWant.n !== nP || pg.vWant.page !== pg.page) return;   // đã sang chương khác / đã tự lật trang → không can thiệp
+        const e = $('#v' + nP); if (!e) return;
+        const vr = $('#pgView').getBoundingClientRect(), r0 = e.getClientRects()[0]; if (!r0) return;
+        const inView = r0.left >= vr.left - 2 && r0.left < vr.right - 4;
+        if (!inView){ pgGo(pgPageOf(e)); pg.vWant.page = pg.page; }
+      } catch(err){}
+    }, t));
+    return true;
+  }
   const key0 = curBook ? curBook.name + '|' + S.chapter : '';
   const cn = $('#chapNav'); let user = false; const timers = [];
   const vv = window.visualViewport, evs = ['touchstart','wheel','mousedown'];
