@@ -893,7 +893,7 @@ body.pg:not(.searching) main{position:static;perspective:none;overflow:visible;m
 body.pg:not(.searching) #chapNav{display:none!important}
 /* Trang giấy: ẩn/hiện thanh trên bằng visibility (KHÔNG dùng transform) → chữ thanh trên luôn sắc nét */
 body.pg:not(.searching) .top{position:fixed;left:0;right:0;transform:none!important;transition:none!important;visibility:hidden}
-body.pg.pgchrome:not(.searching) .top{visibility:visible}
+body.pg.pgchrome:not(.searching) .top,body.pg:not(.searching) .top:focus-within{visibility:visible}
 /* Menu trên hiện ra: thu nhẹ khung trang (chỉ bằng CSS, theo biến --pgfit) để dòng đầu nằm dưới thanh menu. Gỡ class pgchrome là hết hiệu lực NGAY, nên lật trang không bị ảnh hưởng */
 body.pg.pgchrome:not(.searching) #pgView{transform:scale(var(--pgfit,1));transform-origin:50% 100%}
 body.pg .pgv{display:block;position:fixed;z-index:5;left:0;right:0;top:env(safe-area-inset-top);bottom:calc(36px + env(safe-area-inset-bottom));overflow:hidden;background:var(--bg);touch-action:none}
@@ -1368,7 +1368,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5737,6 +5737,7 @@ async function pgFlip(dir){                                        // chạm mé
     if (e.target.closest('.fnk,.fnx,.rfk')) return;                 // chú thích hiện bằng khung nổi: không dàn trang lại → chữ không nhảy
     if (Date.now() - t0 > 480) return;                              // giữ lâu: để menu chạm giữ xử lý
     const cl = document.body.classList, eat = () => { e.stopPropagation(); e.preventDefault(); };
+    const fa = document.activeElement; if (fa && fa.closest && fa.closest('.top') && /^(INPUT|TEXTAREA|SELECT)$/.test(fa.tagName)) return;   // đang gõ ở thanh trên: giữ nguyên
     if (cl.contains('pgchrome')){ cl.remove('pgchrome'); return eat(); }
     if (e.clientY < 64){ cl.add('pgchrome'); return eat(); }
     /* Đã bỏ chạm mép trái/phải để lật trang (dễ chạm nhầm): chỉ lật bằng vuốt, phím ← → hoặc lăn chuột */
@@ -6531,7 +6532,9 @@ planSum();
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
+    const pgPaper = b.classList.contains('pg') && !b.classList.contains('searching');   // Trang giấy: KHÔNG dời thanh menu ngay trong cú chạm (iOS ≤16 sẽ không bung bàn phím); fit() sẽ nâng thanh sau khi bàn phím đã mở
+    if (pgPaper){ if (inBar()) b.classList.add('pgchrome'); }
+    else if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
       /* Ô Chương/Câu: thanh menu nổi lên trên bàn phím NGAY lúc ô nhận con trỏ (dùng chiều cao bàn phím đã nhớ từ lần trước) → iOS không phải đẩy trang */
       let h = 0; try { h = +localStorage.getItem(KB) || 0; } catch(e){}
       if (h < 150 || h > 420) h = 271;
