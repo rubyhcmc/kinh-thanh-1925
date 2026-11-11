@@ -579,7 +579,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 #settings .preview{margin:0;border-radius:10px;background:var(--bg);line-height:1.5}
 .about{padding:18px 16px 14px}
 .abhead{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.abicon{width:48px;height:48px;border-radius:12px;background:#3b2a1a;color:#e8c675;display:flex;align-items:center;justify-content:center;flex:none}
+.abicon{width:48px;height:48px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none}   /* logo sách giống favicon / icon app */
+.abicon svg{display:block;width:48px;height:48px}
 .abname{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.2}
 .absub{font-size:12.5px;color:var(--muted);margin-top:2px}
 .abtxt{font-size:13.5px;line-height:1.7;margin:16px 0 0;color:var(--fg);text-align:left;overflow-wrap:break-word}   /* canh trái: khung hẹp + từ ghép có gạch nối nên canh đều hai bên làm khoảng cách chữ bị giãn, lệch */
@@ -1195,7 +1196,7 @@ html[data-paper] .reader.print{text-align:justify}
     <div class="slabel">Giới thiệu</div>
     <div class="sgroup about">
       <div class="abhead">
-        <div class="abicon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></svg></div>
+        <div class="abicon"><svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#8a5a1f"/><path d="M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4" stroke="#f0e3cc" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z" fill="#5c3a12"/><path d="M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z" fill="#fffdf8"/><path d="M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z" fill="#f4ead3"/><path d="M50 43v34" stroke="#c9ad7a" stroke-width="2" fill="none"/><path d="M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3" stroke="#c9ad7a" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
         <div><div class="abname" id="abName">Kinh Thánh</div><div class="absub" id="abSub" hidden></div></div>
       </div>
       <div class="abtxt" id="abText"></div>
@@ -1624,7 +1625,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.11d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.11e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -8397,22 +8398,28 @@ document.addEventListener('visibilitychange', () => { if (S.wake && document.vis
 
 /* §§ ▼▼▼ MỤC 3 · BỘ NHỚ LƯU TRỮ TRÊN MÁY — Offline: Service Worker, manifest, biểu tượng ▼▼▼ */
 /* ============ OFFLINE: Service Worker, manifest, biểu tượng ============ */
-/* Logo app: ĐỒNG BỘ với logo đầu mục Giới thiệu (.abicon): nền nâu đậm #3b2a1a, chữ thập vàng #e8c675 (cùng hình dạng, cùng tỉ lệ 26/48 như trong Giới thiệu).
-   Dùng cho favicon, apple-touch-icon và icon PWA. Hình chữ thập nằm trên khung 24×24 y hệt SVG trong Giới thiệu, đặt giữa ô và chiếm 26/48 chiều rộng ô. */
-const LOGO_BG = '#3b2a1a', LOGO_FG = '#e8c675';
-const LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="25" fill="' + LOGO_BG + '"/>' +
-  '<g fill="' + LOGO_FG + '" transform="translate(22.917 22.917) scale(2.2569)"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></g></svg>';
+/* Logo app: sách mở dưới tia sáng (vẽ bằng Path2D trên khung 100×100 → dùng cho icon PWA, apple-touch-icon và favicon) */
+const LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#8a5a1f"/>' +
+  '<path d="M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4" stroke="#f0e3cc" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+  '<path d="M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z" fill="#5c3a12"/>' +
+  '<path d="M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z" fill="#fffdf8"/>' +
+  '<path d="M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z" fill="#f4ead3"/>' +
+  '<path d="M50 43v34" stroke="#c9ad7a" stroke-width="2" fill="none"/>' +
+  '<path d="M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3" stroke="#c9ad7a" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
 function makeIcon(size){
   const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
-  x.fillStyle = LOGO_BG; x.fillRect(0, 0, size, size);                       // nền tràn viền (hệ điều hành tự bo góc)
-  const u = size * 26 / (48 * 24), o = size * 11 / 48;                       // 1 đơn vị của khung 24×24 = u px; chữ thập đặt giữa, như trong Giới thiệu
-  const rr = (rx, ry, w, h, r) => {                                          // hình chữ nhật bo góc (không phụ thuộc ctx.roundRect)
-    x.beginPath(); x.moveTo(rx + r, ry); x.arcTo(rx + w, ry, rx + w, ry + h, r); x.arcTo(rx + w, ry + h, rx, ry + h, r);
-    x.arcTo(rx, ry + h, rx, ry, r); x.arcTo(rx, ry, rx + w, ry, r); x.closePath(); x.fill();
-  };
-  x.fillStyle = LOGO_FG;
-  rr(o + 10.6 * u, o + 3 * u, 2.8 * u, 18 * u, .6 * u);
-  rr(o + 6 * u, o + 8 * u, 12 * u, 2.8 * u, .6 * u);
+  x.fillStyle = '#8a5a1f'; x.fillRect(0, 0, size, size);                    // nền tràn viền (hệ điều hành tự bo góc)
+  const k = size / 100, f = 0.86;                                            // thu nhỏ nhẹ để nằm trong vùng an toàn của icon "maskable"
+  x.save(); x.translate(size * (1 - f) / 2, size * (1 - f) / 2); x.scale(k * f, k * f);
+  const P = d => new Path2D(d), fill = (d, col) => { x.fillStyle = col; x.fill(P(d)); };
+  const line = (d, col, w) => { x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.stroke(P(d)); };
+  line('M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4', '#f0e3cc', 3);
+  fill('M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z', '#5c3a12');
+  fill('M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z', '#fffdf8');
+  fill('M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z', '#f4ead3');
+  line('M50 43v34', '#c9ad7a', 2);
+  line('M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3', '#c9ad7a', 2);
+  x.restore();
   return c.toDataURL('image/png');
 }
 (function(){ try { const l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/svg+xml'; l.href = 'data:image/svg+xml,' + encodeURIComponent(LOGO_SVG); document.head.appendChild(l); } catch(e){} })();
