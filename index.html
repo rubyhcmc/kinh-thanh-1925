@@ -579,7 +579,8 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 #settings .preview{margin:0;border-radius:10px;background:var(--bg);line-height:1.5}
 .about{padding:18px 16px 14px}
 .abhead{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.abicon{width:48px;height:48px;border-radius:12px;background:#3b2a1a;color:#e8c675;display:flex;align-items:center;justify-content:center;flex:none}
+.abicon{width:48px;height:48px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none}   /* logo sách giống favicon / icon app */
+.abicon svg{display:block;width:48px;height:48px}
 .abname{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.2}
 .absub{font-size:12.5px;color:var(--muted);margin-top:2px}
 .abtxt{font-size:13.5px;line-height:1.7;margin:16px 0 0;color:var(--fg);text-align:left;overflow-wrap:break-word}   /* canh trái: khung hẹp + từ ghép có gạch nối nên canh đều hai bên làm khoảng cách chữ bị giãn, lệch */
@@ -1192,7 +1193,7 @@ html[data-paper] .reader.print{text-align:justify}
     <div class="slabel">Giới thiệu</div>
     <div class="sgroup about">
       <div class="abhead">
-        <div class="abicon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="10.6" y="3" width="2.8" height="18" rx=".6"/><rect x="6" y="8" width="12" height="2.8" rx=".6"/></svg></div>
+        <div class="abicon"><svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#8a5a1f"/><path d="M50 12v9M30 18l5 7M70 18l-5 7M20 29l7 4M80 29l-7 4" stroke="#f0e3cc" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M13 54v21c13-3 28-2 37 4 9-6 24-7 37-4V54z" fill="#5c3a12"/><path d="M50 77V43C41 36 27 34 15 37v34c13-3 27-1 35 6z" fill="#fffdf8"/><path d="M50 77V43c9-7 23-9 35-6v34c-13-3-27-1-35 6z" fill="#f4ead3"/><path d="M50 43v34" stroke="#c9ad7a" stroke-width="2" fill="none"/><path d="M22 47c8-1 16 0 22 3M22 54c8-1 16 0 22 3M22 61c8-1 16 0 22 3M78 47c-8-1-16 0-22 3M78 54c-8-1-16 0-22 3M78 61c-8-1-16 0-22 3" stroke="#c9ad7a" stroke-width="2" stroke-linecap="round" fill="none"/></svg></div>
         <div><div class="abname" id="abName">Kinh Thánh</div><div class="absub" id="abSub" hidden></div></div>
       </div>
       <div class="abtxt" id="abText"></div>
@@ -1367,7 +1368,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.12a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.12b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
