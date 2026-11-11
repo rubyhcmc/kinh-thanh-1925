@@ -1354,12 +1354,9 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   const nativeFocus = HTMLElement.prototype.focus;
   HTMLElement.prototype.focus = function(){ if (!touched && isText(this)) return; return nativeFocus.apply(this, arguments); };
   const drop = () => { if (touched) return; try { const a = document.activeElement; if (isText(a)) HTMLElement.prototype.blur.call(a); } catch(e){} };
-  /* Lớp chặn thứ hai: trước cú chạm đầu tiên, mọi ô nhập có sẵn đều ở dạng chỉ-đọc → iOS không bao giờ bật bàn phím, dù mã nào gọi focus()/select()/click().
-     Ngay khi người dùng chạm lần đầu (touchstart xảy ra trước lúc ô nhận con trỏ) thì mở khóa, nên bấm vào ô Chương / Câu / Tìm kiếm vẫn gõ bình thường. */
-  const lock = () => { try { document.querySelectorAll('input,textarea').forEach(el => { if (isText(el) && !el.readOnly){ el.setAttribute('readonly', ''); el.setAttribute('data-kl', '1'); } }); } catch(e){} };
-  const unlock = () => { try { document.querySelectorAll('[data-kl]').forEach(el => { el.removeAttribute('readonly'); el.removeAttribute('data-kl'); }); } catch(e){} };
-  const mine = () => { touched = true; unlock(); };
-  lock(); addEventListener('DOMContentLoaded', lock);
+  /* Không dùng thuộc tính readonly nữa: iOS cũ (iPhone 8 Plus…) quyết định bật bàn phím ngay từ lúc bắt đầu chạm,
+     nên ô vừa được gỡ readonly ở touchstart vẫn bị coi là chỉ-đọc → bàn phím không hiện. Chỉ cần chặn focus() bằng mã + blur khi chưa chạm là đủ. */
+  const mine = () => { touched = true; };
   ['touchstart', 'pointerdown', 'mousedown', 'keydown'].forEach(ev => addEventListener(ev, mine, { capture:true, passive:true, once:true }));
   document.addEventListener('focusin', e => { if (!touched && isText(e.target)) drop(); }, true);
   try { document.querySelectorAll('[autofocus]').forEach(el => el.removeAttribute('autofocus')); } catch(e){}
@@ -1368,7 +1365,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.12c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.12d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6461,7 +6458,12 @@ planSum();
   [nc, nv].forEach(inp => {
     inp.focus = function(o){ if (ok()) vFocus(inp); else nativeFocus.call(inp, o); };
     inp.blur = function(){ if (vT === inp) vBlur(); else if (!ok()) nativeBlur.call(inp); };
-    inp.addEventListener('touchend', e => { if (!ok() || inp.disabled) return; e.preventDefault(); vFocus(inp); }, { passive: false });
+    inp.addEventListener('touchend', e => {
+      if (!ok() || inp.disabled) return;
+      e.preventDefault(); vFocus(inp);
+      /* Dự phòng: nếu ô ẩn không nhận được con trỏ (một số bản iOS cũ) → mở bàn phím bằng chính ô thật */
+      if (actGet.call(doc) !== proxy){ const t = vT; vT = null; mark(t, false); nativeFocus.call(inp); }
+    }, { passive: false });
   });
   proxy.addEventListener('input', () => {
     const t = vT; if (!t) return;
