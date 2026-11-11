@@ -128,11 +128,6 @@ html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{top:calc(env(safe-area-ins
 /* Gõ ở ô Chương / Câu khi menu ở DƯỚI (class kbup): thanh menu GIỮ nguyên chỗ trong bố cục, chỉ được nâng lên ngay trên bàn phím bằng transform
    (không đụng tới bố cục nên nội dung trang chính đứng yên, không bị đẩy; bật ngay lúc chạm nên không có độ trễ). */
 html.sa.kbup:not(.mtop) .top,html.sa.kbup:not(.mtop) body:not(.pg) .top,html.sa.kbup:not(.mtop) body.pg:not(.searching) .top{transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;-webkit-transform:translate3d(0,calc(-1px * var(--kbu,0)),0)!important;transition:none!important;z-index:60}
-/* Trang giấy + menu ở DƯỚI (Màn hình chính): thanh menu nằm TRONG LUỒNG bố cục (position:relative, thân trang là flex cột) y như chế độ thường.
-   Trước đây thanh là position:absolute sát đáy → iPhone đời cũ (iOS ≤16) chỉ hiện thanh Xong chứ không bung bàn phím khi chạm ô Chương/Câu/Tìm. Cấu trúc trong luồng là cấu trúc chế độ thường vẫn gõ được. */
-html.sa:not(.mtop) body.pg:not(.searching){display:flex;flex-direction:column}
-html.sa:not(.mtop) body.pg:not(.searching) .top{position:relative;top:auto;bottom:auto;left:auto;right:auto;width:100%;flex:none;order:2;margin-top:auto}
-html.sa.kbtop:not(.mtop) body.pg:not(.searching) .top{position:absolute;width:auto;margin-top:0}
 .rschip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 14px);z-index:26;display:flex;align-items:center;max-width:calc(100vw - 24px);background:var(--card);color:var(--fg);border:1px solid var(--accent);border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
 .rschip button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .rschip .rsgo{padding:10px 6px 10px 16px;min-width:0;text-align:left;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1373,7 +1368,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6537,8 +6532,9 @@ planSum();
   };
   vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
   document.addEventListener('focusin', () => {
-    if (b.classList.contains('pg') && !b.classList.contains('searching') && inBar()) b.classList.add('pgchrome');   // Trang giấy: thanh menu phải ở yên (hiện) suốt lúc gõ
-    if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
+    const pgPaper = b.classList.contains('pg') && !b.classList.contains('searching');   // Trang giấy: KHÔNG dời thanh menu ngay trong cú chạm (iOS ≤16 sẽ không bung bàn phím); fit() sẽ nâng thanh sau khi bàn phím đã mở
+    if (pgPaper){ if (inBar()) b.classList.add('pgchrome'); }
+    else if (typeof IS_IOS !== 'undefined' && IS_IOS && !de.classList.contains('mtop') && numBox()){
       /* Ô Chương/Câu: thanh menu nổi lên trên bàn phím NGAY lúc ô nhận con trỏ (dùng chiều cao bàn phím đã nhớ từ lần trước) → iOS không phải đẩy trang */
       let h = 0; try { h = +localStorage.getItem(KB) || 0; } catch(e){}
       if (h < 150 || h > 420) h = 271;
