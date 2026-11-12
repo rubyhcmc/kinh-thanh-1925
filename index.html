@@ -1165,7 +1165,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13e';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -4596,7 +4596,8 @@ function pgFitArt(art){
   pad = put(lh, n); pgBrk(art, W, lh);                              // không gom được → giữ như cũ
 };
 const pgSetX = (art, page, W) => { art.style.transform = 'translateX(' + (-page * W) + 'px)'; };
-function pgCount(){
+function pgCount(){ return pgNoChrome(pgCountIn); }
+function pgCountIn(){
   const a = $('#bibleText'), f = pg.fit;
   pg.sig = pgShKey();
   if (pg.useFit && f && f.key === [S.book, S.chapter, S.view, S.fs, S.font, innerWidth, innerHeight, S.paper ? 1 : 0].join('|')){
@@ -4615,7 +4616,10 @@ function pgGo(p){
   pg.page = Math.max(0, Math.min(p, pg.pages - 1));
   pgSetX($('#bibleText'), pg.page, pgW()); pgFoot(); clearTimeout(pg.svT); pg.svT = setTimeout(syncVerse, 250); pgPrep(); rsTrack();
 }
-const pgPageOf = el => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); };
+/* Khi menu dưới đang hiện (class pgchrome), khung trang bị thu nhẹ bằng scale(--pgfit): mọi phép đo theo toạ độ màn hình bị co theo → số trang của câu bị tính LỆCH (câu nằm ở trang sau mà app tưởng ở trang trước).
+   pgNoChrome: tạm gỡ pgchrome trong lúc đo rồi trả lại ngay (cùng một nhịp, không vẽ ra màn hình) để phép đo luôn ở tỉ lệ 1:1. */
+const pgNoChrome = fn => { const cl = document.body.classList, had = cl.contains('pgchrome'); if (had) cl.remove('pgchrome'); try { return fn(); } finally { if (had) cl.add('pgchrome'); } };
+const pgPageOf = el => pgNoChrome(() => { const a = $('#bibleText'); return Math.floor((el.getBoundingClientRect().left - a.getBoundingClientRect().left + 2) / pgW()); });
 function pgScrollTo(el){ if (!pgOn()) return false; pgGo(pgPageOf(el)); return true; }
 /* Câu vừa nhảy tới (ghim / dấu trang / tìm kiếm / gõ số câu) mà người đọc CHƯA lật sang trang khác: sau mỗi lần chữ dàn lại (phông chữ tải xong, thanh địa chỉ iPhone co giãn, xoay máy)
    phải bám theo CÂU chứ không bám theo số trang, nếu không câu trôi sang trang kế và màn hình dừng ở cuối trang trước. */
