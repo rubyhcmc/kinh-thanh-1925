@@ -68,16 +68,11 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area
 .iconbtn.aa{font-family:var(--serif);font-size:19px;font-weight:600;letter-spacing:-.03em}
 .iconbtn.aa small{font-size:.7em}
 .offtag{font-size:10px;color:var(--muted);letter-spacing:.04em;margin-right:2px}
-.syncb{color:var(--muted)}
-.syncb.busy svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.syncb.dirty,.syncb.offline{color:var(--accent)}
-.syncb.err,.syncb.conflict{color:var(--danger)}
 /* thanh trên luôn cố định, không tự ẩn khi cuộn */
 /* Trang cố định: tài liệu không cuộn, không kéo trượt; chỉ vùng đọc (main) cuộn bên trong → hết giật cả trang khi đổi chương */
 html{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
 body{position:fixed;left:0;right:0;top:0;bottom:0;width:100%;overflow:hidden;overscroll-behavior:none}
-body.hdr-nt .top,body.hdr-nt .navrow{transition:none!important}
 /* KHÓA ZOOM + GHIM THANH TRÊN: không phóng to/thu nhỏ trang; thanh trên dính chặt mép trên, nằm trên lớp riêng nên không bị rung khi lật trang */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body:not(.pg) .top{transition:none!important;transform:translate3d(0,0,0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
@@ -118,7 +113,6 @@ html.sa.mtop .toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px
    Chỉnh mức ở Cài đặt → "Chừa mép trên". */
 html.sa body{padding-top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
 html.sa body.pg .pgv{top:calc(env(safe-area-inset-top) + var(--sbx,0px))}
-html.sa .admin .bar{padding-top:calc(10px + env(safe-area-inset-top) + var(--sbx,0px))}
 /* Menu ở DƯỚI + đang gõ ở thanh menu (class kbtop): thanh tạm bay lên TRÊN, như khi menu ở trên → ô nhập không bị bàn phím che, iOS không đẩy trang, nội dung đứng yên.
    Thanh rời luồng bố cục (fixed) nên đầu vùng đọc không dịch chuyển; gõ xong thanh về lại đáy. */
 html.sa.kbtop:not(.mtop) body:not(.pg) .top{position:fixed;top:calc(env(safe-area-inset-top) + var(--sbx,0px));left:0;right:0;width:100%;height:46px;padding:0 4px 0 10px;border-top:0;border-bottom:1px solid var(--line);z-index:40}
@@ -234,7 +228,6 @@ html[data-paper][data-theme=dark] .poem .v.sel,html[data-paper][data-theme=dark]
 .poem{margin:0 0 .9em;text-align:left}
 .poem .v{display:block}
 .pl{display:block;padding-left:1.3em;text-indent:-1.3em}
-.pl.q2{padding-left:2.6em}
 /* Thơ thụt dòng như văn xuôi: dòng 2 trở đi của một câu thụt vào đúng bằng dòng tràn xuống, chỉ dòng đầu (có số câu) nằm sát lề */
 .poem .v:not(:has(.q2)) .pl ~ .pl{text-indent:0}
 /* Số chương lớn trong đoạn thơ: nằm sát lề trái; mép phải của nó chừa thêm 1.3em (= .3714em của chữ lớn 3.5em) để bù thụt âm của các dòng thơ bên cạnh,
@@ -247,37 +240,9 @@ html[data-paper][data-theme=dark] .poem .v.sel,html[data-paper][data-theme=dark]
 .fn.fnv{font-size:1em;line-height:1.65;color:var(--fg);margin:.5em 0 .6em}
 .fns{margin-top:1.5em;padding-top:.7em;border-top:1px solid var(--line);text-align:left}
 .fn{display:block;text-align:left;text-indent:0;font-style:italic;font-weight:400;font-size:.76em;line-height:1.55;color:var(--muted);margin:.2em 0}
-
-/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — CSS trình soạn thảo ▼▼▼ */
-/* ===== Trình soạn thảo ===== */
-.edwrap{max-width:1100px;margin:0 auto;padding:12px 14px 30px}
-.edtop{display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:8px}
-.edtop input{min-width:0}
-@media(max-width:600px){.edtop{grid-template-columns:1fr 1fr}.edtop .chstep{grid-column:1/-1}}
-.chstep{display:flex;gap:6px}
-.chstep input{text-align:center}
-.chstep .btn{padding:8px 14px}
-.edopts{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;font-size:13px;color:var(--muted)}
-.edopts label{display:flex;align-items:center;gap:6px}
-.edopts input,.edopts select{width:auto;padding:6px 8px;font-size:14px}
-.edopts input[type=number]{width:70px}
-.edseg{margin:6px 0 10px}
-.edseg button{flex:1}
-.edcols{display:grid;grid-template-columns:1fr;gap:12px}
-.edpane{display:none}
-.edpane.on{display:block}
-@media(min-width:900px){.edcols{grid-template-columns:1fr 1fr}.edseg{display:none}.edpane{display:block}}
-.tbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.tbar .btn{padding:7px 10px;font-size:13px}
-#edText{min-height:58vh;font-family:ui-monospace,Menlo,monospace;font-size:15px;line-height:1.6}
 .paper{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:58vh;padding-top:20px}
-.edact{position:sticky;bottom:0;background:var(--bg);padding:10px 0 calc(10px + env(safe-area-inset-bottom));margin-top:12px;border-top:1px solid var(--line)}
-
-.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 12px;font-size:14px;color:var(--muted)}
 .empty{padding:48px 24px;text-align:center;color:var(--muted)}
 .empty b{display:block;font-size:18px;color:var(--fg);margin-bottom:6px}
-.searchbar{padding:10px 12px;position:sticky;top:var(--hh);z-index:10;background:var(--bg);display:flex;gap:8px}
-.searchbar input{flex:1;min-width:0}
 
 /* Tìm kiếm Kinh Thánh */
 #tab-bible.searching>.reader,#tab-bible.searching>.pgv,#tab-bible.searching>.chapnav{display:none!important}
@@ -321,8 +286,6 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-wei
 .bs-link{border:0;background:none;color:var(--accent);font-size:13px;padding:4px 2px;text-transform:none;letter-spacing:0;font-weight:600}
 .bs-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px}
 .bs-wrap .bs-chip{white-space:normal;text-align:left}
-.bs-tips{margin:0;padding:0 18px 0 32px;color:var(--muted);font-size:14.5px;line-height:1.6}
-.bs-tips b{color:var(--fg);font-weight:600}
 .bsinfo{padding:12px 14px 6px;font-size:13px;color:var(--muted);min-height:1em}
 .bs-facets{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 #bsItems{background:var(--card)}
@@ -374,12 +337,6 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px;font-wei
 .seg button.on{background:var(--accent);color:#fff}
 [data-theme=dark] .seg button.on{color:#1a1409}
 input[type=range]{width:100%}
-.preview{font-family:var(--serif);font-size:var(--fs);padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-top:8px}
-
-.admin{position:fixed;inset:0;z-index:45;background:var(--bg);overflow:auto;padding:0 0 40px}
-.admin .bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;
-  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--card);border-bottom:1px solid var(--line)}
-.admin .bar h3{margin:0}
 .panel{max-width:760px;margin:14px auto;padding:0 14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
 .card h4{margin:0 0 10px;font-size:15px}
@@ -388,7 +345,6 @@ input[type=range]{width:100%}
 .stats div{background:var(--bg);border-radius:10px;padding:10px 4px;font-size:12px;color:var(--muted)}
 .stats b{display:block;font-size:22px;color:var(--accent)}
 textarea{min-height:180px;font-family:ui-monospace,Menlo,monospace;font-size:13px;resize:vertical}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .log{font-size:13px;margin-top:10px;white-space:pre-wrap}
 .log.ok{color:#2e7d32}.log.err{color:var(--danger)}
@@ -398,15 +354,9 @@ details summary{cursor:pointer;color:var(--accent);font-weight:600}
 details pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:12px;color:var(--fg)}
 details ol{padding-left:20px;line-height:1.7}
 details a{color:var(--accent)}
-.lbl{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
-.chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
-.chk input{width:auto}
 .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);z-index:80;
   background:#222;color:#fff;padding:8px 16px;border-radius:99px;font-size:14px;line-height:1.35;width:max-content;max-width:90vw;text-align:center}
 @media(min-width:760px){.overlay{align-items:center}.sheet{border-radius:18px}}
-/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — CSS quản lý tên sách trong soạn thảo ▼▼▼ */
-/* ===== Quản lý tên sách trong trình soạn thảo ===== */
-.edsub{display:block;width:100%;margin:6px 0 0;padding:8px 12px;min-height:38px;max-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--card,var(--bg));color:inherit;font:inherit;font-size:13.5px;line-height:1.4;resize:none;overflow:auto;box-sizing:border-box}
 .chhead.tp{min-height:0;margin:.5em 0 1.5em;align-items:center}
 .chhead.tp .tpl{font-weight:800;text-transform:uppercase;line-height:1.15;letter-spacing:.015em;color:var(--fg);text-wrap:balance;overflow-wrap:anywhere}
 .chhead.tp .t1{font-size:min(1.05em,4.6vw)}
@@ -422,62 +372,12 @@ details a{color:var(--accent)}
 .chhead.tp2 .tb{font-size:min(1em,4.6vw);font-weight:800;letter-spacing:.12em;margin-top:.05em}
 .chhead.tp2 .ch{margin-top:1em}
 .chhead .bksub{font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.5;margin-bottom:.45em}
-.chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}   /* tiêu đề phụ dưới tên sách: lớn hơn, thưa chữ, cách xa dòng CHƯƠNG */
-.edbook{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
-.edbook .btn{padding:7px 10px;font-size:13px}
-.edhint{flex:1;min-width:170px;font-size:12.5px;color:var(--muted);line-height:1.4}
-.edhint.warn{color:var(--accent);font-weight:600}
-/* ===== Quét gạch nối trong văn bản cổ (đỏ = chưa sửa · vàng = đã sửa) ===== */
-.hybar{position:sticky;top:-18px;z-index:3;margin:-18px -18px 10px;padding:16px 18px 10px;background:var(--card);border-bottom:1px solid var(--line)}
-.hysum{margin:0 0 8px;font-size:14px;line-height:1.7}
-.hynote{margin:0 0 8px;font-size:12.5px;line-height:1.5;color:var(--muted)}
-.hyrow{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 8px;background:var(--bg)}
-.hyctx{font-family:var(--serif);font-size:16px;line-height:1.6;overflow-wrap:anywhere}
-.hyw{display:inline;padding:1px 5px;border-radius:6px;font-weight:700;font-family:var(--sans);font-size:.92em}
-.hyw.r{background:rgba(220,38,38,.16);color:#c62828;box-shadow:inset 0 -2px 0 #c62828}
-.hyw.y{background:#fde68a;color:#6b4a00;box-shadow:inset 0 -2px 0 #e0a800}
-.hyw.g{background:var(--accent-soft);color:var(--muted)}
-[data-theme=dark] .hyw.r{background:rgba(255,138,128,.18);color:#ff8a80;box-shadow:inset 0 -2px 0 #ff8a80}
-[data-theme=dark] .hyw.y{background:rgba(250,204,21,.26);color:#fde047;box-shadow:inset 0 -2px 0 #facc15}
-html[data-paper] .hyw.r{background:none;color:var(--fg);text-decoration:underline wavy;box-shadow:none}
-html[data-paper] .hyw.y{background:var(--hl);color:var(--fg);box-shadow:none}
-.hybtn{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
-.hybtn .sbtn{padding:8px 13px}
-.hytag{font:11.5px var(--sans);color:var(--muted)}
-.arrule.off{opacity:.5}
-.arin{flex:1 1 180px;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:14px var(--sans)}
-.artag{font:13px var(--sans);display:inline-flex;gap:6px;align-items:center}
-/* §§ ▼▼▼ MỤC 6 · QUẢN TRỊ & SAO LƯU — CSS đăng nhập quản trị ▼▼▼ */
-/* ===== Đăng nhập ===== */
-#login .sheet{max-width:380px;padding:26px 22px calc(18px + env(safe-area-inset-bottom));text-align:center;background:var(--card)}
-@media(min-width:760px){#login .sheet{border-radius:20px}}
-.lgico{width:54px;height:54px;margin:0 auto 12px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
-.lgtitle{margin:0 0 18px!important;font-family:var(--serif);font-size:22px!important;letter-spacing:.01em}
-.pwwrap{position:relative}
-.pwwrap input{height:50px;padding:0 48px 0 16px;border-radius:12px;background:var(--bg);text-align:left;font-size:17px}
-.pwwrap input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.pweye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center;border-radius:10px}
-.pweye:active{background:var(--accent-soft)}
-.lgerr{min-height:20px;margin:10px 0 0;font-size:13px;text-align:center}
-.lgbtns{display:grid;gap:6px;margin-top:8px}
-.lgbtns .btn{height:48px;padding:0 14px;border-radius:12px;font-size:16px}
-.lgbtns .lgcancel{border-color:transparent;background:none;color:var(--muted);font-weight:600}
+.chhead .bksub.below{font-size:.8em;font-weight:600;letter-spacing:.2em;line-height:1.3;margin:.3em 0 .7em}
 /* §§ ▼▼▼ MỤC 1 · GIAO DIỆN & HÌNH THỨC HIỂN THỊ — CSS chú thích bấm để bung/ẩn ▼▼▼ */
 /* ===== Chú thích bấm để bung/ẩn ===== */
 :root[data-theme=dark] .fnm{color:#ffb454}
 .hd .fnx{font-size:15px;font-family:var(--serif);letter-spacing:0;text-transform:none;font-weight:400;text-align:left}
 .hd .fnm{font-size:.6em}
-/* Dời chương */
-.mvlist{margin:6px 0 10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
-.mvrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
-.mvrow:first-child{border-top:0}
-.mvrow.moved{background:var(--accent-soft)}
-.mvn{flex:none;min-width:40px;text-align:center;font-weight:700;font-size:15px;border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--bg)}
-.mvt{flex:1;min-width:0;font-size:13px;line-height:1.35;color:var(--muted)}
-.mvt b{display:block;color:var(--fg);font-size:13px;font-weight:600}
-.mvt i{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mvb{flex:none;display:flex;gap:4px}
-.mvb button{min-width:38px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
 .fnk{cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
 .fnk::after{content:'';position:absolute;inset:-12px -8px}
 .fnk:active{opacity:.55}
@@ -568,15 +468,9 @@ html:has(.overlay:not([hidden])),body:has(.overlay:not([hidden])){overflow:hidde
 .stxt span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .srow .seg{flex:none}
 .srow .seg button{padding:7px 11px;font-size:13px}
-.fgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px}
 .fld span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
 .fld select{height:42px;padding:0 28px 0 12px;-webkit-appearance:none;appearance:none;
   background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center}
-.fsline{display:flex;align-items:center;gap:10px}
-.fsline input{flex:1;accent-color:var(--accent)}
-.fsa{font-family:var(--serif);color:var(--muted);line-height:1}
-.fsa.s{font-size:13px}.fsa.l{font-size:24px}
-#settings .preview{margin:0;border-radius:10px;background:var(--bg);line-height:1.5}
 .about{padding:18px 16px 14px}
 .abhead{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .abicon{width:48px;height:48px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none}   /* logo sách giống favicon / icon app */
@@ -656,8 +550,6 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .updwrap .btn{padding:8px 16px;font-size:13.5px}
 .updmsg{min-height:1.4em;margin-top:6px;font-size:12px;color:var(--muted)}
 .abver{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.03em;color:var(--muted);text-align:center}
-.adminlink{display:flex;align-items:center;gap:5px;margin:16px auto 0;border:0;background:none;color:var(--muted);opacity:.65;font-size:11px;letter-spacing:.04em;padding:6px 12px}
-.adminlink:active{opacity:1}
 /* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS cửa sổ chọn sách KINH-THÁNH (mục lục Cựu-Ước / Tân-Ước) ▼▼▼ */
 .overlay.bkpick{z-index:90;opacity:0;transition:opacity .2s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 .overlay.bkpick.in{opacity:1}
@@ -684,70 +576,8 @@ details.adv>div>.srow{border-top:1px solid var(--line)}
 .bkrow[disabled]:hover,.bkrow[disabled]:active{background:transparent}
 .bkrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media (prefers-reduced-motion:reduce){.overlay.bkpick,.bkpick .bksheet{transition:none}}
-/* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — CSS công cụ tìm toàn bộ Kinh Thánh (kể cả chú thích) trong trình soạn thảo ▼▼▼ */
-.overlay.sxp{z-index:96;align-items:stretch;opacity:0;transition:opacity .15s ease}
-.overlay.sxp.in{opacity:1}
-.sxp .sxsheet{padding:0;max-width:720px;width:100%;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;border-radius:0;max-height:none;height:100%;background:var(--card)}
-@media(min-width:760px){.overlay.sxp{align-items:center;padding:20px 0}.sxp .sxsheet{height:min(88vh,860px);border-radius:18px}}
-.sxhead{flex:none;padding:10px 12px 8px;background:linear-gradient(180deg,var(--accent-soft),var(--card));border-bottom:1px solid var(--line)}
-.sxtop{display:flex;align-items:center;gap:8px}
-.sxtop h2{flex:1;margin:0;font-size:17px;font-weight:700;color:var(--accent)}
-.sxtop .sxx{flex:none;width:40px;height:40px;padding:0;border:0;box-shadow:none;border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center}
-.sxtop .sxx:active{background:var(--line)}
-.sxq{display:flex;align-items:center;gap:6px;margin-top:6px}
-.sxq input{flex:1;min-width:0;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:17px}
-.sxq input:focus{outline:none;border-color:var(--accent)}
-#sxQ::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
-.sxq button{flex:none;height:44px;min-width:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font-size:16px;cursor:pointer}
-.sxrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
-.sxrow select{flex:1 1 150px;min-width:0;height:36px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:14px;padding:0 8px}
-.sxchip{flex:none;height:34px;padding:0 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg);font:inherit;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.sxchip.on{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:700}
-.sxinfo{flex:none;padding:8px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);min-height:20px;white-space:pre-line}
-.sxbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-.sxit{display:block;width:100%;text-align:left;padding:11px 14px 12px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--card);box-shadow:none;color:var(--fg);font-family:var(--serif);font-size:16px;line-height:1.55;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.sxit:active{background:var(--accent-soft)}
-.sxit .sxref{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:3px;font-family:inherit}
-.sxit .sxref b{color:var(--accent)}
-.sxit .sxk{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);letter-spacing:.02em}
-.sxit .sxk.f{background:var(--hl)}
-.sxit .sxgo{margin-left:auto;font-size:13px;color:var(--muted)}
 .sxmore{display:block;margin:12px auto 0;padding:10px 18px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
-.sxem{padding:28px 18px;text-align:center;color:var(--muted)}
-.sxit .sxgo{display:flex;align-items:center;gap:10px}
-.sxit .sxskip{height:30px;padding:0 11px;border:1.5px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg);box-shadow:none;font:inherit;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.sxit .sxskip:active{background:var(--accent-soft)}
-.sxit.sk{opacity:.55}
-.sxit .sxquick{height:30px;padding:0 11px;border:1.5px solid var(--accent);border-radius:999px;background:var(--accent-soft);color:var(--accent);box-shadow:none;font:inherit;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.sxit.ed{cursor:default;background:var(--accent-soft)}
-.sxit.ed .sxgo{display:none}
-.sxedlbl{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent)}
 .sxed{margin-top:6px}
-.sxta{display:block;width:100%;box-sizing:border-box;min-height:84px;resize:vertical;border:1.5px solid var(--accent);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;line-height:1.55;padding:9px 10px;-webkit-user-select:text;user-select:text}
-.sxta:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
-.sxedb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
-.sxedb small{color:var(--muted);font-size:12px}
-.sxskipbar{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--bg)}
-.sxskipbar .sxchip{height:30px;font-size:13px;padding:0 11px}
-.sxrow input.sxrepin{flex:1 1 150px;min-width:0;height:38px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;padding:0 10px}
-.sxrow input.sxrepin:focus{outline:none;border-color:var(--accent)}
-.sxchip.pri{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:700}
-.sxchip:disabled{opacity:.4;cursor:default}
-.srsum{margin-top:6px;font-size:14px;line-height:1.5;color:var(--fg)}
-.srwarn{margin-top:3px;font-size:13px;color:var(--danger)}
-.srfoot{flex:none;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
-.srfoot .btn{flex:1;padding:12px 10px}.srfoot .btn.primary{flex:2}.srfoot .btn:disabled{opacity:.4}
-.sxit.sxrv{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
-.sxrv .srchk{flex:none;padding:4px 2px 0}.sxrv .srchk input{width:22px;height:22px;accent-color:var(--accent)}
-.sxrv .srmain{flex:1;min-width:0}
-.sxrv .srn{font-size:12px;color:var(--muted)}
-.sxrv .srEd{margin-left:auto;border:0;background:transparent;box-shadow:none;padding:2px 4px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
-.sxrv .srb,.sxrv .sra{font-size:15px;line-height:1.5}
-.sxrv .srb::before,.sxrv .sra::before{content:"Trước ";font:700 11px var(--sans);color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:6px}
-.sxrv .sra::before{content:"Sau ";color:var(--accent)}
-.sxrv mark.srnew{background:#cdeccb;color:inherit;border-radius:3px}
-[data-theme=dark] .sxrv mark.srnew{background:#24472a}
-@media (prefers-reduced-motion:reduce){.overlay.sxp{transition:none}}
 /* §§ ▼▼▼ MỤC 3 · BỘ NHỚ LƯU TRỮ TRÊN MÁY — CSS đánh dấu vị trí đọc (Bookmark) ▼▼▼ */
 /* ===== Đánh dấu vị trí đọc (Bookmark) ===== */
 .reader .v,#bibleText,#bibleText *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -789,8 +619,6 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 .bmmain .bmt{display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .bmmain small{display:block;font-family:var(--sans);font-size:11px;color:var(--muted);margin-top:3px}
 .bmitem .iconbtn{align-self:center;color:var(--muted)}
-.bmlast{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:1px}
-[data-theme=dark] .bmlast{color:#1a1409}
 /* §§ ▼▼▼ MỤC 1 · GIAO DIỆN & HÌNH THỨC HIỂN THỊ — CSS hiệu ứng lật trang ▼▼▼ */
 /* ===== Lật trang như sách giấy ===== */
 .fl-stage{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:hidden;pointer-events:none;contain:strict;transform:translateZ(0)}
@@ -866,18 +694,6 @@ html[data-paper] .v.hold{-webkit-text-stroke:.6px currentColor}
 [data-theme=dark] .lstabs button.on{color:#1a1409}
 .lsq{width:100%;box-sizing:border-box;margin:0 0 6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:15px}
 .lscount{font-size:11.5px;color:var(--muted);margin:0 0 4px}
-.stgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 12px}
-.stc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
-.stc b{display:block;font:700 22px/1.2 var(--serif);color:var(--accent)}
-.stc span{font:12px/1.35 var(--sans);color:var(--muted)}
-.sth{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 8px}
-.stbars{display:flex;align-items:flex-end;gap:6px;height:92px;padding:4px 2px 0;border-bottom:1px solid var(--line)}
-.stbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font:10.5px var(--sans);color:var(--muted)}
-.stbar i{display:block;width:70%;max-width:26px;min-height:3px;background:var(--accent);border-radius:4px 4px 0 0;opacity:.85}
-.stbar i.z{background:var(--line);opacity:1}
-.stdays{display:flex;gap:6px;margin:4px 2px 0}
-.stdays div{flex:1;text-align:center;font:10.5px var(--sans);color:var(--muted)}
-.stdays em{display:block;font-style:normal;color:var(--accent);height:14px}
 .lslinks{flex:none;margin:8px 0 0;max-height:96px;overflow:auto}
 .lslinks .lk{font:700 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 0 4px}
 .lslinks .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
@@ -949,9 +765,6 @@ html[data-paper] .reader.print{text-align:justify}
 .sbtn{flex:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;padding:7px 14px;font:600 13px var(--sans);letter-spacing:.02em}
 .sbtn:active{background:var(--accent-soft)}
 .sbtn.warn{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
-.bkin{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px}
-.bkchk{display:flex;align-items:center;gap:8px;font:13px var(--sans);color:var(--muted);margin:0 0 4px}
-.bkext{font:12px var(--sans);color:var(--muted);margin:0 0 10px}
 /* §§ ▼▼▼ MỤC 2 · ĐIỀU KHIỂN & CẢM ỨNG — CSS hướng dẫn lần đầu ▼▼▼ */
 /* ===== Hướng dẫn lần đầu ===== */
 .obsheet{text-align:center;max-width:420px;padding:26px 22px calc(18px + env(safe-area-inset-bottom))}
@@ -1002,9 +815,6 @@ html[data-paper] .reader.print{text-align:justify}
 .usstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin:12px 0 4px}
 .usstats div{background:var(--bg);border-radius:10px;padding:8px 2px;font-size:11.5px;color:var(--muted)}
 .usstats b{display:block;font:700 19px var(--serif);color:var(--accent)}
-.uspw{position:relative}
-.uspw input{padding-right:62px}
-.uspw button{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:6px 10px;border:0;background:none;color:var(--muted);font-size:13px}
 .uslog{font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;max-height:120px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px;color:var(--muted);margin-top:10px;user-select:text;-webkit-user-select:text}
 #usSheet .sheet{user-select:text;-webkit-user-select:text}
 .uscode{font:700 17px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-align:center;word-break:break-all;padding:12px;border-radius:10px;background:var(--bg);color:var(--accent);user-select:text;-webkit-user-select:text}
@@ -1355,7 +1165,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13c';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.13d';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -1372,10 +1182,7 @@ function guessRepo(){
 
 /* §§ ▼▼▼ DÙNG CHUNG — Tiện ích dùng chung ▼▼▼ */
 /* ============ TIỆN ÍCH ============ */
-/* Bản người dùng: các ô quản trị không có trên trang này → trả về "ô rỗng" an toàn (luôn ẩn, mọi thao tác không làm gì) */
-const KT_NOADMIN = new Set(["login","pw","pwEye","loginErr","loginGo","loginCancel","admin","logout","adminClose","stBible","stChap","stSync","openEditor","ghStatus","ghToken","ghRepo","ghAuto","ghBranch","ghPath","ghConnect","ghSyncNow","ghDisconnect","ghLog","ghShare","ghShareUrl","ghCopy","ghCode","impType","impMode","impText","impFile","pickFile","fillSample","doImport","impLog","exBook","exSetHint","exName","exGo","exWord","exRestore","exCheck","exFile","exCheckFile","exLog","abeName","abeSub","abeText","abeFeat","abeLog","abeSave","abeReset","pwOld","pwNew","pwNew2","pwShow","pwLog","pwChange","pwReset","hashMake","doExport","clearBible","editor","edClose","edBook","edAbbr","edPrev","edChap","edNext","edSub","edSubPos","edDcOff","edTitle","bookList","edBookHint","edBookList","edBookMove","edBookRename","edBookDel","edStart","edPoem","edSeg","paneEdit","edPasteBtn","edDelBtn","edH","edVNum","edNote","edItal","edQ1","edQ2","edPara","edNorm","edClean","edFindAll","edHy","edArch","edTone","edQHist","edClear","edText","edStatus","edAuto","paneView","edCopySrc","edCopyPlain","edPreview","edSave","edSaveNext","edView","edExport","edDel"]);
-const KT_NULLEL = (() => { const CL = { add(){}, remove(){}, toggle(){ return false; }, contains(){ return false; } }; return new Proxy({}, { get: (t, k) => k === 'hidden' ? true : (k === 'value' || k === 'textContent' || k === 'innerHTML' || k === 'innerText') ? '' : k === 'style' || k === 'dataset' ? {} : k === 'classList' ? CL : (k === 'children' || k === 'options' || k === 'files') ? [] : (typeof k === 'string' && /^querySelectorAll/.test(k)) ? (() => []) : (k === Symbol.toPrimitive) ? undefined : () => null, set: () => true }); })();
-const $ = (s, r = document) => { const e = r.querySelector(s); if (e || r !== document) return e; const m = /^#([\w-]+)/.exec(s); return m && KT_NOADMIN.has(m[1]) ? KT_NULLEL : e; };
+const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const SCR = document.querySelector('main');   // khung cuộn duy nhất của vùng đọc
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1893,7 +1700,7 @@ $('#nextChap').onclick = () => stepChapter(1);
 
   const canGo = d => !!curBook && !$('#chapNav').hidden && !(d > 0 ? $('#nextChap') : $('#prevChap')).disabled;
   const free = () => curBook && !busy && !document.body.classList.contains('searching') && !document.body.classList.contains('pg') &&
-    $('#editor').hidden && $('#admin').hidden && $('#settings').hidden && $('#login').hidden;
+    $('#settings').hidden;
 
   /* --- Dựng sẵn HTML của chương kế / chương trước --- */
   async function loadNbr(d){
@@ -2365,7 +2172,7 @@ function rdEngaged(){
   if (document.hidden || document.visibilityState === 'hidden') return false;
   if (document.body.classList.contains('searching') || document.documentElement.dataset.flipping) return false;
   if (document.querySelector('.overlay:not([hidden]), .lssheet.open')) return false;
-  if (['#editor', '#admin', '#settings', '#login'].some(q => { const e = $(q); return e && !e.hidden; })) return false;
+  if (['#settings'].some(q => { const e = $(q); return e && !e.hidden; })) return false;
   if (typeof pg !== 'undefined' && pg && pg.busy) return false;
   return Date.now() - rdAct <= RD_IDLE_MS;
 }
@@ -2849,7 +2656,7 @@ function toggleFn(e){
   if (mk) mk.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (window.ktFlipDirty) window.ktFlipDirty();
 }
-['#bibleText', '#edPreview'].forEach(id => {
+['#bibleText'].forEach(id => {
   const r = $(id);
   r.addEventListener('click', toggleFn, true);
   r.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && (e.target.classList.contains('fnk') || e.target.classList.contains('rfk'))){ if (e.key === ' ') e.preventDefault(); toggleFn(e); } }, true);
@@ -3415,16 +3222,6 @@ const GitHubStore = Store.register({
     return { version:r.content.sha };
   }
 });
-/* --- Mẫu cho adapter khác (ví dụ máy chủ riêng, Cloudflare R2, Firebase, Supabase…): chỉ cần cùng các hàm trên ---
-const MyServerStore = Store.register({
-  id:'myserver', label:'Máy chủ của tôi',
-  configured: () => true, canWrite: () => isAdmin(), autoSync: () => true, describe: () => 'api.example.com',
-  async head(){ const r = await fetch('https://api.example.com/bible/version'); return r.ok ? { version:(await r.json()).v } : null; },
-  async read(){ const r = await fetch('https://api.example.com/bible'); return r.ok ? { version:r.headers.get('etag'), payload:await r.json() } : null; },
-  async write(payload){ const r = await fetch('https://api.example.com/bible', { method:'PUT', headers:{ Authorization:'Bearer …' }, body:JSON.stringify(payload) }); return { version:(await r.json()).v }; }
-});
-Store.active = 'myserver';
---- */
 
 /* --- Bộ máy đồng bộ (dùng chung cho mọi adapter) --- */
 async function applyRemote(A, r){
@@ -3475,23 +3272,12 @@ function setSync(st, msg){ syncState = st; syncMsg = msg || ''; updateSyncUI(); 
 function updateSyncUI(){
   const A = Store.cur(), on = syncOn();
   let st = syncState; if (st === 'ok' && SY.dirty && syncCanWrite()) st = 'dirty';
-  $('#stSync').textContent = on ? 'Bật' : 'Tắt';
-  const at = SY.at ? new Date(SY.at).toLocaleString('vi-VN') : 'chưa lần nào';
-  const l = $('#ghStatus');
-  l.textContent = on ? `${A.describe()}\nTrạng thái: ${SYNC_TXT[st] || '—'}${syncMsg ? '\n' + syncMsg : ''}\nLần đồng bộ gần nhất: ${at}\nChế độ: ${A.canWrite() ? 'đọc & ghi (có quyền ghi)' : 'chỉ đọc'}` : 'Chưa kết nối nơi lưu trữ.';
-  l.className = 'log ' + (st === 'err' || st === 'conflict' ? 'err' : 'ok');
   const es = $('#emptySync');
   if (es) es.innerHTML = (on && (st === 'err' || st === 'offline' || st === 'conflict')) ? `<b>${esc(SYNC_TXT[st] || '')}</b>${syncMsg ? '<br>' + esc(syncMsg) : ''}<br><button class="btn" id="emptyRetry" style="margin-top:12px">↻ Thử tải lại</button>` : '';
-  const sh = $('#ghShare'); sh.hidden = !(on && A.shareUrl);
-  if (on && A.shareUrl) $('#ghShareUrl').value = A.shareUrl();
 }
 
 // Đánh dấu có thay đổi → tự đẩy lên nơi lưu trữ sau vài giây (chỉ khi adapter cho phép ghi)
-function markDirty(){
-  SY.dirty = true; saveSY(); updateSyncUI();
-  const A = Store.cur();
-  if (A && A.configured() && A.canWrite() && A.autoSync()){ clearTimeout(pushTimer); pushTimer = setTimeout(() => syncNow({ auto:true }), 4000); }
-}
+
 
 async function syncNow(o = {}){
   const A = Store.cur();
@@ -3526,7 +3312,7 @@ async function syncNow(o = {}){
       }
     }
   } catch(e){ setSync('err', e.message || String(e)); if (!o.auto) toast('Đồng bộ lỗi: ' + (e.message || e)); }
-  finally { syncBusy = false; updateSyncUI(); if (!$('#admin').hidden) refreshStats(); }
+  finally { syncBusy = false; updateSyncUI(); }
 }
 
 /* --- Kết nối --- */
@@ -3551,11 +3337,11 @@ setInterval(() => { if (syncOn() && document.visibilityState === 'visible' && Da
 /* =========================================================
  *  ĐĂNG NHẬP & TRANG QUẢN LÝ
  * ========================================================= */
-const isAdmin = () => false;   // bản người dùng: không có quản trị (quản trị ở trang admin.html)
+
 function show(id, on = true){ $(id).hidden = !on; }
 
-/* Phần "Giới thiệu" trong Cài đặt: Admin chỉnh sửa được (Quản lý dữ liệu → Giới thiệu ứng dụng) */
-const ABOUT_DEF = { name:'Kinh Thánh', sub:'', text:'', feat:[] };   // mặc định để trống – Admin tự nhập
+/* Phần "Giới thiệu" trong Cài đặt (nội dung lấy từ dữ liệu đồng bộ) */
+const ABOUT_DEF = { name:'Kinh Thánh', sub:'', text:'', feat:[] };   // mặc định để trống
 let ABOUT = { ...ABOUT_DEF, feat:[...ABOUT_DEF.feat] };
 try { const a = JSON.parse(localStorage.getItem('kt.about') || 'null'); if (a && typeof a === 'object') ABOUT = { ...ABOUT, ...a }; } catch(e){}
 if (!Array.isArray(ABOUT.feat)) ABOUT.feat = [];
@@ -3698,33 +3484,9 @@ $('#settings').onclick = e => { if (e.target.id === 'settings') show('#settings'
 
 
 
-async function refreshStats(){
-  const metas = await dbAll('bookMeta');
-  $('#stBible').textContent = metas.length;
-  const exSel = $('#exBook'), exCur = exSel.value || S.book;
-  const exOpts = [...metas].sort((a, b) => a.order - b.order).map(m => `<option value="${esc(m.name)}">${esc(m.name)} (${m.chapterCount || 0} ch.)</option>`).join('');
-  let exSets = '';
-  try {                                                  // Cựu Ước · Tân Ước · Toàn bộ Kinh Thánh
-    if (metas.some(m => m.chapterCount > 0)){
-      const mk = k => {
-        const c = exSetCount(metas, k), sp = EX_SETS[k];
-        const txt = (c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách') + (c.extra ? ' + ' + c.extra + ' sách khác' : '');
-        return `<option value="${EX_SET_PREFIX}${k}"${(c.have + c.extra) ? '' : ' disabled'}>${esc(sp.label)} (${txt})</option>`;
-      };
-      exSets = '<optgroup label="Trọn bộ">' + ['all', 'ot', 'nt'].map(mk).join('') + '</optgroup>'
-             + '<optgroup label="Theo nhóm trong mục lục (Cựu-Ước)">' + ['mo', 'ls', 'vt', 'tt'].map(mk).join('') + '</optgroup>';
-    }
-  } catch(e){ exSets = ''; }
-  exSel.innerHTML = exSets ? exSets + '<optgroup label="Từng sách">' + exOpts + '</optgroup>' : (exOpts || '<option value="">(chưa có sách)</option>');
-  const exWant = [...exSel.options].find(o => o.value === exCur && !o.disabled), exFirst = [...exSel.options].find(o => o.value && !exSetKey(o.value));
-  if (exWant) exSel.value = exCur; else if (exFirst) exSel.value = exFirst.value;
-  exSyncUI();
-  exRefreshSetLabels(metas).catch(() => {});                       // cập nhật số sách có nội dung thật (chạy nền)
-  $('#stChap').textContent = metas.reduce((a, m) => a + (m.chapterCount || 0), 0);
-  $('#stSync').textContent = syncOn() ? 'Bật' : 'Tắt';
-}
 
-async function reloadAll(){ await initBible(); await refreshStats(); }
+
+async function reloadAll(){ await initBible(); }
 
 
 
@@ -3743,25 +3505,20 @@ async function reloadAll(){ await initBible(); await refreshStats(); }
  *    q = mảng mức thụt của từng dòng thơ ([1] hoặc [1,2]...)
  * ========================================================= */
 /*--PURE-START--*/
-const SUPMAP = { '⁰':0,'¹':1,'²':2,'³':3,'⁴':4,'⁵':5,'⁶':6,'⁷':7,'⁸':8,'⁹':9 };
+
 
 // Làm sạch văn bản dán; chữ số mũ (¹²³) → đánh dấu ⟦n⟧
-function cleanRaw(s){
-  s = String(s).replace(/\r\n?/g, '\n').replace(/[\u00A0\u2007\u202F]/g, ' ')
-       .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '').replace(/\t/g, ' ');
-  return s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => '⟦' + [...m].map(c => SUPMAP[c]).join('') + '⟧');
-}
+
 
 // Dòng bắt đầu bằng địa chỉ Kinh Thánh (Lê-vi Ký 19:36; 2 Các Vua 4:1; St 1,1): dùng để nhận ra các câu trích nằm trong chú thích dài
 const FN_REF = /^(?:\d{1,2}\s+)?\p{Lu}[\p{L}\-\s.]{0,40}?\s\d{1,3}\s*[:,.]\s*\d{1,3}/u;
 
 /* Dòng kết thúc bằng "(Sê-la)" là câu thơ (dấu nghỉ Thi Thiên), KHÔNG phải tiêu đề; và "… câu văn. (xxx)" (có dấu câu ngay trước ngoặc) cũng là lời văn chứ không phải "Tiêu đề (tham chiếu)" */
-const SELA_END = /\(\s*S[êe][- ]?lah?\s*\)\s*$/iu;
-const isHeadLine = s => s.length <= 110 && /^\p{Lu}/u.test(s) && !SELA_END.test(s) &&
-  ((/\([^()]*\)$/.test(s) && !/[.,;:!?…”"’']\s*\([^()]*\)$/.test(s)) || !/[.,;:!?…”"’')\]]$/.test(s));
-const isRefLine  = s => /^\(.{2,40}\)$/.test(s) && !SELA_END.test(s);
+
+
+
 // Chú thích [ … ] (không phải số câu như [3]): tự xuống dòng riêng, chữ nghiêng nhỏ hơn
-const NOTE_RE = /\[[^\[\]]*[^\d\[\]\s,.\-–][^\[\]]*\]/g;
+
 // Chú thích bấm để bung/ẩn: quét mọi đoạn [ … ] bằng một regex duy nhất
 //  · [n]        (số) → dấu chú thích; nếu có dòng giải nghĩa "[n] …" thì bấm để bung nội dung (fm = bản đồ số → nội dung đã escape)
 //  · [chữ …]    → thu gọn thành dấu [*], bấm để bung nội dung bên trong
@@ -3793,290 +3550,25 @@ function richText(s, fm){
   });
 }
 
-function markerOK(t, m){
-  const prev = t[m.index - 1], next = t[m.index + m[0].length];
-  if (prev !== undefined && !/[\s"“‘'«—–-]/.test(prev)) return false;
-  if (next !== undefined && /\d/.test(next)) return false;
-  return true;
-}
+
 // Tìm số câu theo THỨ TỰ (1,2,3…) để không nhầm với số trong lời văn (vd "40 ngày")
-function findMarkers(t, start, from, strictFirst){
-  const marks = []; let pos = from || 0, n = start;
-  const spans = []; t.replace(NOTE_RE, (s, i) => { spans.push([i, i + s.length]); return s; });
-  const inNote = i => spans.some(([a, b]) => i >= a && i < b);
-  // Số câu ĐẦU TIÊN dễ bị nhầm với số nằm trong tiêu đề (vd "(đoạn 1 đến đoạn 30)"):
-  // ưu tiên (0) đứng đầu dòng + theo sau là chữ hoa, (1) theo sau là chữ hoa, (2) bất kỳ
-  const lineStart = i => /(^|\n)[ \t]*$/.test(t.slice(Math.max(0, i - 40), i));
-  const upperNext = e => /^\s*["“‘'«(\[]?\p{Lu}/u.test(t.slice(e, e + 8));
-  for (;;){
-    let found = null;
-    const passes = strictFirst && !marks.length ? [0, 1, 2] : [2];
-    for (const pass of passes){
-      for (let k = 0; k < 4 && !found; k++){          // cho phép nhảy qua câu bị thiếu
-        const re = /(?:\((\d{1,3})\)|(\d{1,3}))[.:]?/g; re.lastIndex = pos; let m;
-        while ((m = re.exec(t))){
-          if (+(m[1] || m[2]) !== n + k || !markerOK(t, m) || inNote(m.index)) continue;
-          const e = m.index + m[0].length;
-          if (pass === 0 && !(lineStart(m.index) && upperNext(e))) continue;
-          if (pass === 1 && !upperNext(e)) continue;
-          found = { n:n + k, idx:m.index, end:e }; break;
-        }
-      }
-      if (found) break;
-    }
-    if (!found) break;
-    marks.push(found); pos = found.end; n = found.n + 1;
-  }
-  return marks;
-}
+
 
 // Tách phần văn bản giữa hai số câu: thân câu + tiêu đề (đứng cuối, trước câu kế) + cờ đoạn mới
-function splitSeg(seg, hasNext, poem, oneLine){
-  const endsBlank = /\n[ \t]*\n[ \t]*$/.test(seg), endsNL = /\n[ \t]*$/.test(seg);
-  const heads = [];
-  let lines = seg.split('\n').map(s => s.trim()).filter(l => {
-    if (/^#\s+/.test(l)){ heads.push(l.replace(/^#\s+/, '')); return false; }
-    return true;
-  });
-  while (lines.length && !lines[lines.length - 1]) lines.pop();
-  if (hasNext && !heads.length){
-    // Dòng đứng riêng sau một dòng trống, ngắn, không kết thúc bằng , ; : và không bắt đầu bằng số → chắc chắn là tiêu đề
-    const strongHead = (ls, i) => i > 0 && ls[i - 1] === '' && ls[i].length <= 70 && /^\p{Lu}/u.test(ls[i]) &&
-      !/[,;:]$/.test(ls[i]) && !SELA_END.test(ls[i]) && !/^(\d{1,3}\b|\[\d)/.test(ls[i]);
-    let i = lines.length - 1, first = -1;
-    while (i > 0){
-      const ln = lines[i];
-      if (!ln || isRefLine(ln)){ i--; continue; }
-      if (isHeadLine(ln) || strongHead(lines, i)){ first = i; i--; continue; }
-      break;
-    }
-    if (first > 0){
-      const blk = lines.slice(first).filter(l => l && !isRefLine(l));
-      let prev = first - 1; while (prev > 0 && !lines[prev]) prev--;
-      const afterBlank = lines[first - 1] === '';
-      const prevEnds = /[.!?…;:"”’')\]]$/.test(lines[prev] || '');
-      const shortBlk = blk.length > 0 && blk.length <= 3 && blk.every(l => l.length <= 80);
-      if (!poem || afterBlank || (prevEnds && shortBlk)){
-        heads.push(lines.slice(first).filter(Boolean).join('\n'));
-        lines = lines.slice(0, first);
-      }
-    }
-    // Tiêu đề dính liền cuối câu trước (cùng dòng): "… câu văn. Tiêu đề ngắn"
-    if (!heads.length && lines.length){
-      const last = lines[lines.length - 1];
-      const m = last.match(/^(.*[.!?…”"’)])\s+(\p{Lu}[^.,;:!?…”"()\d]{3,60})$/u);
-      if (m){
-        const w = m[2].trim().split(/\s+/).length;
-        if (w >= 2 && w <= 7 && m[1].length >= 15){
-          heads.push(m[2].trim());
-          lines[lines.length - 1] = m[1];
-        }
-      }
-    }
-  }
-  return { body: lines.filter(Boolean), h: heads.length ? heads.join('\n') : null, para: endsBlank || (endsNL && !oneLine) };
-}
+
 
 // Nhận dạng văn bản gốc → danh sách câu
-function detectVerses(raw, o){
-  o = o || {};
-  const startAt = o.startAt || 1;
-  let t = cleanRaw(raw);
-  const defs = [];                                   // dòng chú thích cuối: "[1] Ê-va, nghĩa là sự sống."
-  { const L = t.split('\n'), keep = [];                       // chú thích có thể dài nhiều dòng: nối các dòng sau nếu là câu trích (có địa chỉ Kinh Thánh) hoặc dấu nháy chưa đóng
-    for (let i = 0; i < L.length; i++){
-      const m = L[i].match(/^[ \t]*\[(\d{1,3})\][ \t:.)\-–]*(\S.*)$/);
-      if (!m){ keep.push(L[i]); continue; }
-      let txt = m[2].trim(), j = i + 1;
-      for (;;){
-        let k = j; while (k < L.length && !L[k].trim()) k++;
-        if (k >= L.length) break;
-        const ln = L[k].trim();
-        if (/^\[\d{1,3}\]/.test(ln) || /^#/.test(ln)) break;
-        if (FN_REF.test(ln) || !/^(?:\(\d{1,3}\)|\d{1,3})(?:[.:]|\s)/.test(ln)){ txt += '\n' + ln; j = k + 1; } else break;
-      }
-      defs.push({ k:m[1], t:`[${m[1]}] ${txt}` }); i = j - 1;
-    }
-    t = keep.join('\n').trim(); }
-  if (!t) return [];
-  let marks = [];
-  if (/⟦\d/.test(t)){                                   // số câu dạng chỉ số mũ / <sup> từ trang gốc
-    const re = /⟦(\d{1,3})⟧[ \t]*/g; let m;
-    while ((m = re.exec(t))) marks.push({ n:+m[1], idx:m.index, end:m.index + m[0].length });
-    if (marks.length > 1 && marks[0].n >= marks[1].n) marks[0].n = startAt;   // số chương chữ lớn ở đầu
-  } else {                                              // số câu là chữ số thường
-    marks = findMarkers(t, startAt, 0, true);
-    if (!marks.length || marks[0].n > startAt){         // câu đầu không có số (thay bằng số chương)
-      const lead = t.match(/^\s*(\d{1,3})(?=\s)/);
-      const from = (lead && o.chapter && +lead[1] === +o.chapter && startAt === 1) ? lead[0].length : 0;
-      marks = [{ n:startAt, idx:from, end:from, implicit:true }, ...findMarkers(t, startAt + 1, from)];
-    }
-  }
-  const real = marks.filter((m, i) => i > 0 && !m.implicit);
-  const oneLine = real.length ? real.filter(m => t[m.idx - 1] === '\n').length / real.length >= 0.8 : true;
 
-  let pendH = null, pendP = false;
-  const pre = t.slice(0, marks[0].implicit ? 0 : marks[0].idx);
-  const hs = [];
-  pre.split('\n').map(s => s.trim()).filter(Boolean).forEach(l => {
-    if (/^#\s+/.test(l)) hs.push(l.replace(/^#\s+/, ''));
-    else if (/^\d{1,3}$/.test(l)) { /* số chương đứng riêng */ }
-    else if (isHeadLine(l) || isRefLine(l)) hs.push(l);
-    else if (l.length <= 200 && !/^(chương|chapter)\s*\d+$/i.test(l)) hs.push(l);   // dòng trước câu 1 luôn là tiêu đề/dẫn nhập, đừng làm mất
-  });
-  if (hs.length) pendH = hs.join('\n');
-
-  const vs = [];
-  marks.forEach((m, i) => {
-    const seg = t.slice(m.end, i + 1 < marks.length ? marks[i + 1].idx : t.length);
-    const r = splitSeg(seg, i + 1 < marks.length, o.poem, oneLine);
-    let txt, q = null;
-    if (o.poem && r.body.length){ txt = r.body.join('\n'); q = r.body.map(() => 1); }
-    else txt = r.body.join(' ').replace(/\s{2,}/g, ' ');
-    if (!txt && m.implicit){ if (r.h) pendH = r.h; return; }
-    const v = { n:m.n, t:txt };
-    if (q) v.q = q;
-    if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
-    vs.push(v); pendH = r.h; pendP = r.para;
-  });
-  // gắn chú thích vào câu có dấu [n] tương ứng (không thấy thì gắn vào câu cuối)
-  const taken = new Set();
-  defs.forEach(d => {
-    let idx = vs.findIndex((v, i) => !taken.has(d.k + ':' + i) && (v.t.includes('[' + d.k + ']') || String(v.h || '').includes('[' + d.k + ']')));
-    if (idx < 0) idx = vs.length - 1;
-    if (idx < 0) return;
-    taken.add(d.k + ':' + idx);
-    (vs[idx].fn = vs[idx].fn || []).push(d.t);
-  });
-  return vs;
-}
 
 /* Chú thích KHÔNG có số [n] (ví dụ "(Phó cho quản phường nhạc, khảy đờn mà hát bài nầy)." cuối Ha-ba-cúc 3): hiện trong ô soạn thành dòng "* nội dung".
    Dấu * giúp app nhận ra đây là ghi chú in nghiêng nên sửa được, lưu lại vẫn là ghi chú (không bị nhập vào câu Kinh Thánh). */
-function serializeFn(f){
-  const s = String(f);
-  if (/^\[\d{1,3}\]/.test(s.trim())) return [s];                       // chú thích có số: giữ nguyên như cũ
-  const parts = s.split('\n').map(x => x.trim()).filter(Boolean);
-  if (!parts.length) return [];
-  const safe = parts.slice(1).every(x => !/^(?:[#>*\[]|\(?\d{1,3}(?:[\s.:)_\-–—]|$))/.test(x));   // ghi chú nhiều dòng: dòng tiếp theo giữ nguyên nếu không bị nhầm với câu / tiêu đề
-  return safe ? ['* ' + parts[0], ...parts.slice(1)] : parts.map(x => '* ' + x);
-}
+
 // Câu → văn bản soạn thảo (# tiêu đề · dòng trống = đoạn mới · > thơ · * ghi chú in nghiêng)
-function serializeVerses(vs){
-  const out = [];
-  vs.forEach((v, i) => {
-    if (v.h){ if (out.length) out.push(''); v.h.split('\n').forEach(l => out.push('# ' + l)); }
-    else if (v.p && i > 0) out.push('');
-    if (Array.isArray(v.q) && v.q.length){
-      v.t.split('\n').forEach((ln, k) => {
-        const pre = '>'.repeat(Math.min(2, v.q[k] || 1));
-        out.push(k === 0 ? `${pre} ${v.n}${v.e > v.n ? '-' + v.e : ''} ${ln}` : `${pre} ${ln}`);
-      });
-    } else out.push(`${v.n}${v.e > v.n ? '-' + v.e : ''} ${v.t}`);
-    (v.fn || []).forEach(f => serializeFn(f).forEach(l => out.push(l)));
-  });
-  return out.join('\n');
-}
+
 // Văn bản soạn thảo → câu
-function parseMarkup(text, startAt){
-  const vs = []; let pendH = null, pendP = false, lastFn = null, pendFn = [];     // lastFn: chú thích đang viết dở (có thể dài nhiều dòng)
-  const accept = n => !vs.length || (n > (vs[vs.length - 1].e || vs[vs.length - 1].n) && n - (vs[vs.length - 1].e || vs[vs.length - 1].n) <= 6);
-  const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
-  for (let li = 0; li < lines.length; li++){
-    const line = lines[li].trim();
-    if (!line){ pendP = true; continue; }                              // dòng trống không làm đứt chú thích dài
-    let m = line.match(/^#\s+(.+)$/);
-    if (m){ lastFn = null; pendH = pendH ? pendH + '\n' + m[1] : m[1]; continue; }
-    m = line.match(/^\*\s*(.*)$/);                                      // ghi chú in nghiêng không số: "* nội dung" (dòng "* " còn trống thì bỏ qua)
-    if (m){
-      const nt = m[1].trim(); lastFn = null; if (!nt) continue;
-      if (vs.length && pendH === null){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(nt); lastFn = { v:lv, i:lv.fn.length - 1 }; }
-      else { pendFn.push(nt); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; }
-      continue;
-    }
-    /* Dòng CUỐI chương nằm trọn trong ngoặc tròn, không phải số câu (vd "(Phó cho quản phường nhạc, khảy đờn mà hát bài nầy.)") → tự nhận là ghi chú in nghiêng, xuống dòng riêng, khỏi cần gõ "* " */
-    if (vs.length && pendH === null && /^\(\s*[^\d\s()][^()]*\)\.?$/.test(line) && lines.slice(li + 1).every(x => !x.trim())){
-      const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(line); lastFn = null; continue;
-    }
-    m = line.match(/^(>{1,2})\s*(.*)$/);
-    const lvl = m ? m[1].length : 0, body = m ? m[2] : line;
-    const fm = !lvl && body.match(/^\[(\d{1,3})\][\s:.)\-–]*(\S.*)$/);      // chấp nhận cả "[1]Nội dung", "[1]: Nội dung"          // "[1] chú thích" → gắn vào câu liền trước
-    if (fm && (!vs.length || pendH !== null)){            // chú thích của dấu [n] nằm trong TIÊU ĐỀ (hoặc trước câu 1): giữ lại, gắn vào câu liền sau tiêu đề
-      pendFn.push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:{ fn:pendFn }, i:pendFn.length - 1 }; continue;
-    }
-    if (fm && vs.length){ const lv = vs[vs.length - 1]; (lv.fn = lv.fn || []).push(`[${fm[1]}] ${fm[2].trim()}`); lastFn = { v:lv, i:lv.fn.length - 1 }; continue; }
-    /* Số câu ghép: "8_9", "8-9", "8–9" (hoặc "(8-9)") = câu 8 nối liền câu 9 trong cùng một đoạn văn (bản gốc không tách được); hiện "8–9", câu kế tiếp là 10 */
-    let nm = body.match(/^(?:\((\d{1,3})(?:\s*[_\-–—]\s*(\d{1,3}))?\)|(\d{1,3})(?:\s*[_\-–—]\s*(\d{1,3}))?)[.:]?(?:\s+(.*))?$/), ne = 0;
-    if (nm){ const a = +(nm[1] || nm[3]), b = +(nm[2] || nm[4] || 0); if (b && (b <= a || b - a > 20)) nm = null; else ne = b; }
-    const nn = nm ? +(nm[1] || nm[3]) : 0;
-    const lastN = vs.length ? (vs[vs.length - 1].e || vs[vs.length - 1].n) : 0, nextVerse = !!nm && nn > lastN && nn - lastN <= 2 && !FN_REF.test(body);
-    if (lastFn && !lvl && !nextVerse){ lastFn.v.fn[lastFn.i] += '\n' + body; continue; }   // chú thích dài: mọi dòng sau (kể cả cách dòng trống, dài bao nhiêu cũng được) đều nối vào chú thích cho tới khi gặp câu kế tiếp, tiêu đề # hoặc dòng thơ >
-    lastFn = null;
-    if (nm && accept(nn)){
-      const v = { n:nn, t:(nm[5] || '').trim() };
-      if (ne) v.e = ne;
-      if (lvl) v.q = [lvl];
-      if (pendH) v.h = pendH; else if (pendP && vs.length) v.p = true;
-      if (pendFn.length){ v.fn = pendFn; pendFn = []; }
-      pendH = null; pendP = false; vs.push(v);
-    } else if (!lvl && (isHeadLine(body) || isRefLine(body)) && ((pendH !== null && !pendP) || !vs.length)){
-      pendH = pendH ? pendH + '\n' + body : body;
-    } else if (vs.length){
-      const v = vs[vs.length - 1];
-      if (lvl){ if (!v.q) v.q = [1]; v.t = v.t ? v.t + '\n' + body : body; v.q.push(lvl); }
-      else v.t = v.t ? v.t + ' ' + body : body;
-    } else if (!lvl && body.length <= 200 && lines.slice(li + 1).some(x => /^(?:>{1,2}\s*)?(?:\((\d{1,3})\)|(\d{1,3}))(?:[.:]|\s)/.test(x.trim()))){
-      pendH = pendH ? pendH + '\n' + body : body;        // dòng trước câu 1 (kể cả không viết hoa) → tiêu đề / dẫn nhập
-    } else {
-      const v = { n:startAt || 1, t:body }; if (lvl) v.q = [lvl]; if (pendH) v.h = pendH; if (pendFn.length){ v.fn = pendFn; pendFn = []; } pendH = null; pendP = false; vs.push(v);
-    }
-  }
-  return vs;
-}
+
 // Kiểm tra chương: số câu (nhảy / thiếu / trùng / lùi), câu rỗng, khoảng trắng thừa, dấu câu thừa – thiếu, ngoặc & dấu trích dẫn
-function checkVerses(vs){
-  const w = [], miss = [], dup = [], back = [], jump = [];
-  const list = a => { const u = [...new Set(a)]; return u.slice(0, 10).join(', ') + (u.length > 10 ? '… (+' + (u.length - 10) + ')' : ''); };
-  for (let i = 1; i < vs.length; i++){
-    const a = vs[i - 1].e || vs[i - 1].n, b = vs[i].n;
-    if (b === a) dup.push(b);
-    else if (b < a) back.push(a + '→' + b);
-    else if (b - a > 1){ jump.push(a + '→' + b); for (let k = a + 1; k < b; k++) miss.push(k); }
-  }
-  if (vs.length && vs[0].n !== 1) w.push('Bắt đầu từ câu ' + vs[0].n);
-  if (miss.length) w.push('Nhảy câu ' + list(jump) + ' → thiếu câu: ' + list(miss));
-  if (dup.length) w.push('Trùng số câu: ' + list(dup));
-  if (back.length) w.push('Số câu bị đảo ngược thứ tự: ' + list(back));
-  const E = { empty:[], sp2:[], sped:[], spb:[], spa:[], dp:[], mix:[], br:[] };
-  let dq = 0, lq = 0, rq = 0, lp = 0, rp = 0;
-  vs.forEach(v => {
-    const t = String(v.t);
-    if (!t.trim()){ E.empty.push(v.n); return; }
-    if (t.split('\n').some(l => /[ \t\u00A0]{2,}/.test(l))) E.sp2.push(v.n);
-    if (t.split('\n').some(l => l !== l.trim())) E.sped.push(v.n);
-    if (/[^\s(\[“"‘'«][ \t]+[,;:!?]/.test(t) || /[^\s.][ \t]+\.(?![.\d])/.test(t)) E.spb.push(v.n);
-    if (/\p{L}[,;:!?]\p{L}/u.test(t) || /\p{Ll}\.\p{Lu}/u.test(t)) E.spa.push(v.n);
-    if (/([,;:!?])\1/.test(t) || /(?<!\.)\.\.(?!\.)/.test(t) || /\.{4,}/.test(t) || /…[.…]|\.…/.test(t)) E.dp.push(v.n);
-    if (/[,;:][,;:.]/.test(t)) E.mix.push(v.n);
-    const o = (t.match(/\[/g) || []).length, c = (t.match(/\]/g) || []).length;
-    if (o !== c) E.br.push(v.n);
-    dq += (t.match(/"/g) || []).length; lq += (t.match(/“/g) || []).length; rq += (t.match(/”/g) || []).length;
-    lp += (t.match(/\(/g) || []).length; rp += (t.match(/\)/g) || []).length;
-  });
-  if (E.empty.length) w.push('Câu rỗng: ' + list(E.empty));
-  if (E.sp2.length) w.push('Dư khoảng trắng liên tiếp ở câu: ' + list(E.sp2));
-  if (E.sped.length) w.push('Thừa khoảng trắng đầu/cuối dòng ở câu: ' + list(E.sped));
-  if (E.spb.length) w.push('Thừa khoảng trắng trước dấu câu ở câu: ' + list(E.spb));
-  if (E.spa.length) w.push('Thiếu khoảng trắng sau dấu câu ở câu: ' + list(E.spa));
-  if (E.dp.length) w.push('Thừa dấu câu lặp (,, ;; .. ....) ở câu: ' + list(E.dp));
-  if (E.mix.length) w.push('Dấu câu đứng sát nhau bất thường (,. ;, :,…) ở câu: ' + list(E.mix));
-  if (E.br.length) w.push('Ngoặc vuông [ ] không đủ cặp ở câu: ' + list(E.br));
-  if (lp !== rp) w.push('Ngoặc tròn ( ) không đủ cặp (' + lp + ' mở, ' + rp + ' đóng)');
-  if (dq % 2) w.push('Dấu nháy kép " không đủ cặp');
-  if (lq !== rq) w.push('Dấu nháy kép “ ” không đủ cặp (' + lq + ' mở, ' + rq + ' đóng)');
-  if (E.sp2.length || E.sped.length || E.spb.length || E.spa.length || E.dp.length) w.push('Gợi ý: bấm “🧹 Dọn lỗi” để tự sửa khoảng trắng và dấu câu lặp.');
-  return w;
-}
+
 // Tự dọn khoảng trắng & dấu câu lặp trong một câu (không đụng tới chữ)
 
 
@@ -4097,19 +3589,15 @@ function secHTML(h, fm){
   }).join('') + '</div>';
 }
 function subOf(book){
-  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Sub.value; } catch(_){}
   return (bibleMeta.find(m => m.name === book) || {}).sub || '';
 }
 function subBelowOf(book){   // tiêu đề phụ nằm dưới tên sách?
-  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.SubPos.value === 'below'; } catch(_){}
   return (bibleMeta.find(m => m.name === book) || {}).subPos === 'below';
 }
 function dcOffOf(book){   // sách tắt số chương lớn ở đầu chương (thư tín 1 chương: Phi-lê-môn, Giu-đe…)?
-  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book && ed.DcOff) return ed.DcOff.value === 'off'; } catch(_){}
   return (bibleMeta.find(m => m.name === book) || {}).dc === 'off';
 }
 function titleOf(book){   // tên hiển thị ở đầu chương (để trống thì dùng tên sách – tên sách vẫn dùng cho mục lục)
-  try { const e = $('#editor'); if (e && !e.hidden && ed.Book && ed.Book.value.trim() === book) return ed.Title.value.trim() || book; } catch(_){}
   return ((bibleMeta.find(m => m.name === book) || {}).title || '').trim() || book;
 }
 function paperHTML(book, ch, verses, view, idp){
@@ -4183,31 +3671,7 @@ $$('#viewSeg button').forEach(b => b.onclick = () => {
 });
 
 /* Dán từ trang web: chuyển HTML → văn bản có đánh dấu số câu (<sup>, class verse-num…) và tiêu đề (h1–h6) */
-function htmlToMarked(html){
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const BLOCK = new Set(['P','DIV','LI','TR','BLOCKQUOTE','SECTION','ARTICLE','UL','OL','TABLE']);
-  let out = '';
-  (function walk(n){
-    if (n.nodeType === 3){ out += n.nodeValue.replace(/\s+/g, ' '); return; }
-    if (n.nodeType !== 1) return;
-    const tag = n.tagName, cls = String(n.getAttribute('class') || '');
-    if (/^(SCRIPT|STYLE|NOSCRIPT|HEAD)$/.test(tag)) return;
-    const txt = n.textContent.trim();
-    const numLike = tag === 'SUP' || /verse-?num|versenum|vnum|v-num|chapter-?num|chapternum|drop-?cap/i.test(cls) ||
-      (tag === 'SPAN' && /(^|\s)label(\s|$)/.test(cls) && n.parentElement && /\bverse\b/.test(n.parentElement.getAttribute('class') || ''));
-    if (numLike){
-      if (/^\[?\d{1,3}\]?$/.test(txt)){ out += '⟦' + txt.replace(/\D/g, '') + '⟧'; return; }
-      if (tag === 'SUP') return;                      // chú thích, dấu tham chiếu: bỏ
-    }
-    if (/^H[1-6]$/.test(tag)){ out += '\n# ' + txt.replace(/\s+/g, ' ') + '\n'; return; }
-    if (tag === 'BR'){ out += '\n'; return; }
-    const blk = BLOCK.has(tag);
-    if (blk) out += '\n';
-    n.childNodes.forEach(walk);
-    if (blk) out += tag === 'P' ? '\n\n' : '\n';
-  })(doc.body);
-  return out.replace(/[ \t]*\n[ \t]*/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-}
+
 
 /* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Trình soạn thảo (giao diện, tự động lưu) ▼▼▼ */
 /* =========================================================
@@ -4215,135 +3679,36 @@ function htmlToMarked(html){
  *  Gõ / dán xong khoảng 2 giây là tự lưu vào máy, hiện ngay
  *  ở trang chủ và tự đẩy lên GitHub (nếu đã kết nối).
  * ========================================================= */
-const ed = {};
-['Book','Abbr','Sub','SubPos','DcOff','Title','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
-let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
-const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
 
-function edRefresh(){
-  const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
-  const name = ed.Book.value.trim() || 'Tên sách', ch = parseInt(ed.Chap.value, 10) || 1;
-  ed.Preview.className = 'reader paper' + (S.view !== 'verse' ? ' print' : '');
-  ed.Preview.innerHTML = vs.length ? paperHTML(name, ch, vs, S.view, 'pv')
-    : '<div class="empty"><b>Chưa có nội dung</b>Dán văn bản chương vào ô soạn thảo.</div>';
-  // Xem trước: bung sẵn mọi chú thích để soát lỗi (bấm vào dấu chú thích vẫn thu/bung được)
-  ed.Preview.querySelectorAll('.fnx').forEach(x => { x.hidden = false; });
-  ed.Preview.querySelectorAll('.fnk').forEach(k => k.setAttribute('aria-expanded', 'true'));
-  edBookHint();
-  try { hyBadge(); } catch(e){}
-  try { archBadge(); } catch(e){}
-  const w = checkVerses(vs), heads = vs.filter(v => v.h).length;
-  ed.Status.className = 'log ' + (w.length ? 'err' : 'ok');
-  ed.Status.textContent = vs.length ? `${vs.length} câu · ${heads} tiêu đề` + (w.length ? '\n⚠ ' + w.join('\n⚠ ') : ' · số câu liên tục ✔') : '';
-  try { if (edCur.name && ed.Text.value.trim() && ed.Text.value !== edLoaded) localStorage.setItem(draftKey(), ed.Text.value); } catch(e){}
-}
-const edQueue = () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); clearTimeout(edAutoTimer); edAutoTimer = setTimeout(edAuto, 2000); };
+
+
+
+
+
 
 // Lưu một chương vào máy (dùng chung cho tự lưu và nút Lưu)
-let persistWarn = [];
-/* Canh chừng mất dấu khi sửa tay: so chữ cũ với chữ mới trong cùng một câu; nếu một chữ bỏ nguyên các chữ cái nhưng RƠI mất dấu (vd "sự" → "su", "người" → "nguời") thì trả về danh sách để báo ngay */
-function ktMarkLoss(oldVs, newVs){
-  const strip = w => w.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-  const mk = w => (w.normalize('NFD').match(/\p{M}/gu) || []).length;
-  const out = [], by = new Map((oldVs || []).map(v => [v.n, v]));
-  for (const v of newVs){
-    const o = by.get(v.n); if (!o) continue;
-    for (const k of ['t', 'h']){
-      if (typeof o[k] !== 'string' || typeof v[k] !== 'string' || o[k] === v[k]) continue;
-      const a = o[k].match(/[\p{L}\p{M}]+/gu) || [], b = v[k].match(/[\p{L}\p{M}]+/gu) || [];
-      if (a.length !== b.length) continue;
-      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && strip(a[i]) === strip(b[i]) && mk(b[i]) < mk(a[i]) && out.length < 12) out.push(`${a[i]} → ${b[i]} (câu ${v.n})`);
-    }
-  }
-  return out;
-}
-async function persistChapter(name, ch, vs, abbr, sub, title, subPos, dc){
-  if (!isAdmin()) throw new Error('Chỉ quản trị viên mới được sửa nội dung.');   // chế độ chỉ đọc cho cộng đồng
-  const rec = (await dbGet('books', name)) || { name, chapters:[] };
-  while (rec.chapters.length < ch) rec.chapters.push([]);
-  vs.forEach(v => { ['t', 'h'].forEach(k => { if (typeof v[k] === 'string') v[k] = v[k].normalize('NFC'); }); if (Array.isArray(v.fn)) v.fn = v.fn.map(x => typeof x === 'string' ? x.normalize('NFC') : x); });   // luôn lưu dạng dấu dựng sẵn (NFC): dán từ nguồn khác có thể là dạng tổ hợp (dấu rời), hiển thị/tìm kiếm/AI đọc sẽ thấy "thiếu dấu"
-  persistWarn = ktMarkLoss(rec.chapters[ch - 1] || [], vs);
-  rec.chapters[ch - 1] = vs;
-  const metas = await dbAll('bookMeta');
-  let meta = metas.find(m => m.name === name);
-  if (!meta) meta = { name, order: metas.reduce((a, m) => Math.max(a, m.order), 0) + 1 };
-  meta.abbr = abbr || meta.abbr || ''; if (typeof sub === 'string') meta.sub = sub.trim(); if (typeof title === 'string') meta.title = title.trim(); if (typeof subPos === 'string') meta.subPos = subPos; if (typeof dc === 'string') meta.dc = dc; meta.chapterCount = rec.chapters.length;
-  await dbPut('books', [rec]); await dbPut('bookMeta', [meta]);
-  S.book = name; S.chapter = ch; saveS();
-  await initBible(); await refreshStats(); markDirty();
-}
-// Tự lưu (chạy ngầm, không hỏi)
-async function edAuto(){
-  clearTimeout(edAutoTimer);
-  const { name, ch } = edCur; if (!name || !(ch >= 1)) return;
-  const text = ed.Text.value; if (!text.trim() || text === edLoaded) return;
-  const vs = parseMarkup(text, +ed.Start.value || 1); if (!vs.length) return;
-  try {
-    const abbr = ed.Book.value.trim() === name ? ed.Abbr.value.trim() : '';
-    await persistChapter(name, ch, vs, abbr, ed.Book.value.trim() === name ? ed.Sub.value : undefined, ed.Book.value.trim() === name ? ed.Title.value : undefined, ed.Book.value.trim() === name ? ed.SubPos.value : undefined, ed.Book.value.trim() === name ? ed.DcOff.value : undefined);
-    edLoaded = text;
-    try { localStorage.removeItem(draftKey()); } catch(e){}
-    if (persistWarn.length) toast('⚠ Có thể bị mất dấu: ' + persistWarn.slice(0, 4).join('; ') + (persistWarn.length > 4 ? '…' : '') + ' — kiểm tra lại', 6000);
-    const d = new Date(); ed.Auto.textContent = `✔ Đã tự lưu lúc ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  } catch(e){ ed.Auto.textContent = ''; toast('Lỗi tự lưu: ' + e.message); }
-}
 
-async function edLoad(){
-  const name = ed.Book.value.trim(), ch = parseInt(ed.Chap.value, 10);
-  edCur = { name, ch: ch >= 1 ? ch : 0 }; ed.Auto.textContent = '';
-  if (!name || !(ch >= 1)){ ed.Text.value = ''; edLoaded = ''; return edRefresh(); }
-  const rec = await dbGet('books', name);
-  const meta = bibleMeta.find(m => m.name === name);
-  if (meta && !ed.Abbr.value) ed.Abbr.value = meta.abbr || '';
-  if (meta && !ed.Sub.value) ed.Sub.value = meta.sub || '';
-  if (meta && !ed.Title.value) ed.Title.value = meta.title || '';
-  if (meta) ed.SubPos.value = meta.subPos === 'below' ? 'below' : '';
-  if (meta) ed.DcOff.value = meta.dc === 'off' ? 'off' : '';
-  edLoaded = serializeVerses((rec && rec.chapters[ch - 1]) || []);
-  let txt = edLoaded;
-  try {
-    const d = localStorage.getItem(draftKey());
-    if (d && d !== edLoaded){ txt = d; toast('Đã khôi phục bản nháp chưa lưu'); }
-  } catch(e){}
-  ed.Text.value = txt; edRefresh();
-  if (txt !== edLoaded) edAutoTimer = setTimeout(edAuto, 1200);
-}
+/* Canh chừng mất dấu khi sửa tay: so chữ cũ với chữ mới trong cùng một câu; nếu một chữ bỏ nguyên các chữ cái nhưng RƠI mất dấu (vd "sự" → "su", "người" → "nguời") thì trả về danh sách để báo ngay */
+
+
+// Tự lưu (chạy ngầm, không hỏi)
+
+
+
 
 
 
 
 // Dán: tự nhận dạng số câu / tiêu đề / đoạn / thơ
-const edPasteHandler = e => {
-  const cd = e.clipboardData; if (!cd) return;
-  let raw = cd.getData('text/plain') || '';
-  const html = cd.getData('text/html');
-  if (html){ try { const c = htmlToMarked(html); if (/⟦\d/.test(c) || /^# /m.test(c)) raw = c; } catch(err){} }
-  if (/^>{1,2}\s/m.test(raw)) return;                              // đã là định dạng của trình soạn thảo
-  const vs = detectVerses(raw, { startAt:+ed.Start.value || 1, chapter:parseInt(ed.Chap.value, 10) || 0, poem:ed.Poem.value === '1' });
-  if (vs.length < 2) return;                                        // dán thường
-  e.preventDefault();
-  const txt = serializeVerses(vs), t = ed.Text;
-  const s = t.selectionStart, en = t.selectionEnd;
-  const whole = !t.value.trim() || (s === 0 && en === t.value.length);
-  if (whole) t.value = txt;
-  else t.setRangeText((s > 0 && t.value[s - 1] !== '\n' ? '\n' : '') + txt + '\n', s, en, 'end');
-  ed.lastPaste = whole ? { raw, out:t.value } : null;               // nhớ bản gốc (còn nguyên xuống dòng) để đổi "Giữ như thơ" / "Nối thành văn xuôi" sau khi dán
-  toast(`Đã nhận dạng ${vs.length} câu` + (ed.Poem.value === '1' ? ' (dạng thơ)' : '')); edRefresh(); edQueue();
-};
-ed.Text.addEventListener('paste', edPasteHandler);
+
+
 
 /* Nút 📥 Dán: đọc bộ nhớ tạm rồi đi qua đúng bộ nhận dạng của thao tác dán thường (số câu, tiêu đề, đoạn, thơ).
    Không nhận dạng được thì chèn nguyên văn tại con trỏ (thay phần đang bôi chọn). */
 /* Nhớ vùng chọn của ô soạn: trên iPhone/Android, bấm nút làm ô soạn mất tiêu điểm và gọi focus() có thể đưa con trỏ về chỗ khác,
    nên các nút Dán / Xóa dùng vùng chọn đã nhớ lúc người dùng còn đang bôi chọn. */
-const edSel = { s:0, e:0 };
-{ const t = ed.Text, keep = () => { if (document.activeElement === t){ edSel.s = t.selectionStart; edSel.e = t.selectionEnd; } };
-  ['select', 'keyup', 'mouseup', 'touchend', 'input', 'click', 'focus'].forEach(ev => t.addEventListener(ev, keep));
-  document.addEventListener('selectionchange', keep);
-  t.addEventListener('blur', () => { edSel.s = t.selectionStart; edSel.e = t.selectionEnd; });
-  // giữ tiêu điểm khi bấm nút công cụ (không bàn phím nhảy, không mất vùng chọn)
-  ['#edPasteBtn', '#edDelBtn', '#edNote', '#edItal', '#edVNum'].forEach(q => { const b = $(q); ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, e => e.preventDefault())); });
-}
+
+
 
 // Thay đoạn [s,e) bằng txt. Ưu tiên execCommand (giữ Hoàn tác); nếu trình duyệt không làm thật thì ghi trực tiếp vào ô.
 
@@ -4382,50 +3747,19 @@ const edSel = { s:0, e:0 };
 /* --- Quét dấu gạch nối giữa chữ (tội-lỗi, phước-hạnh…) trong văn bản cổ ---
    Đỏ = còn gạch nối · vàng = đã sửa (đổi "-" thành dấu cách, độ dài văn bản không đổi nên vị trí các mục khác không bị lệch).
    Bỏ qua tên riêng phiên âm (Giê-hô-va, Ép-ra-im…): chữ hoa giữa câu, tên sách, từ đã được đánh dấu "Là tên riêng". */
-const HY_KEY = 'kt.hyIgnore';
-const HY_SPLIT = /[-‐‑]/g;
-const HY_PRE = ['a-men','ha-lê-lu-gia','hô-sa-na','sê-la','sê-lah','ma-na','thánh-linh'];
-const hyKey = w => w.normalize('NFC').toLowerCase().replace(HY_SPLIT, '-');
-const hyIsCap = w => /^\p{Lu}/u.test(w);
-const hyIgn = () => { try { return new Set(JSON.parse(localStorage.getItem(HY_KEY) || '[]')); } catch(e){ return new Set(); } };
 
-let hyNameCache = null, hyNameN = -1;
-function hyNames(){
-  let n = 0; try { n = bibleMeta.length; } catch(e){}
-  if (hyNameCache && hyNameN === n) return hyNameCache;
-  const s = new Set(HY_PRE);
-  const add = x => { if (!x) return; const k = hyKey(String(x)); s.add(k); String(x).split(/\s+/).forEach(p => { if (/[-‐‑]/.test(p)) s.add(hyKey(p)); }); };
-  try { BIBLE66.forEach(add); } catch(e){}
-  try { bibleMeta.forEach(b => { add(b.name); add(b.abbr); }); } catch(e){}
-  hyNameCache = s; hyNameN = n; return s;
-}
+
+
+
+
+
+
+
+
 // Từ đứng đầu câu? (trước nó chỉ còn số câu, ngoặc, nháy, ">" hoặc dấu kết câu)
-function hySentStart(text, idx){
-  let i = idx - 1;
-  while (i >= 0 && /[\s\d>"'“”‘’()\[\]_\-–—]/.test(text[i])){ if (text[i] === '\n') return true; i--; }
-  return i < 0 || /[.!?:;…]/.test(text[i]);
-}
-function hyScan(text){
-  const ign = hyIgn(), names = hyNames();
-  const re = /[\p{L}\p{M}]+(?:[-‐‑][\p{L}\p{M}]+)+/gu, raw = [];
-  let m; while ((m = re.exec(text))) raw.push({ s: m.index, w: m[0] });
-  const midCap = new Set();                       // chữ hoa giữa câu ở bất kỳ đâu → chắc chắn là tên riêng
-  raw.forEach(r => { if (hyIsCap(r.w) && !hySentStart(text, r.s)) midCap.add(hyKey(r.w)); });
-  const out = [];
-  raw.forEach(r => {
-    const key = hyKey(r.w);
-    if (ign.has(key) || names.has(key) || midCap.has(key)) return;
-    let flag = false;
-    if (hyIsCap(r.w)){ if (!hySentStart(text, r.s)) return; flag = true; }   // chữ hoa đầu câu: có thể là tên riêng → hỏi lại
-    out.push({ s: r.s, e: r.s + r.w.length, key, orig: r.w, cur: r.w, fix: r.w.replace(HY_SPLIT, ' '), flag, state: 'r' });
-  });
-  return out;
-}
-function hyBadge(){
-  const b = $('#edHy'); if (!b) return;
-  const n = hyScan(ed.Text.value).length;
-  b.textContent = n ? `🔎 Gạch nối (${n})` : '🔎 Gạch nối';
-}
+
+
+
 /* --- Sửa theo từ cho TOÀN BỘ Kinh Thánh (trong công cụ Quét gạch nối) ---
    Mỗi dòng một luật:
      • “sa-bát”            → tự tìm mọi dạng bị mất gạch nối / sai dấu nối (sa bát, Sa bát, SA BÁT, sa–bát…) và khôi phục về đúng “sa-bát”
@@ -4499,59 +3833,13 @@ function applyArch(a){                      // nhận từ điển từ GitHub (
   archCache = a.map(archNorm).filter(Boolean); archComp = null;
   try { localStorage.setItem(ARCH_KEY, JSON.stringify(archCache)); } catch(e){}
 }
-const archEsc = s => s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
-const archL = '[\\p{L}\\p{M}\\p{N}]';
-function archCompile(){
-  if (archComp) return archComp;
-  archComp = archGet().filter(r => r.on).map(r => {
-    const body = archEsc(r.from).replace(/ /g, '[ \\u00a0]+').replace(/[-‐‑]/g, '[-‐‑]');
-    const src = (r.whole ? `(?<!${archL})` : '') + body + (r.whole ? `(?!${archL})` : '');
-    let re = null; try { re = new RegExp(src, r.cs ? 'gu' : 'giu'); } catch(e){}
-    const ex = new Set(r.except.split(', ').filter(Boolean).map(x => archNFC(x).toLowerCase()));
-    return re ? { r, re, ex } : null;
-  }).filter(Boolean);
-  return archComp;
-}
-function archCase(m, rep, cs){
-  if (cs || !rep) return rep;
-  const L = m.replace(/[^\p{L}]/gu, '');
-  if (L.length > 1 && L === L.toUpperCase() && L !== L.toLowerCase()) return rep.toUpperCase();
-  if (/^\p{Lu}/u.test(m)) return rep.charAt(0).toUpperCase() + rep.slice(1);
-  return rep;
-}
-const archWordAt = (text, s, e) => {
-  const isW = c => /[\p{L}\p{M}\p{N}]/u.test(c);
-  let a = s, b = e; while (a > 0 && isW(text[a - 1])) a--; while (b < text.length && isW(text[b])) b++;
-  return text.slice(a, b).toLowerCase();
-};
-function archFind(text){
-  const raw = [];
-  archCompile().forEach((c, ri) => {
-    c.re.lastIndex = 0; let m;
-    while ((m = c.re.exec(text))){
-      if (!m[0].length){ c.re.lastIndex++; continue; }
-      const s = m.index, e = s + m[0].length;
-      if (c.ex.size && c.ex.has(archNFC(archWordAt(text, s, e)))) continue;
-      raw.push({ s, e, ri, c });
-    }
-  });
-  raw.sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s) || a.ri - b.ri);
-  const out = []; let end = -1;
-  raw.forEach(x => {
-    if (x.s < end) return;                                   // chồng lấn → giữ cụm dài nhất / luật đứng trước
-    end = x.e;
-    const orig = text.slice(x.s, x.e), rep = archCase(orig, x.c.r.to, x.c.r.cs);
-    if (rep === orig) return;
-    const flag = !x.c.r.cs && /^\p{Lu}/u.test(orig) && orig !== orig.toUpperCase() && !hySentStart(text, x.s);
-    out.push({ s: x.s, e: x.e, orig, cur: orig, rep, rule: x.c.r, flag, state: 'r' });
-  });
-  return out;
-}
-function archBadge(){
-  const b = $('#edArch'); if (!b) return;
-  const n = archGet().length ? archFind(ed.Text.value).length : 0;
-  b.textContent = n ? `🔁 Từ cổ (${n})` : '🔁 Từ cổ';
-}
+
+
+
+
+
+
+
 
 /* ---- Sửa HÀNG LOẠT cho TOÀN BỘ Kinh Thánh theo từ điển từ cổ: lời văn + chú thích + tiêu đề của mọi sách, mọi chương ----
    Mỗi chuỗi (một câu / một chú thích / một tiêu đề) được xử lý riêng bằng đúng luật của chức năng quét từng chương (trọn từ, giữ kiểu hoa nhơn→nhân · Nhơn→Nhân · NHƠN→NHÂN, ngoại lệ, cụm dài nhất).
@@ -4589,17 +3877,7 @@ const HY_SUS = new Set(['a-dua','cu-đê','ra-ên','run-en','ta-lâng','phu-tù'
 
 
 /* --- Tên sách: báo sách có sẵn / sẽ tạo mới (bắt lỗi gõ nhầm), đổi tên, xóa sách --- */
-function edBookHint(){
-  const h = $('#edBookHint'); if (!h) return;
-  const n = ed.Book.value.trim();
-  if (!n){ h.textContent = 'Nhập hoặc chọn tên sách.'; h.className = 'edhint'; return; }
-  const m = bibleMeta.find(x => x.name === n);
-  if (m){ h.textContent = `✔ Sách có sẵn · ${m.chapterCount || 0} chương`; h.className = 'edhint'; return; }
-  const key = s => fold(s).replace(/[^a-z0-9]+/g, ''), k = key(n);
-  const sim = bibleMeta.find(x => { const y = key(x.name); return k.length >= 3 && (y === k || y.includes(k) || k.includes(y)); });
-  h.textContent = '⚠ Chưa có sách này – sẽ tạo sách MỚI khi lưu.' + (sim ? ` Ý bạn là "${sim.name}"?` : '');
-  h.className = 'edhint warn';
-}
+
 
 
 
@@ -4607,16 +3885,16 @@ function edBookHint(){
 /* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Tìm toàn bộ Kinh Thánh (lời văn + chú thích + tiêu đề) để sửa chính tả / cập nhật chú thích ▼▼▼ */
 /* Nút "🔍 Tìm toàn bộ" trong trình soạn thảo: tìm trong MỌI sách trong máy, kể cả chú thích [n], ghi chú in nghiêng (*) và tiêu đề (#).
    Bấm một kết quả → lưu chương đang soạn, mở đúng chương đó vào ô soạn và bôi chọn chỗ tìm thấy để sửa ngay. */
-const SX_KEY = 'kt.sxopts';
-const sx = { q:'', scope:'', kind:'', acc:true, word:false, all:false, keep:true, uni:false, uniTerms:[], uniRx:[], uniOk:0, undo:null, showSkip:false, skipSet:null, qk:'', nSkip:0, idx:null, gen:-1, res:[], shown:0, el:null, scroll:0 };
-try { const o = JSON.parse(localStorage.getItem(SX_KEY) || '{}'); ['kind', 'scope'].forEach(k => { if (typeof o[k] === 'string') sx[k] = o[k]; }); ['acc', 'word', 'all', 'keep'].forEach(k => { if (typeof o[k] === 'boolean') sx[k] = o[k]; }); } catch(e){}
-try { const u = JSON.parse(localStorage.getItem('kt.sxundo') || 'null'); if (u && Array.isArray(u.items) && u.items.length) sx.undo = u; } catch(e){}
+
+
+
+
 
 
 /* BỎ QUA (kt.sxskip): đánh dấu những chỗ ĐÃ ĐÚNG để ẩn khỏi danh sách, còn lại là chỗ cần xem/sửa. Lưu riêng theo từ đang tìm (và theo chế độ Đúng dấu), chỉ trên máy này.
    Mỗi chỗ gắn với nội dung lúc bỏ qua: nếu sau đó chỗ ấy bị sửa thì tự hiện lại. Chỗ đã bỏ qua KHÔNG bị “Thay tất cả” đụng tới. */
-const SKIP_KEY = 'kt.sxskip', SKIP_MAX = 6000;
-let SXS = {}; try { SXS = JSON.parse(localStorage.getItem(SKIP_KEY) || '{}'); if (!SXS || typeof SXS !== 'object' || Array.isArray(SXS)) SXS = {}; } catch(e){ SXS = {}; }
+
+ 
 
 
 
@@ -4636,17 +3914,17 @@ let SXS = {}; try { SXS = JSON.parse(localStorage.getItem(SKIP_KEY) || '{}'); if
 
 /* NHẬT KÝ SỬA NHANH (kt.sxedits): mỗi lần 💾 Lưu ở “Sửa nhanh” được ghi lại (chữ cũ → chữ mới) để Hoàn tác về sau, không chỉ ở thông báo 5 giây.
    Xem & hoàn tác ở: nút “🕘 Đã sửa nhanh” dưới ô tìm, hoặc nút “🕘 Sửa nhanh” trong trình soạn (đang mở đúng chương đó thì chỉ hiện các chỗ của chương). Chỉ lưu trên máy này. */
-const SXE_KEY = 'kt.sxedits', SXE_MAX = 200;
-let SXE = []; try { SXE = JSON.parse(localStorage.getItem(SXE_KEY) || '[]'); if (!Array.isArray(SXE)) SXE = []; } catch(e){ SXE = []; }
-SXE = SXE.filter(x => x && x.b && x.c >= 1 && typeof x.old === 'string' && typeof x.nw === 'string');
 
-function sxeSyncBtn(){ const b = $('#edQHist'); if (b){ b.hidden = !SXE.length; b.textContent = `🕘 Sửa nhanh (${SXE.length})`; } }
+ 
 
 
 
 
 
-try { sxeSyncBtn(); } catch(e){}
+
+
+
+
 /* SỬA NHANH NGAY TRONG DANH SÁCH: bấm “📝 Sửa nhanh” → ô soạn hiện ngay trong dòng (tự bôi chọn chữ đang tìm) → 💾 Lưu là ghi thẳng vào Kinh Thánh,
    dòng đó ẩn đi như “Bỏ qua” (nếu chữ tìm vẫn còn trong câu thì nhớ là đã đúng). Có Hoàn tác. Giữ nguyên số dòng của thơ/tiêu đề. */
 
@@ -4698,88 +3976,28 @@ try { sxeSyncBtn(); } catch(e){}
 
 
 
-ed.Text.addEventListener('input', edQueue);
-let edSubTimer;
-const edSubFit = () => { ed.Sub.style.height = 'auto'; ed.Sub.style.height = Math.min(ed.Sub.scrollHeight + 2, 92) + 'px'; };
-ed.Sub.addEventListener('input', () => {
-  edSubFit();                 // tiêu đề phía trên tên sách: xem trước ngay, tự lưu cho sách đã có
-  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200);
-  clearTimeout(edSubTimer); edSubTimer = setTimeout(async () => {
-    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
-    const v = ed.Sub.value.trim(); if (v === (meta.sub || '')) return;
-    const m2 = Object.assign({}, meta, { sub:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
-    ed.Auto.textContent = '✔ Đã lưu tiêu đề sách';
-  }, 1200);
-});
-let edPosTimer;
-ed.SubPos.addEventListener('change', () => {   // đổi vị trí tiêu đề phụ: xem trước ngay, tự lưu cho sách đã có
-  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 100);
-  clearTimeout(edPosTimer); edPosTimer = setTimeout(async () => {
-    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
-    const v = ed.SubPos.value; if (v === (meta.subPos || '')) return;
-    const m2 = Object.assign({}, meta, { subPos:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
-    ed.Auto.textContent = '✔ Đã lưu vị trí tiêu đề phụ';
-  }, 300);
-});
-let edDcTimer;
-ed.DcOff.addEventListener('change', () => {   // bật/tắt số chương lớn: xem trước ngay, tự lưu cho sách đã có
-  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 100);
-  clearTimeout(edDcTimer); edDcTimer = setTimeout(async () => {
-    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
-    const v = ed.DcOff.value; if (v === (meta.dc || '')) return;
-    const m2 = Object.assign({}, meta, { dc:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
-    ed.Auto.textContent = v === 'off' ? '✔ Đã ẩn số chương lớn của sách này' : '✔ Đã hiện lại số chương lớn';
-  }, 300);
-});
-let edTitleTimer;
-ed.Title.addEventListener('input', () => {   // tên hiển thị đầu chương: xem trước ngay, tự lưu cho sách đã có
-  clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200);
-  clearTimeout(edTitleTimer); edTitleTimer = setTimeout(async () => {
-    const name = ed.Book.value.trim(), meta = name && bibleMeta.find(m => m.name === name); if (!meta) return;
-    const v = ed.Title.value.trim(); if (v === (meta.title || '')) return;
-    const m2 = Object.assign({}, meta, { title:v }); await dbPut('bookMeta', [m2]); await initBible(); markDirty();
-    ed.Auto.textContent = '✔ Đã lưu tên hiển thị đầu chương';
-  }, 1200);
-});
-ed.Start.addEventListener('input', edQueue);
-ed.Book.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
-ed.Chap.addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(edRefresh, 200); });
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* Đổi "Xuống dòng trong câu": áp dụng NGAY cho nội dung đang soạn (trước đây chỉ có tác dụng ở lần dán kế tiếp nên bấm không thấy gì) */
-function edApplyPoem(){
-  const txt = ed.Text.value; if (!txt.trim()) return;
-  const poem = ed.Poem.value === '1', startAt = +ed.Start.value || 1;
-  let vs, src = txt;
-  if (ed.lastPaste && ed.Text.value === ed.lastPaste.out) src = ed.lastPaste.raw;   // chưa sửa gì sau khi dán → dựng lại từ bản gốc còn xuống dòng
-  if (poem){
-    if (src === txt && /^>{1,2}\s/m.test(txt)) return toast('Nội dung đã ở dạng thơ');
-    vs = detectVerses(src, { startAt, chapter:parseInt(ed.Chap.value, 10) || 0, poem:true });
-    if (!vs.length) vs = parseMarkup(txt, startAt);
-    if (!vs.some(v => Array.isArray(v.q) && v.q.length)) return toast('Không thấy dòng thơ để giữ. Hãy dán lại văn bản gốc có xuống dòng, hoặc dùng nút "＞ Thơ".');
-  } else {
-    vs = parseMarkup(txt, startAt);
-    vs.forEach(v => { if (Array.isArray(v.q) && v.q.length){ delete v.q; v.t = String(v.t).split('\n').map(x => x.trim()).filter(Boolean).join(' '); } });
-  }
-  ed.Text.value = serializeVerses(vs);
-  if (ed.lastPaste) ed.lastPaste.out = ed.Text.value;
-  edRefresh(); edQueue();
-  toast(poem ? '✔ Đã chuyển sang dạng thơ (xuống dòng theo từng dòng)' : '✔ Đã nối thành văn xuôi');
-}
-ed.Poem.onchange = edApplyPoem;
+
+
 // Đổi chương / sách: tự lưu chương đang sửa trước rồi mới chuyển
 // Chuyển sang chương vừa gõ (dùng chung cho onchange và phím Enter; nếu đã đang ở đúng chương đó thì không nạp lại)
-async function edGoChap(){
-  const ch = parseInt(ed.Chap.value, 10);
-  if (ch >= 1 && ch === edCur.ch && ed.Book.value.trim() === edCur.name) return;
-  await edAuto(); edLoad();
-}
-ed.Chap.onchange = edGoChap;
-ed.Chap.addEventListener('keydown', async e => {       // gõ số chương rồi nhấn Enter → nạp ngay chương đó vào ô soạn + xem trước
-  if (e.key !== 'Enter' && e.key !== 'Go' && e.key !== 'Done') return;
-  e.preventDefault();
-  await edGoChap();
-  ed.Chap.blur();
-});
-ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => m.name === ed.Book.value.trim()) || {}; ed.Abbr.value = bm.abbr || ''; ed.Sub.value = bm.sub || ''; ed.Title.value = bm.title || ''; ed.SubPos.value = bm.subPos === 'below' ? 'below' : ''; ed.DcOff.value = bm.dc === 'off' ? 'off' : ''; edSubFit(); edLoad(); };
+
+
+
+
 
 
 
@@ -4791,7 +4009,7 @@ ed.Book.onchange = async () => { await edAuto(); const bm = bibleMeta.find(m => 
 
 
 // Tránh mất chữ khi đóng/khóa màn hình: lưu ngay khi app bị ẩn
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !$('#editor').hidden) edAuto(); });
+
 
 /* §§ ▼▼▼ MỤC 5 · GHI CHÚ & SOẠN THẢO — Xuất sách PDF + JSON ▼▼▼ */
 /* =========================================================
@@ -4996,18 +4214,11 @@ function refMarkHTML(html){
 const _paperHTML0 = paperHTML;
 paperHTML = function(){ return refMarkHTML(_paperHTML0.apply(this, arguments)); };
 // Số thứ tự của sách: theo danh sách chuẩn 66 sách; không nhận ra tên thì dùng vị trí của sách trong app
-function bookNoOf(name){
-  const k = BIBLE_KEYS.get(bkKey(name)); if (k) return { no:k, known:true };
-  const i = bibleMeta.findIndex(m => m.name === name);
-  return { no:i >= 0 ? i + 1 : 0, known:false };
-}
+
 // Tên tệp: 10_II-Sa-Mu-En (số thứ tự 2 chữ số + tên không dấu, mỗi từ viết hoa chữ đầu; số La Mã I/II/III giữ nguyên chữ hoa)
-function bookSlug(name){
-  const w = fold(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').filter(Boolean);
-  return w.map((x, i) => (i === 0 && /^i{1,3}$/.test(x)) ? x.toUpperCase() : x.charAt(0).toUpperCase() + x.slice(1)).join('-') || 'Sach';
-}
+
    // tên tệp Word: 01_Sang_The_Ky … 66_Khai_Huyen
-function bookFileBase(name){ const n = bookNoOf(name); return (n.no ? String(n.no).padStart(2, '0') + '_' : '') + bookSlug(name); }
+
 /* Kiểm tra bản xuất NGAY trước khi giao cho người dùng: đọc lại dữ liệu khôi phục nằm trong PDF và JSON, so với sách đang có trong máy */
 
 /* Lưu tệp có cửa sổ CHỌN THƯ MỤC: máy tính (Chrome/Edge) mở hộp chọn thư mục rồi ghi thẳng vào đó (lần sau nhớ thư mục gần nhất);
@@ -5056,77 +4267,23 @@ async function saveSmart(files){
  *  - Khôi phục: tự nhận diện (1 sách · trọn bộ · sao lưu app · PDF kèm dữ liệu · văn bản), phân tích TOÀN BỘ trước khi ghi,
  *    ghi theo từng lô nhỏ vào IndexedDB, đọc lại để kiểm tra từng sách; không xóa dữ liệu đang có.
  * ========================================================= */
-const EX_SETS = {
-  ot:  { label:'Cựu Ước',            from:1, to:39, file:'Cuu-Uoc_01-39' },
-  nt:  { label:'Tân Ước',            from:40, to:66, file:'Tan-Uoc_40-66' },
-  all: { label:'Toàn bộ Kinh Thánh', from:1, to:66, file:'Kinh-Thanh_01-66' },
-  /* các nhóm trong mục lục Kinh Thánh (Tân-Ước chỉ có một nhóm nên dùng chung "nt") */
-  mo:  { label:'Năm quyển sách của Môi-se', from:1, to:5,  file:'Ngu-Kinh_01-05',  group:true },
-  ls:  { label:'Các sách về Lịch-sử',       from:6, to:17, file:'Lich-Su_06-17',   group:true },
-  vt:  { label:'Các sách Văn-thơ',          from:18, to:22, file:'Van-Tho_18-22',  group:true },
-  tt:  { label:'Các sách Tiên-tri',         from:23, to:39, file:'Tien-Tri_23-39', group:true }
-};
-const EX_SET_PREFIX = '@set:';
-function exSetKey(v){ v = String(v || ''); return (v.startsWith(EX_SET_PREFIX) && EX_SETS[v.slice(EX_SET_PREFIX.length)]) ? v.slice(EX_SET_PREFIX.length) : null; }
-const exNoOf = name => BIBLE_KEYS.get(bkKey(name)) || 0;
-function exSetCount(metas, key, filled){                          // số sách đang có trong máy / tổng của bộ (filled: tập tên sách THỰC SỰ có câu; không truyền = chỉ dựa vào số chương)
-  const sp = EX_SETS[key], have = new Set(); let extra = 0;
-  metas.forEach(m => { if (!(m.chapterCount > 0) || (filled && !filled.has(m.name))) return; const no = exNoOf(m.name); if (no >= sp.from && no <= sp.to) have.add(no); else if (!no && key === 'all') extra++; });
-  return { have:have.size, total:sp.to - sp.from + 1, extra };
-}
+
+
+
+
+
 
 /* Tập tên các sách THỰC SỰ có câu (để nhãn "Cựu Ước (x/39 sách)" không báo số ảo khi nhiều sách mới chỉ có khung chương trống) */
-let exScanTk = 0;
-async function exFilledNames(metas){
-  const filled = new Set();
-  for (const m of metas){
-    if (!(m.chapterCount > 0)) continue;
-    const rec = await dbGet('books', m.name);
-    if (rec && rec.chapters && rec.chapters.some(c => c && c.length)) filled.add(m.name);
-    await exYield();
-  }
-  return filled;
-}
-async function exRefreshSetLabels(metas){
-  const tk = ++exScanTk, sel = $('#exBook'); if (!sel) return;
-  let filled; try { filled = await exFilledNames(metas); } catch(e){ return; }
-  if (tk !== exScanTk) return;
-  [...sel.options].forEach(o => {
-    const k = exSetKey(o.value);
-    if (k){
-      const c = exSetCount(metas, k, filled), sp = EX_SETS[k];
-      o.textContent = `${sp.label} (${c.have === c.total ? c.total + ' sách' : c.have + '/' + c.total + ' sách có nội dung'}${c.extra ? ' + ' + c.extra + ' sách khác' : ''})`;
-      o.disabled = !(c.have + c.extra);
-    } else if (o.value){
-      const m = metas.find(x => x.name === o.value);
-      if (m && m.chapterCount > 0 && !filled.has(m.name)) o.textContent = `${m.name} (${m.chapterCount} ch. – chưa có câu nào)`;
-    }
-  });
-  const cur = sel.selectedOptions[0];
-  if (cur && cur.disabled){ const f = [...sel.options].find(o => !o.disabled && o.value && !exSetKey(o.value)); if (f) sel.value = f.value; }
-  exSyncUI();
-}
+
+
+
 /* Nhường giao diện cho trình duyệt (vẽ lại, nhận chạm) nếu đã chạy liên tục > 14 ms → không giật lag */
-let exYieldAt = 0;
-async function exYield(force){
-  const n = performance.now();
-  if (force || n - exYieldAt > 14){ await new Promise(r => setTimeout(r, 0)); exYieldAt = performance.now(); }
-}
+
+
 /* Bảng tiến độ (trạng thái loading) có thanh chạy + nút Hủy */
 
 
-function exSyncUI(){                                              // đổi nhãn nút, dòng chú thích và tên tệp gợi ý theo lựa chọn
-  const sel = $('#exBook'), go = $('#exGo'), h = $('#exSetHint'), nm = $('#exName'), wd = $('#exWord'); if (!sel || !go) return;
-  const k = exSetKey(sel.value);
-  go.textContent = k ? '🧾 Xuất JSON trọn bộ' : '📕 Xuất PDF + JSON';
-  if (wd){ wd.hidden = false; wd.textContent = k ? '📄 Xuất Word (mỗi sách 1 tệp)' : '📄 Xuất Word'; }   // 1 sách → 1 tệp Word · trọn bộ → nhiều tệp Word theo nhóm sách
-  if (h){ h.hidden = !k; h.textContent = k ? `“${EX_SETS[k].label}”: “📄 Xuất Word” tạo MỖI SÁCH MỘT TỆP RỜI (01_Sang_The_Ky … 66_Khai_Huyen), xếp theo nhóm trong mục lục; “🧾 Xuất JSON” tạo 1 tệp gộp có mã kiểm chứng SHA-256.` : ''; }
-  if (nm){                                                        // ô tên tệp: gợi ý sẵn, chỉ ghi đè khi người dùng chưa tự sửa
-    const auto = k ? EX_SETS[k].file : (sel.value ? bookFileBase(sel.value) : '');
-    if (!nm.value.trim() || nm.value === nm.dataset.auto) nm.value = auto;
-    nm.dataset.auto = auto;
-  }
-}
+
    // đổi lựa chọn → trở về tên gợi ý mới
 
 /* ---- MÃ KIỂM CHỨNG (SHA-256) ----
@@ -5299,7 +4456,7 @@ function setupPWA(){
     const had = !!navigator.serviceWorker.controller; let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {       // có bản mới → tự tải lại (trừ khi đang soạn)
       if (!had || reloaded) return; reloaded = true;
-      if ($('#editor').hidden && $('#admin').hidden) location.reload(); else toast('Có bản mới – đóng trang soạn rồi mở lại app để cập nhật');
+      location.reload();
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache:'none' }).then(reg => {
       reg.update().catch(() => {});
@@ -7039,7 +6196,7 @@ PStore.init();
     + '@media (prefers-reduced-motion:reduce){.updcard{animation:none}}';
   document.head.appendChild(css);
   var shown = '', dismissed = '', lastCheck = 0, busy = false, tries = 0;
-  var busyUI = function(){ var e = document.getElementById('editor'), a = document.getElementById('admin'); return !!((e && !e.hidden) || (a && !a.hidden)); };
+  var busyUI = function(){ return false; };
   function close(){ var c = document.getElementById('updCard'); if (c) c.remove(); shown = ''; }
   function show(ver){
     if (document.getElementById('updCard')) return;
