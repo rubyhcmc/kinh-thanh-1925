@@ -3850,6 +3850,13 @@ async function syncReadOnly(A, o){
   if (!r){ setSync('ok', `Trên ${A.label} chưa có dữ liệu.`); return; }
   if (r.version === SY.sha && hasLocal){ SY.at = Date.now(); saveSY(); setSync('ok', 'Nội dung đã là bản mới nhất.'); return; }
   if (!normBible((r.payload || {}).bible || r.payload || {}).length) throw new Error(`Dữ liệu trên ${A.label} chưa có nội dung Kinh Thánh.`);
+  if (SY.dirty && hasLocal){                      // máy này có bản sửa CHƯA đẩy lên (thiết bị không có quyền ghi) → tuyệt đối không tự ghi đè, kẻo mất các lần sửa hàng loạt
+    if (o.auto){ setSync('conflict', `Máy này có chỗ sửa chưa đẩy lên ${A.label} nên không tự tải bản mới về (tránh mất chỗ đã sửa). Cần quyền ghi (token) để đẩy lên, hoặc vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); return; }
+    syncBusy = false;
+    const c = await choose('Có chỗ sửa chưa đẩy lên', 'Máy này có chỗ đã sửa chưa đẩy lên ' + A.label + ' (thiết bị chỉ đọc). Tải bản trên ' + A.label + ' sẽ MẤT các chỗ sửa đó. Bạn muốn?', [{ t:'Giữ bản sửa trong máy (khuyên dùng)', cls:'primary' }, { t:`⬇️ Lấy dữ liệu từ ${A.label} (bỏ chỗ đã sửa)` }]);
+    syncBusy = true;
+    if (c !== 1){ setSync('conflict', 'Đang giữ bản sửa trong máy; chưa đẩy được lên vì thiếu quyền ghi.'); return; }
+  }
   if (!SY.sha && hasLocal){                       // máy này có dữ liệu riêng chưa từng đồng bộ
     if (o.auto){ setSync('conflict', `Máy này đã có dữ liệu riêng khác với ${A.label}. Vào Quản lý dữ liệu → Đồng bộ ngay để chọn.`); toast(`Dữ liệu máy này khác ${A.label} – vào Quản lý dữ liệu → Đồng bộ ngay để chọn`); return; }
     syncBusy = false;
@@ -4851,6 +4858,8 @@ const ed = {};
 ['Book','Abbr','Sub','SubPos','DcOff','Title','Chap','Start','Poem','Text','Status','Preview','Auto'].forEach(k => ed[k] = $('#ed' + k));
 let edLoaded = '', edTimer, edAutoTimer, edCur = { name:'', ch:0 };
 const draftKey = () => `kt.draft.${edCur.name}|${edCur.ch}`;
+/* Sau mọi lần sửa hàng loạt: xóa bản nháp cũ còn sót, nếu không edLoad sẽ khôi phục chữ cũ rồi tự lưu đè kết quả vừa sửa */
+function edDropDrafts(){ try { Object.keys(localStorage).filter(k => k.startsWith('kt.draft.')).forEach(k => localStorage.removeItem(k)); } catch(e){} }
 
 function edRefresh(){
   const vs = parseMarkup(ed.Text.value, +ed.Start.value || 1);
@@ -5459,7 +5468,7 @@ async function fwApply(plan, allow){
     }
     if (plan.protect){ try { const hs = hyIgn(); plan.rules.forEach(r => { if (/^[\p{L}\p{M}]+(?:[-‐‑][\p{L}\p{M}]+)+$/u.test(r.to)) hs.add(hyKey(r.to)); }); hyIgnSave(hs); hyBadge(); } catch(e){} }
     ui.say('Đang cập nhật giao diện…', 99); await ui.step();
-    await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+    await initBible(); await refreshStats(); edDropDrafts(); try { await edLoad(); } catch(e){}
     ui.close();
     const good = !bad.length && !l1 && !l2;
     return { n:nTot, books:nb, kinds, good, verify: bad.length ? `⚠ Đối chiếu sau khi ghi KHÔNG khớp ở: ${esc(bad.join(', '))} — hãy bấm “Hoàn tác toàn bộ lần sửa này”.`
@@ -5565,7 +5574,7 @@ function fwOpen(onDone, opts){
           await dbPut('books', [Object.assign({}, rec, { chapters:b.chapters })]);
         }
         const n = fwBulkUndo.books.length; fwBulkUndo = null; HYB.map = null; try { markDirty(); } catch(e){}
-        await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+        await initBible(); await refreshStats(); edDropDrafts(); try { await edLoad(); } catch(e){}
         ui.close(); view = 'input'; msg = ''; draw(); toast(`Đã hoàn tác ${n} sách`);
       } catch(err){ ui.close(); toast('Lỗi khi hoàn tác: ' + (err.message || err)); }
     }
@@ -5951,7 +5960,7 @@ function archOpen(){
         }
         ui.say('Đang cập nhật giao diện…', 99); await ui.step();
         if (undo.length){ archBulkUndo = { time:Date.now(), books:undo }; try { markDirty(); } catch(e){} }
-        await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+        await initBible(); await refreshStats(); edDropDrafts(); try { await edLoad(); } catch(e){}
         ui.close();
         const tot = out.reduce((a, x) => a + x.n, 0);
         bulk = { phase:'done', books:out, by, verify: mismatch.length ? `⚠ Số câu/chương của ${esc(mismatch.join(', '))} lệch so với bản gốc — hãy bấm “Hoàn tác toàn bộ lần sửa này”.`
@@ -5972,7 +5981,7 @@ function archOpen(){
           await dbPut('books', [Object.assign({}, rec, { chapters:b.chapters })]);
         }
         const n = archBulkUndo.books.length; archBulkUndo = null; try { markDirty(); } catch(e){}
-        await initBible(); await refreshStats(); try { await edLoad(); } catch(e){}
+        await initBible(); await refreshStats(); edDropDrafts(); try { await edLoad(); } catch(e){}
         ui.close(); bulk = null; view = 'scan'; rescan(); draw(); toast(`Đã hoàn tác ${n} sách`);
       } catch(err){ ui.close(); toast('Lỗi khi hoàn tác: ' + (err.message || err)); }
       return;
@@ -6544,7 +6553,7 @@ async function sxQuickRefresh(e){
   bs.idx = null;                                                       // chỉ mục tìm của trang đọc tự dựng lại lần sau (chỉ mục ở đây đã được cập nhật tại chỗ)
   try { if (curBook && curBook.name === e.b){ curBook = await dbGet('books', e.b); if (curBook && S.book === e.b && S.chapter === e.c) renderChapter(); } } catch(x){}
   markDirty();
-  try { if (!$('#editor').hidden) await edLoad(); } catch(x){}        // ô soạn đang mở: nạp lại để không tự lưu đè bản cũ
+  edDropDrafts(); try { if (!$('#editor').hidden) await edLoad(); } catch(x){}        // ô soạn đang mở: nạp lại để không tự lưu đè bản cũ
 }
 async function sxQuickSave(row){
   const i = +row.dataset.i, e = sx.res[i], ta = row.querySelector('.sxta'); if (!e || !ta) return;
@@ -6886,7 +6895,7 @@ async function sxGroupWrite(items, field){            // field 'nw' = ghi chữ 
 }
 async function sxAfterWrite(){
   await initBible(); await refreshStats(); markDirty();
-  try { if (!$('#editor').hidden) await edLoad(); } catch(e){}      // ô soạn đang mở: nạp lại chương từ dữ liệu mới, tránh tự lưu đè bản cũ
+  edDropDrafts(); try { if (!$('#editor').hidden) await edLoad(); } catch(e){}      // ô soạn đang mở: nạp lại chương từ dữ liệu mới, tránh tự lưu đè bản cũ
   if (sx.el) sxRun();
 }
 async function sxApply(on){
