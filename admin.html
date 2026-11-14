@@ -1703,7 +1703,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.14a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.14b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -5695,6 +5695,7 @@ function archNorm(r){
   if (!from) return null;
   return { from, to, whole: r.whole !== false, cs: !!r.cs, except: archNFC(r.except || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean).join(', '), note: String(r.note || '').trim(), on: r.on !== false };
 }
+const archLossy = r => !!r && wcWords(r.to) < wcWords(r.from);                  // luật làm ÍT TỪ HƠN (vd “đều lành” → “điều”, hoặc để trống = xóa)
 function archGet(){
   if (archCache) return archCache;
   let a = []; try { a = JSON.parse(localStorage.getItem(ARCH_KEY) || '[]'); } catch(e){}
@@ -5888,7 +5889,7 @@ function archOpen(){
     let head, btns;
     if (B.phase === 'plan'){
       head = tot || totSkip
-        ? `<p class="hysum"><span class="hyw r">${tot} chỗ chắc chắn</span>${totSkip ? ` <span class="hyw g">${totSkip} chữ hoa giữa câu</span>` : ''} <span class="hytag">${B.books.length} sách · quét ${B.scanned} sách / ${B.chScanned} chương</span></p><p class="hynote">Đã quét <b>lời văn, chú thích và tiêu đề</b> của toàn bộ Kinh Thánh theo ${archGet().filter(r => r.on).length} luật đang bật. Chưa có gì bị sửa — xem thống kê rồi bấm nút thực hiện.</p>${totSkip ? '<p class="hynote">“Chữ hoa giữa câu” (vd: Nhơn đứng giữa câu) có thể là tên riêng nên mặc định không sửa; bấm “Sửa cả chữ hoa” nếu bạn chắc chắn muốn sửa luôn.</p>' : ''}`
+        ? `<p class="hysum"><span class="hyw r">${tot} chỗ chắc chắn</span>${totSkip ? ` <span class="hyw g">${totSkip} chữ hoa giữa câu</span>` : ''} <span class="hytag">${B.books.length} sách · quét ${B.scanned} sách / ${B.chScanned} chương</span></p>${(() => { const bad = archGet().filter(r => r.on && archLossy(r) && B.by[r.from + ' → ' + r.to]); return bad.length ? `<p class="hynote" style="color:var(--danger);font-weight:700">⛔ ${bad.length} luật sẽ làm MẤT CHỮ: ${bad.slice(0, 6).map(r => esc(r.from) + ' → ' + (esc(r.to) || '(xóa)') + ' (' + B.by[r.from + ' → ' + r.to] + ' chỗ)').join('; ')}${bad.length > 6 ? '…' : ''}. Hãy sửa luật trước khi bấm Sửa.</p>` : ''; })()}<p class="hynote">Đã quét <b>lời văn, chú thích và tiêu đề</b> của toàn bộ Kinh Thánh theo ${archGet().filter(r => r.on).length} luật đang bật. Chưa có gì bị sửa — xem thống kê rồi bấm nút thực hiện.</p>${totSkip ? '<p class="hynote">“Chữ hoa giữa câu” (vd: Nhơn đứng giữa câu) có thể là tên riêng nên mặc định không sửa; bấm “Sửa cả chữ hoa” nếu bạn chắc chắn muốn sửa luôn.</p>' : ''}`
         : '<p class="hynote">✔ Toàn bộ Kinh Thánh không còn từ nào trong từ điển cần sửa.</p>';
       btns = `<button class="sbtn" data-a="bulkrun"${tot ? '' : ' disabled'} style="background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700">✅ Sửa ${tot} chỗ cho toàn bộ Kinh Thánh</button>${totSkip ? `<button class="sbtn" data-a="bulkrunflag">Sửa cả chữ hoa (${tot + totSkip})</button>` : ''}<button class="sbtn" data-a="back">← Quay lại</button><button class="sbtn" data-a="close">Đóng</button>`;
     } else {
@@ -5939,15 +5940,20 @@ function archOpen(){
       return;
     }
     if (a === 'bulkrun' || a === 'bulkrunflag'){
-      const incl = a === 'bulkrunflag', ui = exProgUI('Đang sửa toàn bộ Kinh Thánh…');
+      const incl = a === 'bulkrunflag';
+      { const bad = archGet().filter(r => r.on && archLossy(r) && bulk && bulk.by && bulk.by[r.from + ' → ' + r.to]);
+        if (bad.length && !confirm(`⛔ CẢNH BÁO: ${bad.length} luật sẽ làm MẤT CHỮ (xóa từ):\n` + bad.slice(0, 8).map(r => '• ' + r.from + ' → ' + (r.to || '(xóa)')).join('\n') + `\n\nChỉ bấm OK nếu thật sự muốn xóa chữ.`)) return; }
+      const ui = exProgUI('Đang sửa toàn bộ Kinh Thánh…');
       try {
         await edAuto();
-        const todo = bulk.books.map(b => b.name), undo = [], out = [], by = {}; let leftover = 0, mismatch = [];
+        const todo = bulk.books.map(b => b.name), undo = [], out = [], by = {}; let leftover = 0, mismatch = [], wBefore = 0, wAfter = 0;
+        const wcCh = chs => (chs || []).reduce((a, vs) => a + (vs || []).reduce((b, v) => b + wcWords(v && v.t) + wcWords(v && v.h) + ((v && v.fn) || []).reduce((c, f) => c + wcWords(f), 0), 0), 0);
         for (let i = 0; i < todo.length; i++){
           const name = todo[i]; ui.say('Đang sửa: ' + name, 100 * i / todo.length, (i + 1) + '/' + todo.length + ' sách'); await ui.step();
           const rec = await dbGet('books', name); if (!rec) continue;
           const R = archMapChapters(rec.chapters, incl);
           if (!R.n) continue;
+          wBefore += wcCh(rec.chapters); wAfter += wcCh(R.chapters);
           undo.push({ name, chapters:rec.chapters });
           const nrec = Object.assign({}, rec, { chapters:R.chapters });
           await dbPut('books', [nrec]);
@@ -5963,9 +5969,10 @@ function archOpen(){
         await initBible(); await refreshStats(); edDropDrafts(); try { await edLoad(); } catch(e){}
         ui.close();
         const tot = out.reduce((a, x) => a + x.n, 0);
-        bulk = { phase:'done', books:out, by, verify: mismatch.length ? `⚠ Số câu/chương của ${esc(mismatch.join(', '))} lệch so với bản gốc — hãy bấm “Hoàn tác toàn bộ lần sửa này”.`
+        const wLost = wBefore - wAfter;
+        bulk = { phase:'done', books:out, by, verify: (wLost > 0 ? `⛔ Tổng số TỪ giảm ${wLost} từ sau khi sửa (bị xóa chữ). Nếu bạn không chủ ý, bấm “Hoàn tác toàn bộ lần sửa này” NGAY. ` : '') + (mismatch.length ? `⚠ Số câu/chương của ${esc(mismatch.join(', '))} lệch so với bản gốc — hãy bấm “Hoàn tác toàn bộ lần sửa này”.`
           : leftover ? `⚠ Sau khi sửa vẫn còn ${leftover} chỗ khớp từ điển (do luật thay chuyền tiếp). Bấm “Sửa cho toàn bộ Kinh Thánh” lần nữa để xem.`
-          : `✔ Đã đọc lại từ máy và đối chiếu: số chương, số câu giữ nguyên 100%, không còn từ nào trong từ điển cần sửa${incl ? '' : ' (trừ chữ hoa giữa câu đã bỏ qua)'}.` };
+          : `✔ Đã đọc lại từ máy và đối chiếu: số chương, số câu giữ nguyên 100%${wLost > 0 ? '' : ', số từ không bị giảm'}, không còn từ nào trong từ điển cần sửa${incl ? '' : ' (trừ chữ hoa giữa câu đã bỏ qua)'}.`) };
         view = 'bulk'; draw(); toast(`Đã sửa ${tot} chỗ ở ${out.length} sách`);
       } catch(err){ ui.close(); if (err && err.exCancel){ toast('Đã hủy — những sách xử lý xong trước đó vẫn được giữ, có thể hoàn tác'); } else toast('Lỗi khi sửa: ' + (err.message || err)); try { await initBible(); await refreshStats(); } catch(e){} }
       return;
@@ -5998,6 +6005,7 @@ function archOpen(){
       else if (a === 'cancel'){ editIdx = -1; msg = ''; }
       else if (a === 'save'){
         const r = archNorm({ from: val('arFrom'), to: val('arTo'), whole: chk('arWhole'), cs: chk('arCs'), except: val('arEx'), note: val('arNote'), on: editIdx >= 0 ? L[editIdx].on : true });
+        if (r && archLossy(r) && !confirm(`⛔ Luật này làm MẤT CHỮ:\n“${r.from}” → ${r.to ? '“' + r.to + '”' : '(xóa trắng)'}\n\nCâu sẽ có ÍT TỪ HƠN sau khi sửa. Nếu bạn chỉ muốn đổi chữ, hãy ghi ĐỦ cả cụm ở ô “Thay bằng” (vd: đều lành → điều lành).\n\nChỉ bấm OK nếu thật sự muốn xóa chữ.`)) return;
         if (!r) return toast('Hãy nhập từ cổ');
         const w = warn(L, r, editIdx);
         if (w.some(x => x.includes('đã có'))){ msg = '⚠ ' + w[0] + ' — hãy sửa luật cũ thay vì thêm trùng.'; return draw(); }
@@ -6831,8 +6839,10 @@ async function sxQuoteStart(){
   P.certain = nOn;
   sxReview('', P);
 }
+const wcWords = x => (String(x == null ? '' : x).match(/\S+/g) || []).length;       // đếm từ — dùng cho “chống mất chữ”
 function sxReview(rep, P){
   const plan = P.plan, KIND = SX_KIND, q = sx.q.trim();
+  if (!P.quote) plan.forEach(p => { const w = wcWords(p.c.base) - wcWords(p.c.out); p.lw = w > 0 ? w : 0; if (p.lw) p.on = false; });   // CHỐNG MẤT CHỮ: chỗ nào thay xong ÍT TỪ HƠN trước → mặc định KHÔNG tick
   const el = document.createElement('div'); el.className = 'overlay sxp sxr'; el.style.zIndex = 97;
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Xem trước thay thế');
   el.innerHTML = `<div class="sheet sxsheet"><div class="sxhead">
@@ -6850,6 +6860,8 @@ function sxReview(rep, P){
     if (!sx.acc) warn.push('⚠ Đang TẮT “Đúng dấu”: chữ khác dấu cũng bị thay — xem kỹ từng chỗ.');
     if (!sx.word) warn.push('⚠ Chưa bật “Nguyên từ”: chữ nằm trong từ dài hơn cũng bị thay.');
     if (!rep && !sx.uni) warn.push('⚠ Chữ thay thế để trống: các chỗ khớp sẽ bị XÓA.');
+    const nLoss = plan.filter(p => p.lw).length;
+    if (nLoss) warn.push(`⛔ ${nLoss} chỗ sau khi thay sẽ MẤT CHỮ (ít từ hơn trước) — đã tự bỏ tick các chỗ này, có nhãn đỏ “mất N từ”. Nếu bạn chỉ muốn đổi chữ (vd đều lành → điều lành) hãy gõ ĐỦ cả cụm vào ô “Thay bằng”.`);
     }
     $('#srSum').innerHTML = (P.quote ? `<div>Đổi ngoặc kép thẳng <b>"</b> → ngoặc cong <b>“ ”</b> · ${esc(sxScopeLabel())}</div>` : (sx.uni ? `<div>🎯 Thống nhất theo đúng dạng: <b>${esc(rep)}</b> · ${esc(sxScopeLabel())}</div>` : `<div>“<b>${esc(q)}</b>” → ${rep ? '“<b>' + esc(rep) + '</b>”' : '<b>(xóa)</b>'} · ${esc(sxScopeLabel())}</div>`)) + warn.map(w => `<div class="srwarn">${esc(w)}</div>`).join('');
     $('#srInfo').textContent = `Sẽ thay ${on.length}/${plan.length} chỗ (${times} lần) · ${cnt.v} lời văn · ${cnt.f} chú thích · ${cnt.h} tiêu đề` + (P.nl ? `\n${P.nl} chỗ vắt qua xuống dòng không tự thay (dùng ✏️ Sửa › để sửa tay).` : '') + (P.note ? '\n' + P.note : '');
@@ -6859,7 +6871,7 @@ function sxReview(rep, P){
   const item = i => {
     const p = plan[i], e = p.e, c = p.c;
     return `<div class="sxit sxrv" data-i="${i}"><label class="srchk"><input type="checkbox" data-i="${i}"${p.on ? ' checked' : ''} aria-label="Thay chỗ này"></label><div class="srmain">
-      <span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${KIND[e.k]}</span>${c.n > 1 ? `<span class="srn">${c.n} lần</span>` : ''}${p.chk ? `<span class="srn" style="background:#fde8c8;color:#7a4a00" title="${esc(p.why)}">⚠ cần xem</span>` : ''}<button type="button" class="srEd" data-ed="${i}">✏️ Sửa tay</button></span>
+      <span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${KIND[e.k]}</span>${c.n > 1 ? `<span class="srn">${c.n} lần</span>` : ''}${p.chk ? `<span class="srn" style="background:#fde8c8;color:#7a4a00" title="${esc(p.why)}">⚠ cần xem</span>` : ''}${p.lw ? `<span class="srn" style="background:#f8c9c9;color:#7a0000;font-weight:700">⛔ mất ${p.lw} từ</span>` : ''}<button type="button" class="srEd" data-ed="${i}">✏️ Sửa tay</button></span>
       <div class="srb">${sxSnippet(dsp(c.base), c.rg)}</div><div class="sra">${sxSnippet(dsp(c.out), c.nr).replace(/<mark>/g, '<mark class="srnew">')}</div></div></div>`;
   };
   const more = () => shown < plan.length ? `<button type="button" class="sxmore" data-more="1">Xem thêm ${Math.min(SX_PAGE, plan.length - shown)} chỗ · còn ${plan.length - shown}</button>` : '';
@@ -6878,7 +6890,8 @@ function sxReview(rep, P){
   });
   $('#srGo').onclick = async () => {
     const on = plan.filter(p => p.on); if (!on.length) return;
-    const times = on.reduce((a, p) => a + p.c.n, 0), bk = new Set(on.map(p => p.e.b)).size;
+    const times = on.reduce((a, p) => a + p.c.n, 0), bk = new Set(on.map(p => p.e.b)).size, lossN = on.filter(p => p.lw).length;
+    if (lossN && !confirm(`⛔ CẢNH BÁO: ${lossN} chỗ bạn đang chọn sẽ làm MẤT CHỮ (câu có ÍT TỪ HƠN sau khi thay).\n\nVí dụ: ${on.find(p => p.lw).c.base.slice(0, 60)}\n→ ${on.find(p => p.lw).c.out.slice(0, 60)}\n\nChỉ bấm OK nếu bạn thật sự muốn xóa chữ.`)) return;
     if (!confirm(`Thay ${on.length} chỗ (${times} lần) trong ${bk} sách?\n${P.quote ? 'Ngoặc kép thẳng \" → cong “ ”' : sx.uni ? 'Thống nhất: ' + rep : '“' + q + '” → ' + (rep ? '“' + rep + '”' : '(xóa)')}\n\nSau khi thay, bấm “↩ Hoàn tác” để trả lại nếu cần.`)) return;
     $('#srGo').disabled = true; close();
     await sxApply(on);
