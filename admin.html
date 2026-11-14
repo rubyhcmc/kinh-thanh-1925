@@ -1703,7 +1703,7 @@ try { const v = localStorage.getItem('kt.sbx'); document.documentElement.style.s
   addEventListener('pageshow', () => { drop(); [100, 500, 1200].forEach(t => setTimeout(drop, t)); });     // quay lại trang từ bộ nhớ đệm của Safari
 })();
 
-const APP_VERSION = '2026.11.13b';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
+const APP_VERSION = '2026.11.14a';   // hiện ở cuối Cài đặt để biết máy đang chạy bản nào
 const DB_NAME = 'kinhthanh-pwa';
 const DEFAULT_REPO_NAME = 'kinh-thanh-data';
 const DEFAULT_FILE = 'kinhthanh-data.json';
@@ -6775,40 +6775,46 @@ function sxReplaceStart(){
   sxReview(rep, P);
 }
 /* ===== NGOẶC KÉP CONG: đổi " (thẳng) → “ ” (cong) hàng loạt, có xem trước & Hoàn tác (dùng chung sxReview / sxApply) =====
-   Ghép cặp theo thứ tự đọc: trong LỜI VĂN, trạng thái “đang mở ngoặc” được giữ xuyên các câu của cùng một chương (lời trích dẫn mở ở câu này, đóng ở câu sau);
-   chú thích / tiêu đề thì xét riêng từng đoạn. Chương hoặc đoạn có ngoặc không khớp cặp (lẻ, lồng nhau, mơ hồ) bị BỎ QUA và báo tên để sửa tay. Ngoặc cong có sẵn được giữ nguyên và tính vào việc ghép cặp. */
+   Cách làm (bản nâng cấp): mỗi dấu " được nhận diện THEO VỊ TRÍ của chính nó — đứng đầu chữ (sau khoảng trắng, mở ngoặc, gạch ngang, hoặc đầu dòng) và liền chữ phía sau → mở “ ;
+   liền chữ phía trước và theo sau là khoảng trắng / dấu câu / hết dòng → đóng ” . Không còn bỏ cả chương chỉ vì một chỗ lệch cặp.
+   Trạng thái “đang mở ngoặc” vẫn được theo dõi xuyên các câu của cùng chương (lời trích dẫn dài) để giải quyết các dấu mơ hồ; ngoặc cong có sẵn được giữ nguyên.
+   Dấu chắc chắn → mặc định được tick. Dấu mơ hồ (đứng giữa chữ, hoặc cách hai phía) hoặc câu có ngoặc lệch cặp → gắn nhãn “cần xem”, mặc định KHÔNG tick để kiểm tra bằng mắt. Không đổi chữ nào khác trong câu. */
 function sxQuoteConv(s, inq){
-  const rg = []; let out = '', ok = true;
+  const rg = []; let out = '', sure = true, skew = false;
+  const OPEN = /[\s(\[{—–‘“«<]/, CLOSE = /[\s,.;:!?)\[\]}—–…’”»>]/;
   for (let i = 0; i < s.length; i++){
     const ch = s[i];
-    if (ch === '\u201C'){ if (inq) ok = false; inq = true; out += ch; continue; }
-    if (ch === '\u201D'){ if (!inq) ok = false; inq = false; out += ch; continue; }
+    if (ch === '“'){ if (inq) skew = true; inq = true; out += ch; continue; }
+    if (ch === '”'){ if (!inq) skew = true; inq = false; out += ch; continue; }
     if (ch !== '"'){ out += ch; continue; }
     const prev = i ? s[i - 1] : '', next = s[i + 1] || '';
-    const po = !prev || /[\s(\[{\u2014\u2013]/.test(prev), ne = !next || /[\s,.;:!?)\[\]}\u2014\u2013]/.test(next);
-    let t = po && !ne ? 'o' : (!po && ne ? 'c' : null);
-    if (!t && !prev && inq) t = 'c';
-    if (!t || (t === 'o') === inq){ ok = false; out += ch; continue; }
-    inq = t === 'o'; rg.push([i, i + 1]); out += inq ? '\u201C' : '\u201D';
+    const po = !prev || OPEN.test(prev), ne = !next || CLOSE.test(next);
+    let t;
+    if (po && !ne) t = 'o';
+    else if (!po && ne) t = 'c';
+    else { t = inq ? 'c' : 'o'; sure = false; }                    // mơ hồ → theo trạng thái, đánh dấu “cần xem”
+    if ((t === 'o') === inq) skew = true;                           // mở khi đang mở / đóng khi chưa mở → lệch cặp
+    inq = t === 'o'; rg.push([i, i + 1]); out += inq ? '“' : '”';
   }
-  return { out, rg, inq, ok };
+  return { out, rg, inq, sure, skew };
 }
 function sxQuotePlan(entries){
-  const plan = [], bad = []; let badN = 0, ck = '', st = false, chBad = false, pend = [];
-  const flush = () => { if (!ck) return; if (st || chBad){ bad.push(ck); badN += pend.length; } else pend.forEach(p => plan.push(p)); pend = []; st = false; chBad = false; };
+  const plan = [], bad = []; let badN = 0, ck = '', st = false, open0 = '';
+  const endCh = () => { if (st && ck){ bad.push(ck + ' (mở ngoặc mà chưa đóng)'); } st = false; };
   for (const e of entries){
     const raw = e.o; if (typeof raw !== 'string' || !raw) continue;
     const isV = e.k === 'v', key = e.b + ' ' + e.c;
-    if (isV && key !== ck){ flush(); ck = key; }
-    if (!/["\u201C\u201D]/.test(raw)) continue;
-    const base = raw.normalize('NFC');
-    if (base.length !== raw.length){ if (isV) chBad = true; else { bad.push(e.b + ' ' + e.c + ':' + e.n); badN++; } continue; }
-    const r = sxQuoteConv(base, isV ? st : false);
-    if (isV){ st = r.inq; if (!r.ok) chBad = true; }
-    else if (!r.ok || r.inq){ bad.push(e.b + ' ' + e.c + ':' + e.n); badN++; continue; }
-    if (r.rg.length){ const it = { e, c:{ out:r.out, base, rg:r.rg, nr:r.rg, n:r.rg.length }, on:true }; if (isV) pend.push(it); else plan.push(it); }
+    if (isV && key !== ck){ endCh(); ck = key; }
+    if (!/["“”]/.test(raw)) continue;
+    const r = sxQuoteConv(raw, isV ? st : false);
+    if (isV) st = r.inq; else if (r.inq) r.skew = true;
+    if (!r.rg.length) continue;
+    const ok = r.sure && !r.skew;
+    const it = { e, c:{ out:r.out, base:raw, rg:r.rg, nr:r.rg, n:r.rg.length }, on:ok, chk:!ok, why: !r.sure ? 'dấu mơ hồ' : (r.skew ? 'ngoặc lệch cặp' : '') };
+    if (!ok){ badN++; bad.push(e.b + ' ' + e.c + ':' + e.n); }
+    plan.push(it);
   }
-  flush();
+  endCh();
   return { plan, bad, badN };
 }
 async function sxQuoteStart(){
@@ -6818,9 +6824,11 @@ async function sxQuoteStart(){
   const idx = await sxBuild(), test = bsScopeFn(sx.scope);
   const ents = idx.filter(e => (!sx.kind || e.k === sx.kind) && (!test || test(e)));
   const P = sxQuotePlan(ents);
-  if (!P.plan.length) return toast(P.bad.length ? `Không có chỗ nào tự đổi được. ${P.bad.length} chỗ ngoặc không khớp cặp: ${P.bad.slice(0, 5).join('; ')}` : 'Không còn dấu ngoặc kép thẳng nào trong phạm vi đang chọn.');
+  if (!P.plan.length) return toast('Không còn dấu ngoặc kép thẳng nào trong phạm vi đang chọn.');
   P.quote = true;
-  P.note = P.bad.length ? `⚠ ${P.bad.length} chương/đoạn có ngoặc không khớp cặp nên KHÔNG tự đổi (dùng ✏️ Sửa › để sửa tay): ${P.bad.slice(0, 6).join('; ')}${P.bad.length > 6 ? '…' : ''}` : '';
+  const nOn = P.plan.filter(p => p.on).length;
+  P.note = P.badN ? `⚠ ${P.badN} chỗ “cần xem” (dấu mơ hồ hoặc ngoặc lệch cặp) — mặc định KHÔNG tick, bạn xem từng chỗ rồi tick nếu đúng, hoặc bấm ✏️ Sửa tay: ${P.bad.slice(0, 6).join('; ')}${P.bad.length > 6 ? '…' : ''}` : '';
+  P.certain = nOn;
   sxReview('', P);
 }
 function sxReview(rep, P){
@@ -6851,7 +6859,7 @@ function sxReview(rep, P){
   const item = i => {
     const p = plan[i], e = p.e, c = p.c;
     return `<div class="sxit sxrv" data-i="${i}"><label class="srchk"><input type="checkbox" data-i="${i}"${p.on ? ' checked' : ''} aria-label="Thay chỗ này"></label><div class="srmain">
-      <span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${KIND[e.k]}</span>${c.n > 1 ? `<span class="srn">${c.n} lần</span>` : ''}<button type="button" class="srEd" data-ed="${i}">✏️ Sửa tay</button></span>
+      <span class="sxref"><b>${esc(e.b)} ${e.c}:${e.n}</b><span class="sxk${e.k === 'f' ? ' f' : ''}">${KIND[e.k]}</span>${c.n > 1 ? `<span class="srn">${c.n} lần</span>` : ''}${p.chk ? `<span class="srn" style="background:#fde8c8;color:#7a4a00" title="${esc(p.why)}">⚠ cần xem</span>` : ''}<button type="button" class="srEd" data-ed="${i}">✏️ Sửa tay</button></span>
       <div class="srb">${sxSnippet(dsp(c.base), c.rg)}</div><div class="sra">${sxSnippet(dsp(c.out), c.nr).replace(/<mark>/g, '<mark class="srnew">')}</div></div></div>`;
   };
   const more = () => shown < plan.length ? `<button type="button" class="sxmore" data-more="1">Xem thêm ${Math.min(SX_PAGE, plan.length - shown)} chỗ · còn ${plan.length - shown}</button>` : '';
